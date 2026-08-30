@@ -1,0 +1,33 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# ---- 环境与密钥 ----
+.env
+.env.local
+*.local
+
+# ---- 数据库 / 数据 ----
+*.db
+*.sqlite3
+server/data/*.db
+
+# ---- 前端 ----
+node_modules/
+dist/
+.wxss.tmp
+app/**/*.js.map
+
+# ---- 微信小程序 ----
+*.wxml.d.ts
+project.private.config.json
+
+# ---- 文档 / 系统 ----
+.DS_Store
+Thumbs.db
+~$*

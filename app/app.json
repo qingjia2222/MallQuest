@@ -1,0 +1,30 @@
+{
+  "pages": [
+    "pages/scan/scan",
+    "pages/chat/chat",
+    "pages/plan/plan",
+    "pages/map/map",
+    "pages/coupon/coupon",
+    "pages/profile/profile",
+    "pages/reserve/reserve"
+  ],
+  "window": {
+    "backgroundTextStyle": "dark",
+    "navigationBarBackgroundColor": "#7C3AED",
+    "navigationBarTitleText": "商场 AI 助手",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#F4F6FB"
+  },
+  "tabBar": {
+    "color": "#9CA3AF",
+    "selectedColor": "#7C3AED",
+    "backgroundColor": "#FFFFFF",
+    "list": [
+      { "pagePath": "pages/chat/chat", "text": "对话" },
+      { "pagePath": "pages/map/map", "text": "地图" },
+      { "pagePath": "pages/profile/profile", "text": "我的" }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}
