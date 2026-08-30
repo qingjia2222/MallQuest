@@ -1,1 +1,6 @@
-{"navigationBarTitleText":"室内路线"}
+{
+  "usingComponents": {
+    "mini-map": "/components/mini-map/mini-map",
+    "parking-gauge": "/components/parking-gauge/parking-gauge"
+  }
+}

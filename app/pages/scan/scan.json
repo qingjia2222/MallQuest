@@ -1,1 +1,5 @@
-{"navigationBarTitleText":"连接商场"}
+{
+  "usingComponents": {
+    "particle-intro": "/components/particle-intro/particle-intro"
+  }
+}

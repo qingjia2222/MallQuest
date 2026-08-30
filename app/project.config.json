@@ -1,1 +1,21 @@
-{"description":"QD square AI 私域服务助手","appid":"touristappid","projectname":"MallQuest-QD-square","compileType":"miniprogram","setting":{"urlCheck":false,"es6":true,"postcss":true,"minified":true}}
+{
+  "description": "商场 AI 私域服务助手 - 微信小程序",
+  "packOptions": {
+    "ignore": [],
+    "include": []
+  },
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "newFeature": true,
+    "bigPackageSizeSupport": true
+  },
+  "compileType": "miniprogram",
+  "libVersion": "3.5.6",
+  "appid": "touristappid",
+  "projectname": "mall-copilot",
+  "condition": {}
+}

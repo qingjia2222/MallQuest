@@ -1,0 +1,39 @@
+<view class="ic">
+  <view class="ic-title">
+    <text>推荐方案</text>
+    <text class="ic-tag">{{itinerary.tag || '为你定制'}}</text>
+  </view>
+
+  <!-- 时间轴 -->
+  <view class="ic-timeline">
+    <view wx:for="{{itinerary.stops}}" wx:key="index" class="ic-stop"
+          data-index="{{index}}" data-stop="{{item}}" bindtap="onStopTap">
+      <view class="ic-rail">
+        <view class="ic-node {{index === 0 ? 'start' : ''}}"></view>
+        <view wx:if="{{index < itinerary.stops.length - 1}}" class="ic-connector"></view>
+      </view>
+      <view class="ic-stop-body">
+        <view class="ic-stop-head">
+          <text class="ic-time">{{item.time}}</text>
+          <text class="ic-name">{{item.name}}</text>
+          <text wx:if="{{item.waiting}}" class="ic-wait {{item.waiting > 10 ? 'busy' : ''}}">{{item.waiting}} 桌</text>
+        </view>
+        <text class="ic-meta">{{item.floor}} 层 · {{item.category}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 落地动作结果 -->
+  <view wx:if="{{itinerary.actions && itinerary.actions.length}}" class="ic-actions">
+    <view wx:for="{{itinerary.actions}}" wx:key="index" class="ic-action">
+      <text class="ic-check {{item.ok ? 'ok' : 'fail'}}">{{item.ok ? '✓' : '×'}}</text>
+      <text class="ic-act-text">{{item.label}}</text>
+    </view>
+  </view>
+
+  <!-- 操作 -->
+  <view class="ic-btns">
+    <view class="ic-btn ghost" bindtap="onChange">换一版</view>
+    <view class="ic-btn primary" bindtap="onConfirm">就按这个</view>
+  </view>
+</view>

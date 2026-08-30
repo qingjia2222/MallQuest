@@ -1,1 +1,28 @@
+.pf-page { min-height: 100vh; background: var(--bg); padding: 0 28rpx 120rpx; }
+.pf-hero {
+  margin: 0 -28rpx; padding: 60rpx 40rpx 50rpx;
+  background: linear-gradient(160deg, #1b1530, #312158 60%, #4c3a8c);
+  display: flex; align-items: center; gap: 24rpx; color: #fff;
+}
+.pf-avatar { width: 120rpx; height: 120rpx; border-radius: 50%; background: rgba(255,255,255,0.16); display: flex; align-items: center; justify-content: center; font-size: 60rpx; }
+.pf-info { display: flex; flex-direction: column; }
+.pf-name { font-size: 40rpx; font-weight: 800; }
+.pf-level { font-size: 24rpx; color: #a78bfa; margin-top: 8rpx; background: rgba(255,255,255,0.14); align-self: flex-start; padding: 4rpx 20rpx; border-radius: 20rpx; }
 
+.pf-card { margin-top: 24rpx; }
+.pf-points-head { display: flex; align-items: baseline; justify-content: space-between; }
+.pf-points-num { font-size: 46rpx; font-weight: 800; color: #7C3AED; }
+.pf-bar { height: 16rpx; background: #f3f4f6; border-radius: 10rpx; margin: 20rpx 0 10rpx; overflow: hidden; }
+.pf-bar-inner { height: 100%; background: linear-gradient(90deg, #7C3AED, #06B6D4); border-radius: 10rpx; }
+.pf-next { font-size: 22rpx; color: #9CA3AF; }
+
+.pf-assets { display: flex; gap: 20rpx; margin-top: 24rpx; }
+.pa { flex: 1; background: #fff; border-radius: 24rpx; padding: 30rpx 0; display: flex; flex-direction: column; align-items: center; box-shadow: 0 8rpx 24rpx rgba(124,58,237,0.06); }
+.pa-num { font-size: 44rpx; font-weight: 800; }
+.pa-label { font-size: 24rpx; color: #9CA3AF; margin-top: 8rpx; }
+
+.pf-rule { display: flex; align-items: flex-start; gap: 14rpx; padding: 14rpx 0; }
+.pf-dot { width: 12rpx; height: 12rpx; border-radius: 50%; background: linear-gradient(135deg, #7C3AED, #06B6D4); margin-top: 12rpx; flex-shrink: 0; }
+.pf-rule-t { font-size: 26rpx; color: #1F2937; }
+
+.chip-wrap { display: flex; flex-wrap: wrap; margin-top: 10rpx; }

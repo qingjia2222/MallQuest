@@ -1,1 +1,37 @@
-const{login,scan}=require('../../utils/auth');Page({data:{loading:false,connected:false},async connect(){this.setData({loading:true});try{await login();const data=await scan();this.setData({connected:true});wx.showToast({title:`已接入${data.mall_name}`});setTimeout(()=>wx.switchTab({url:'/pages/chat/chat'}),500)}catch(e){wx.showModal({title:'连接失败',content:e.message,showCancel:false})}finally{this.setData({loading:false})}}})
+// pages/scan/scan.js - 扫码入口页
+const mock = require('../../utils/mock');
+
+Page({
+  data: {
+    playing: true,
+    connected: false
+  },
+
+  onLoad() {
+    // demo：模拟扫码解析 mall_id 成功
+    setTimeout(() => {
+      // 把商场信息写入全局
+      const app = getApp();
+      app.globalData.mall = mock.mall;
+      this.setData({ connected: true });
+      setTimeout(() => this.enterHome(), 1500);
+    }, 1200);
+  },
+
+  // 支持真机扫码入口（接后端后调用 /api/scan）
+  onScan() {
+    wx.scanCode({
+      success: (res) => {
+        // res.result 含 mall_id，解析后进入
+        this.enterHome();
+      },
+      fail: () => this.enterHome()
+    });
+  },
+
+  onParticleDone() {},
+
+  enterHome() {
+    wx.reLaunch({ url: '/pages/chat/chat' });
+  }
+});

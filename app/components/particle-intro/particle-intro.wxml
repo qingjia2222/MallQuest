@@ -1,0 +1,14 @@
+<view class="pi-wrap {{show ? 'show' : ''}}">
+  <view class="pi-canvas">
+    <view wx:for="{{dots}}" wx:key="index"
+          class="pi-dot"
+          style="left:{{item.x}}%;top:{{item.y}}%;width:{{item.size}}rpx;height:{{item.size}}rpx;animation-delay:{{item.delay}}s"></view>
+  </view>
+  <view class="pi-center">
+    <view class="pi-ring"></view>
+    <text class="pi-emoji">🛍️</text>
+    <text class="pi-title">{{text}}</text>
+    <text class="pi-mall">星河里 · 购物中心</text>
+  </view>
+  <view class="pi-footer" wx:if="{{show}}">正在为你加载 AI 服务…</view>
+</view>

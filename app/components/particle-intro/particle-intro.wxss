@@ -1,0 +1,63 @@
+/* particle-intro */
+.pi-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: linear-gradient(160deg, #1b1530, #312158 60%, #4c3a8c);
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+.pi-wrap.show { opacity: 1; }
+
+.pi-canvas {
+  position: absolute;
+  inset: 0;
+}
+.pi-dot {
+  position: absolute;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #a78bfa, #22d3ee);
+  box-shadow: 0 0 12rpx rgba(167, 139, 250, 0.8);
+  opacity: 0;
+  animation: piFly 1.4s ease forwards;
+  transform: translate(0, 0);
+}
+@keyframes piFly {
+  0% { opacity: 0; transform: translate(var(--sx, 0), var(--sy, 0)) scale(0.2); }
+  40% { opacity: 1; }
+  100% { opacity: 0.25; transform: translate(0, 0) scale(1); }
+}
+
+.pi-center {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.pi-ring {
+  position: absolute;
+  width: 220rpx;
+  height: 220rpx;
+  border: 4rpx solid rgba(255, 255, 255, 0.4);
+  border-top-color: #22d3ee;
+  border-radius: 50%;
+  animation: piSpin 2.4s linear infinite;
+}
+@keyframes piSpin { to { transform: rotate(360deg); } }
+.pi-emoji { font-size: 100rpx; margin-bottom: 20rpx; }
+.pi-title { color: #fff; font-size: 40rpx; font-weight: 700; margin-top: 20rpx; }
+.pi-mall { color: rgba(255,255,255,0.8); font-size: 28rpx; margin-top: 10rpx; }
+.pi-footer {
+  position: absolute;
+  bottom: 100rpx;
+  color: rgba(255,255,255,0.75);
+  font-size: 26rpx;
+  z-index: 2;
+}

@@ -1,0 +1,12 @@
+<view class="ct" style="--cp:{{coupon.color || '#7C3AED'}}">
+  <view class="ct-main">
+    <text class="ct-title">{{coupon.title}}</text>
+    <text class="ct-scope">{{coupon.scope}}</text>
+    <view class="ct-notch top"></view>
+    <view class="ct-notch bottom"></view>
+  </view>
+  <view class="ct-side {{claimed ? 'claimed' : ''}}" bindtap="onClaim">
+    <text wx:if="{{!claimed}}">领</text>
+    <text wx:else>✓</text>
+  </view>
+</view>

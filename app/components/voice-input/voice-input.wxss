@@ -1,0 +1,3 @@
+.vi { display: flex; align-items: center; gap: 10rpx; }
+.vi-mic { width: 60rpx; height: 60rpx; border-radius: 50%; background: linear-gradient(135deg, #ede9fe, #e0f2fe); display: flex; align-items: center; justify-content: center; font-size: 30rpx; }
+.vi-label { font-size: 24rpx; color: #7C3AED; }

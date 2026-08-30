@@ -1,1 +1,5 @@
-{"navigationBarTitleText":"今日特惠"}
+{
+  "usingComponents": {
+    "coupon-ticket": "/components/coupon-ticket/coupon-ticket"
+  }
+}

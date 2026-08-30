@@ -1,1 +1,42 @@
-<view class="page"><view class="card"><view class="title">会员中心</view><button class="button" bindtap="load">查询我的积分</button></view><view class="card result">{{result}}</view></view>
+<view class="pf-page">
+  <!-- 头部 -->
+  <view class="pf-hero">
+    <view class="pf-avatar">🦸</view>
+    <view class="pf-info">
+      <text class="pf-name">{{user.nickname}}</text>
+      <text class="pf-level">{{user.level}}</text>
+    </view>
+  </view>
+
+  <!-- 积分能量条 -->
+  <view class="pf-card card">
+    <view class="pf-points-head">
+      <text>我的积分</text>
+      <text class="pf-points-num">{{user.points}}</text>
+    </view>
+    <view class="pf-bar"><view class="pf-bar-inner" style="width:{{user.points / user.nextLevelPoints * 100}}%"></view></view>
+    <text class="pf-next">再攒 {{user.nextLevelPoints - user.points}} 分升级 {{user.level}}</text>
+  </view>
+
+  <!-- 我的资产 -->
+  <view class="pf-assets">
+    <view class="pa" bindtap="goCoupon"><text class="pa-num">{{myCoupons}}</text><text class="pa-label">优惠券</text></view>
+    <view class="pa" bindtap="goReserve"><text class="pa-num">{{myReservations}}</text><text class="pa-label">预约</text></view>
+    <view class="pa"><text class="pa-num">0</text><text class="pa-label">待评价</text></view>
+  </view>
+
+  <!-- 积分规则 -->
+  <view class="section-title">📖 积分规则（可问我）</view>
+  <view class="pf-card card">
+    <view wx:for="{{pointsRules}}" wx:key="index" class="pf-rule" bindtap="onPointsRule" data-text="{{item}}">
+      <text class="pf-dot"></text><text class="pf-rule-t">{{item}}</text>
+    </view>
+  </view>
+
+  <view class="section-title">💡 试试对我说</view>
+  <view class="chip-wrap">
+    <view class="chip active" bindtap="goPlan">帮我规划约会</view>
+    <view class="chip" bindtap="goChat">停车还有空位吗</view>
+    <view class="chip" bindtap="goCoupon">今日特惠</view>
+  </view>
+</view>

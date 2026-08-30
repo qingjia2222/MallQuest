@@ -1,0 +1,6 @@
+<view class="pg-gauge" style="{{ring}}">
+  <view class="pg-inner">
+    <text class="pg-num">{{free}}</text>
+    <text class="pg-total">/ {{total}} 空位</text>
+  </view>
+</view>

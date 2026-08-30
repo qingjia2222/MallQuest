@@ -1,1 +1,45 @@
-<view class="page"><view class="card"><view class="title">QD square {{floor}}F</view><view class="muted">课程 Demo 仿真地图 · Dijkstra 最短路</view><view class="chips"><view class="chip" data-floor="1" bindtap="floor">1F</view><view class="chip" data-floor="2" bindtap="floor">2F</view></view></view><view class="map"><image src="{{mapUrl}}" mode="widthFix"/><canvas canvas-id="route" class="canvas"/></view><view class="card">{{meta}}</view></view>
+<view class="map-page">
+  <view class="map-title-bar">
+    <view>
+      <view class="mt-name">室内导览地图</view>
+      <view class="mt-sub">虚线为你的规划路线</view>
+    </view>
+    <view class="mt-btn" bindtap="goPlan">帮我规划</view>
+  </view>
+
+  <mini-map stores="{{stores}}" route="{{route}}" activeId="{{activeId}}"
+            bind:storetap="onStoreTap" />
+
+  <!-- 停车位概览 -->
+  <view class="parking-card card">
+    <parking-gauge free="{{95}}" total="{{540}}" />
+    <view class="parking-info">
+      <view class="p-title">🚗 实时停车位</view>
+      <view class="p-areas">
+        <view wx:for="{{[{a:'B1-A',f:34},{a:'B1-B',f:8},{a:'B2-C',f:51},{a:'B2-D',f:2}]}}" wx:key="a" class="p-area">
+          <text>{{item.a}}</text><text class="p-free">{{item.f}} 空</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 店铺详情弹层 -->
+  <view wx:if="{{showDetail && focusStore}}" class="detail-mask" bindtap="closeDetail">
+    <view class="detail" catchtap="noop">
+      <view class="d-head">
+        <view class="d-emoji">🏬</view>
+        <view class="d-main">
+          <text class="d-name">{{focusStore.name}}</text>
+          <text class="d-meta">{{focusStore.category}} · {{focusStore.floor}}F · 评分{{focusStore.rating}}</text>
+        </view>
+        <view class="d-close" bindtap="closeDetail">×</view>
+      </view>
+      <text class="d-desc">{{focusStore.desc}}</text>
+      <view class="d-wait">当前前方 {{focusStore.waiting}} 桌 · 约 {{focusStore.waiting * 2}} 分钟</view>
+      <view class="d-actions">
+        <view class="ic-btn ghost" bindtap="closeDetail">再看看</view>
+        <view class="ic-btn primary" bindtap="reserve">去预约</view>
+      </view>
+    </view>
+  </view>
+</view>

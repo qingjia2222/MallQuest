@@ -1,1 +1,47 @@
-<view class="page"><view class="card"><view class="title">预约记录</view><button class="button" bindtap="load">刷新</button></view><view class="card result">{{result}}</view></view>
+<view class="rs-page">
+  <!-- 成功态 -->
+  <view wx:if="{{confirmed}}" class="rs-success">
+    <view class="rs-check">✓</view>
+    <text class="rs-suc-t">预约成功</text>
+    <view class="rs-card card">
+      <view class="rs-row"><text class="rs-k">餐厅</text><text class="rs-v">{{reservation.store}}</text></view>
+      <view class="rs-row"><text class="rs-k">时间</text><text class="rs-v">今晚 {{reservation.time}}</text></view>
+      <view class="rs-row"><text class="rs-k">人数</text><text class="rs-v">{{reservation.people}} 人</text></view>
+      <view class="rs-row"><text class="rs-k">楼层</text><text class="rs-v">{{reservation.floor}} 层</text></view>
+    </view>
+    <view class="rs-code" wx:if="{{false}}">核销码即将生成</view>
+    <view class="ic-btn ghost" bindtap="cancelReserve">取消预约</view>
+    <view class="ic-btn primary" bindtap="goChat">继续对话</view>
+  </view>
+
+  <!-- 预约表单 -->
+  <view wx:else>
+    <view class="rs-hero">
+      <text class="rs-title">🍽️ 预约餐厅</text>
+      <text class="rs-sub">选择时间与人数，我帮你把关</text>
+    </view>
+
+    <view class="section-title">选餐厅</view>
+    <view class="rs-stores">
+      <view wx:for="{{stores}}" wx:key="id" class="rs-store {{form.store === item.id ? 'active' : ''}}"
+            bindtap="onStore" data-id="{{item.id}}">
+        <text class="rs-store-n">{{item.name}}</text>
+        <text class="rs-store-m">{{item.floor}}F · 评分{{item.rating}} · 前方{{item.waiting}}桌</text>
+      </view>
+    </view>
+
+    <view class="section-title">选时间</view>
+    <view class="rs-chips">
+      <view wx:for="{{['18:00','19:00','19:30','20:00']}}" wx:key="*this"
+            class="chip {{form.time === item ? 'active' : ''}}" data-t="{{item}}" bindtap="onTime">{{item}}</view>
+    </view>
+
+    <view class="section-title">几人</view>
+    <view class="rs-chips">
+      <view wx:for="{{[1,2,4,6]}}" wx:key="*this"
+            class="chip {{form.people === item ? 'active' : ''}}" data-n="{{item}}" bindtap="onPeople">{{item}}人</view>
+    </view>
+
+    <view class="rs-submit btn" bindtap="submit">确认预约</view>
+  </view>
+</view>

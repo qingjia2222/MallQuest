@@ -1,1 +1,70 @@
-textarea{width:100%;min-height:140rpx;background:#F9FAFB;border-radius:18rpx;padding:18rpx;box-sizing:border-box}.chips{margin-top:20rpx}.result{margin-top:18rpx}
+.chat-page { height: 100vh; display: flex; flex-direction: column; background: var(--bg); }
+.chat-scroll { flex: 1; overflow: hidden; }
+.msg-list { padding: 24rpx 28rpx 20rpx; }
+
+.bubble-row { display: flex; margin: 18rpx 0; }
+.bubble-row.user { justify-content: flex-end; }
+.bubble-row.ai { align-items: flex-start; }
+
+.bubble {
+  max-width: 76%;
+  padding: 20rpx 26rpx;
+  font-size: 29rpx;
+  line-height: 1.55;
+  word-break: break-word;
+}
+.user-bubble {
+  background: linear-gradient(135deg, var(--primary), var(--cyan));
+  color: #fff;
+  border-radius: 24rpx 24rpx 6rpx 24rpx;
+  box-shadow: 0 8rpx 20rpx rgba(124, 58, 237, 0.25);
+}
+.ai-avatar {
+  width: 60rpx; height: 60rpx; border-radius: 18rpx;
+  background: linear-gradient(135deg, #ede9fe, #e0f2fe);
+  color: var(--primary); font-weight: 700; font-size: 24rpx;
+  display: flex; align-items: center; justify-content: center;
+  margin-right: 16rpx; flex-shrink: 0;
+}
+.ai-body { flex: 1; }
+.ai-bubble {
+  display: inline-block;
+  background: #fff;
+  color: var(--text);
+  border: 1rpx solid var(--border);
+  border-radius: 24rpx 24rpx 24rpx 6rpx;
+  box-shadow: 0 6rpx 18rpx rgba(0,0,0,0.04);
+}
+.caret {
+  display: inline-block; width: 4rpx; height: 26rpx; margin-left: 4rpx;
+  background: var(--primary); vertical-align: middle; animation: blink 0.9s infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+.quick-chips { display: flex; flex-wrap: wrap; margin-top: 14rpx; }
+.plan-hint { display: inline-block; margin-top: 12rpx; color: var(--primary); font-weight: 600; font-size: 24rpx; background: #ede9fe; padding: 8rpx 20rpx; border-radius: 28rpx; }
+.quick-bar {
+  padding: 12rpx 0;
+  background: rgba(255,255,255,0.7);
+  border-top: 1rpx solid var(--border);
+}
+.quick-scroll { white-space: nowrap; }
+.quick-inner { display: inline-flex; padding: 0 28rpx; }
+.quick-inner .chip { flex-shrink: 0; }
+
+.composer {
+  display: flex; align-items: center; gap: 16rpx;
+  padding: 16rpx 24rpx;
+  background: #fff;
+  border-top: 1rpx solid var(--border);
+}
+.composer-input {
+  flex: 1; background: var(--bg); border-radius: 40rpx; padding: 14rpx 28rpx;
+}
+.composer-input input { width: 100%; font-size: 29rpx; }
+.voice-btn { flex-shrink: 0; padding: 6rpx; }
+.send-btn {
+  background: linear-gradient(135deg, var(--primary), var(--cyan));
+  color: #fff; border-radius: 40rpx; padding: 16rpx 34rpx; font-size: 28rpx; font-weight: 600;
+}
+.send-btn:active { transform: scale(0.96); }

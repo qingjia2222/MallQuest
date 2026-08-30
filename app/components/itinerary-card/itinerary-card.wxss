@@ -1,0 +1,34 @@
+.ic { background: #fff; border-radius: 28rpx; padding: 28rpx; box-shadow: 0 10rpx 30rpx rgba(124,58,237,0.08); }
+.ic-title { display: flex; align-items: center; justify-content: space-between; font-size: 32rpx; font-weight: 700; }
+.ic-tag { font-size: 22rpx; color: #7C3AED; background: #ede9fe; padding: 6rpx 18rpx; border-radius: 30rpx; font-weight: 500; }
+
+.ic-timeline { margin-top: 24rpx; }
+.ic-stop { display: flex; }
+.ic-rail { width: 40rpx; display: flex; flex-direction: column; align-items: center; }
+.ic-node {
+  width: 20rpx; height: 20rpx; border-radius: 50%;
+  background: linear-gradient(135deg, #7C3AED, #06B6D4);
+  margin-top: 12rpx; flex-shrink: 0;
+}
+.ic-node.start { box-shadow: 0 0 0 6rpx rgba(124,58,237,0.2); }
+.ic-connector { flex: 1; width: 4rpx; background: #ede9fe; margin: 4rpx 0; }
+.ic-stop-body { flex: 1; padding: 0 0 28rpx 16rpx; }
+.ic-stop-head { display: flex; align-items: center; gap: 14rpx; }
+.ic-time { font-size: 24rpx; color: #7C3AED; font-weight: 700; }
+.ic-name { font-size: 29rpx; font-weight: 600; }
+.ic-wait { font-size: 22rpx; color: #10B981; }
+.ic-wait.busy { color: #F59E0B; }
+.ic-meta { font-size: 23rpx; color: #9CA3AF; margin-top: 4rpx; }
+
+.ic-actions { margin-top: 8rpx; border-top: 1rpx dashed var(--border); padding-top: 20rpx; display: flex; flex-direction: column; gap: 14rpx; }
+.ic-action { display: flex; align-items: center; gap: 14rpx; }
+.ic-check { width: 36rpx; height: 36rpx; border-radius: 50%; text-align: center; line-height: 36rpx; font-size: 22rpx; }
+.ic-check.ok { background: #ecfdf5; color: #10B981; }
+.ic-check.fail { background: #fee2e2; color: #ef4444; }
+.ic-act-text { font-size: 26rpx; color: #1F2937; }
+
+.ic-btns { display: flex; gap: 18rpx; margin-top: 26rpx; }
+.ic-btn { flex: 1; text-align: center; border-radius: 40rpx; padding: 20rpx 0; font-size: 28rpx; font-weight: 600; }
+.ic-btn.ghost { background: #fff; color: #7C3AED; border: 2rpx solid var(--border); }
+.ic-btn.primary { background: linear-gradient(135deg, #7C3AED, #06B6D4); color: #fff; }
+.ic-btn:active { transform: scale(0.97); }

@@ -1,0 +1,4 @@
+<view class="vi" bindtap="onTap">
+  <view class="vi-mic">🎤</view>
+  <text class="vi-label">语音输入</text>
+</view>

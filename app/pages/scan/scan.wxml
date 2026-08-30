@@ -1,1 +1,4 @@
-<view class="page"><view class="card"><view class="title">QD square</view><view class="muted">扫码即得一个会规划、导航并执行事务的 AI 助手</view><button class="button" loading="{{loading}}" bindtap="connect">连接商场私有数据</button><view wx:if="{{connected}}" class="chip">已连接 · Demo 仿真地图</view></view></view>
+<view class="scan-page">
+  <particle-intro play="{{playing}}" text="{{connected ? '已连接本商场' : '正在连接'}}" bind:done="onParticleDone" />
+  <view class="skip" wx:if="{{connected}}" bindtap="enterHome">进入 AI 助手 ›</view>
+</view>

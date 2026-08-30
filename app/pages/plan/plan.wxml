@@ -1,1 +1,40 @@
-<view class="page"><view class="card"><view class="title">五种规划场景</view><view class="chips"><view wx:for="{{scenes}}" wx:key="scene" class="chip" data-i="{{index}}" bindtap="run">{{item.name}}</view></view></view><view class="card"><view class="muted">IDLE → UNDERSTAND → COLLECT → PLAN → ROUTE → CONFIRM → EXECUTE → DONE</view><view class="result">{{result}}</view><button wx:if="{{canConfirm}}" class="button" bindtap="confirm">明确确认并执行</button></view></view>
+<view class="plan-page">
+  <!-- 顶部：目标 + 进度 -->
+  <view class="plan-hero">
+    <view class="plan-goal-chip">🎯 {{goalText}}</view>
+    <plan-flow step="{{step}}" />
+  </view>
+
+  <!-- 步骤2：采集偏好 -->
+  <view wx:if="{{step === 2}}" class="plan-body">
+    <view class="q-label">第 {{qIndex + 1}} / {{questions.length}} 问</view>
+    <view class="q-title">{{currentQ.label}}</view>
+    <view class="q-options">
+      <view wx:for="{{options}}" wx:key="index" class="q-opt" bindtap="pickOption" data-val="{{item}}">
+        <text>{{item}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 步骤3：生成中 -->
+  <view wx:if="{{step === 3}}" class="plan-body">
+    <view class="generating">
+      <view class="gen-stars">
+        <view class="star"></view><view class="star s2"></view><view class="star s3"></view>
+      </view>
+      <text class="gen-text">{{generating ? '正在为你规划路线…' : ''}}</text>
+      <text class="gen-sub">结合店铺分布 · 实时状态 · 你的偏好</text>
+    </view>
+  </view>
+
+  <!-- 步骤4-5：方案确认 / 执行 -->
+  <view wx:if="{{step >= 4}}" class="plan-body">
+    <itinerary-card itinerary="{{itinerary}}" bind:stoptap="onStopTap"
+                    bind:confirm="onConfirm" bind:change="onChangePlan" />
+    <view wx:if="{{step === 5}}" class="done-tip">✅ 方案已执行，去地图查看路线</view>
+    <view class="plan-nav">
+      <view class="ic-btn ghost" bindtap="goChat">返回对话</view>
+      <view class="ic-btn primary" bindtap="goMap">查看地图路线</view>
+    </view>
+  </view>
+</view>

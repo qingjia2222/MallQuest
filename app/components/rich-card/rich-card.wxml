@@ -1,0 +1,50 @@
+<!-- 店铺卡 -->
+<view wx:if="{{kind === 'store'}}" class="rc rc-store" bindtap="onTap">
+  <view class="rc-head">
+    <view class="rc-avatar rc-avatar-{{card.data.floor}}">🏬</view>
+    <view class="rc-main">
+      <text class="rc-name">{{card.data.name}}</text>
+      <text class="rc-sub">{{card.data.category}} · {{card.data.floor}}F · 评分{{card.data.rating}}</text>
+    </view>
+    <view class="rc-wait {{card.data.waiting > 10 ? 'busy' : ''}}">{{card.data.waiting}} 桌</view>
+  </view>
+</view>
+
+<!-- 停车卡 -->
+<view wx:elif="{{kind === 'parking'}}" class="rc rc-parking" bindtap="onTap">
+  <view class="rc-head">
+    <text class="rc-name">实时停车位</text>
+    <text class="rc-sub">更新于 {{card.data.updatedAt}}</text>
+  </view>
+  <view class="parking-row">
+    <view class="parking-one">
+      <text class="pk-num">{{card.data.free}}</text>
+      <text class="pk-label">总空位</text>
+    </view>
+    <view class="parking-bar"><view class="pk-bar-inner" style="width:{{card.data.ratio}}%"></view></view>
+  </view>
+  <view class="parking-areas">
+    <view wx:for="{{card.data.areas}}" wx:key="area" class="pk-area">
+      <text class="pk-area-name">{{item.area}}</text>
+      <text class="pk-area-free">{{item.free}} 空</text>
+    </view>
+  </view>
+</view>
+
+<!-- 优惠券卡 -->
+<view wx:elif="{{kind === 'coupon'}}" class="rc rc-coupon" bindtap="onTap">
+  <view class="cp-left">
+    <text class="cp-tit">{{card.data.title}}</text>
+    <text class="cp-scope">{{card.data.scope}}</text>
+  </view>
+  <view class="cp-right">
+    <text class="cp-expire">{{card.data.expire}}</text>
+    <view class="cp-btn">领取</view>
+  </view>
+</view>
+
+<!-- 通用文字卡 -->
+<view wx:else class="rc rc-generic" bindtap="onTap">
+  <text class="rc-name">{{card.title}}</text>
+  <text class="rc-sub">{{card.subtitle}}</text>
+</view>

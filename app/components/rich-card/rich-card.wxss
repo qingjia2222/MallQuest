@@ -1,0 +1,56 @@
+.rc {
+  background: #fff;
+  border-radius: 24rpx;
+  padding: 24rpx;
+  margin: 16rpx 0;
+  box-shadow: 0 8rpx 24rpx rgba(124, 58, 237, 0.08);
+  position: relative;
+  overflow: hidden;
+  animation: rcIn 0.35s ease;
+}
+@keyframes rcIn { from { opacity: 0; transform: translateY(12rpx); } to { opacity: 1; transform: none; } }
+
+.rc-head { display: flex; align-items: center; }
+.rc-avatar {
+  width: 80rpx; height: 80rpx; border-radius: 20rpx;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 40rpx; margin-right: 18rpx;
+  background: linear-gradient(135deg, #ede9fe, #e0f2fe);
+}
+.rc-main { flex: 1; display: flex; flex-direction: column; }
+.rc-name { font-size: 30rpx; font-weight: 700; color: #1F2937; }
+.rc-sub { font-size: 24rpx; color: #6B7280; margin-top: 4rpx; }
+.rc-wait {
+  font-size: 24rpx; color: #10B981; font-weight: 600;
+  background: #ecfdf5; padding: 6rpx 18rpx; border-radius: 30rpx;
+}
+.rc-wait.busy { color: #F59E0B; background: #fffbeb; }
+
+/* parking */
+.parking-row { display: flex; align-items: center; margin: 22rpx 0 12rpx; }
+.parking-one { display: flex; flex-direction: column; margin-right: 24rpx; }
+.pk-num { font-size: 56rpx; font-weight: 800; color: #7C3AED; }
+.pk-label { font-size: 22rpx; color: #6B7280; }
+.parking-bar { flex: 1; height: 16rpx; background: #f3f4f6; border-radius: 10rpx; overflow: hidden; }
+.pk-bar-inner { height: 100%; background: linear-gradient(90deg, #7C3AED, #06B6D4); border-radius: 10rpx; }
+.parking-areas { display: flex; flex-wrap: wrap; gap: 12rpx; margin-top: 8rpx; }
+.pk-area {
+  background: #f9fafb; border-radius: 14rpx; padding: 10rpx 16rpx;
+  display: flex; align-items: center; gap: 10rpx;
+}
+.pk-area-name { font-size: 22rpx; color: #6B7280; }
+.pk-area-free { font-size: 22rpx; color: #7C3AED; font-weight: 700; }
+
+/* coupon */
+.rc-coupon { display: flex; align-items: center; justify-content: space-between; }
+.cp-left { display: flex; flex-direction: column; }
+.cp-tit { font-size: 30rpx; font-weight: 700; color: #1F2937; }
+.cp-scope { font-size: 24rpx; color: #6B7280; margin-top: 6rpx; }
+.cp-right { display: flex; flex-direction: column; align-items: flex-end; }
+.cp-expire { font-size: 22rpx; color: #F59E0B; margin-bottom: 10rpx; }
+.cp-btn {
+  background: linear-gradient(135deg, #7C3AED, #06B6D4);
+  color: #fff; font-size: 24rpx; padding: 10rpx 26rpx; border-radius: 30rpx;
+}
+
+.rc-generic { display: flex; flex-direction: column; }

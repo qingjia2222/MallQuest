@@ -1,0 +1,9 @@
+<view class="pf">
+  <block wx:for="{{stepNames}}" wx:key="index">
+    <view class="pf-item {{index + 1 <= step ? 'done' : ''}} {{index + 1 === step ? 'cur' : ''}}">
+      <view class="pf-dot"><text wx:if="{{index + 1 < step}}">✓</text><text wx:else>{{index + 1}}</text></view>
+      <text class="pf-label">{{item}}</text>
+    </view>
+    <view wx:if="{{index < stepNames.length - 1}}" class="pf-line {{index + 1 < step ? 'done' : ''}}"></view>
+  </block>
+</view>

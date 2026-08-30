@@ -1,1 +1,6 @@
-{"navigationBarTitleText":"目标规划"}
+{
+  "usingComponents": {
+    "plan-flow": "/components/plan-flow/plan-flow",
+    "itinerary-card": "/components/itinerary-card/itinerary-card"
+  }
+}

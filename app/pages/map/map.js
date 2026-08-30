@@ -1,1 +1,44 @@
-Page({data:{floor:1,mapUrl:'',meta:'尚未生成路线'},onShow(){this.setFloor(1)},floor(e){this.setFloor(Number(e.currentTarget.dataset.floor))},setFloor(floor){const app=getApp();this.setData({floor,mapUrl:`${app.globalData.apiBase}/api/maps/mall_demo/floor_${floor}.svg`},()=>this.draw())},draw(){const plan=getApp().globalData.currentPlan;if(!plan||!plan.route)return;const pts=plan.route.nodes.filter(n=>n.floor===this.data.floor),ctx=wx.createCanvasContext('route',this),screen=wx.getSystemInfoSync(),width=screen.windowWidth-28,height=width*.76;ctx.setStrokeStyle('#EF4444');ctx.setLineWidth(6);if(pts.length){ctx.moveTo(pts[0].x*width/1000,pts[0].y*height/760);pts.slice(1).forEach(p=>ctx.lineTo(p.x*width/1000,p.y*height/760));ctx.stroke()}ctx.draw();this.setData({meta:`估算距离 ${plan.route.estimated_distance}，跨层请按电梯提示切换楼层`})}})
+// pages/map/map.js - 2.5D 室内地图 + 路线
+const mock = require('../../utils/mock');
+
+// 模拟一条「约会路线」：川渝人家 → 茶颜观色 → 星辰影院 → 甜心甜品
+const ROUTE = ['s_01', 's_02', 's_03', 's_04'];
+
+Page({
+  data: {
+    stores: mock.stores,
+    route: ROUTE,
+    activeId: '',
+    focusStore: null,
+    showDetail: false,
+    planning: true
+  },
+
+  onLoad(query) {
+    if (query.focus) {
+      const s = { ...mock.stores.find(x => x.name === query.focus) };
+      if (s) {
+        this.setData({ activeId: s.id, focusStore: s, showDetail: true });
+      }
+    }
+  },
+
+  onStoreTap(e) {
+    const store = e.detail.store;
+    this.setData({ activeId: store.id, focusStore: store, showDetail: true });
+  },
+
+  closeDetail() {
+    this.setData({ showDetail: false });
+  },
+
+  noop() {},
+
+  reserve() {
+    wx.navigateTo({ url: '/pages/reserve/reserve?store=' + (this.data.focusStore && this.data.focusStore.id || '') });
+  },
+
+  goPlan() {
+    wx.navigateTo({ url: '/pages/plan/plan' });
+  }
+});

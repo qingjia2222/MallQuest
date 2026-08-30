@@ -1,1 +1,92 @@
-page{background:#F4F6FB;color:#1F2340;font-family:-apple-system,BlinkMacSystemFont,"Microsoft YaHei",sans-serif}.page{padding:28rpx}.card{background:#fff;border-radius:24rpx;padding:28rpx;margin-bottom:22rpx;box-shadow:0 12rpx 36rpx rgba(76,29,149,.08)}.title{font-size:40rpx;font-weight:700}.muted{color:#6B7280}.button{background:#7C3AED;color:#fff;border-radius:18rpx;margin-top:18rpx}.chips{display:flex;flex-wrap:wrap;gap:12rpx}.chip{font-size:26rpx;border:1rpx solid #C4B5FD;padding:12rpx 20rpx;border-radius:99rpx;color:#6D28D9}.result{white-space:pre-wrap;font-size:24rpx;background:#111827;color:#D1FAE5;padding:20rpx;border-radius:18rpx;max-height:520rpx;overflow:auto}
+/* app.wxss - 全局主题（紫罗兰科技感） */
+page {
+  --primary: #7C3AED;
+  --primary-dark: #6D28D9;
+  --cyan: #06B6D4;
+  --bg: #F4F6FB;
+  --card: #FFFFFF;
+  --text: #1F2937;
+  --muted: #6B7280;
+  --border: #E5E7EB;
+  --success: #10B981;
+  --warning: #F59E0B;
+  --danger: #EF4444;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 28rpx;
+  line-height: 1.5;
+}
+
+view, text, button, input, textarea { box-sizing: border-box; }
+
+/* 卡片 */
+.card {
+  background: var(--card);
+  border-radius: 24rpx;
+  box-shadow: 0 8rpx 30rpx rgba(124, 58, 237, 0.06);
+  padding: 28rpx;
+  margin: 20rpx 0;
+}
+
+/* 玻璃拟态 */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20rpx);
+  border: 1rpx solid rgba(255, 255, 255, 0.6);
+}
+
+/* 主按钮 */
+.btn {
+  background: linear-gradient(135deg, var(--primary), var(--cyan));
+  color: #fff;
+  border-radius: 44rpx;
+  font-weight: 600;
+  font-size: 30rpx;
+  padding: 22rpx 40rpx;
+  border: none;
+  line-height: 1.4;
+  box-shadow: 0 10rpx 24rpx rgba(124, 58, 237, 0.3);
+}
+.btn::after { border: none; }
+.btn-ghost {
+  background: #fff;
+  color: var(--primary);
+  border: 2rpx solid var(--border);
+  box-shadow: none;
+}
+.btn-pressed { transform: scale(0.97); opacity: 0.9; }
+
+/* 标题 */
+.section-title {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--text);
+  margin: 30rpx 0 12rpx;
+}
+.accent { color: var(--primary); }
+
+/* 胶囊/标签 */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 14rpx 26rpx;
+  border-radius: 40rpx;
+  background: #fff;
+  border: 2rpx solid var(--border);
+  color: var(--text);
+  font-size: 26rpx;
+  margin: 8rpx 10rpx 8rpx 0;
+}
+.chip.active {
+  background: linear-gradient(135deg, var(--primary), var(--cyan));
+  color: #fff;
+  border-color: transparent;
+}
+.chip:active { transform: scale(0.95); }
+
+/* 主容器留白 */
+.page-pad { padding: 24rpx 32rpx 120rpx; }
+
+/* 底部安全区 */
+.safe-bottom { height: env(safe-area-inset-bottom); }
