@@ -1,0 +1,19 @@
+{
+  "mall_id": "mall_demo",
+  "mall_name": "QD square",
+  "is_demo_map": true,
+  "floors": [
+    {
+      "floor": 1,
+      "image": "floor_1.svg",
+      "width": 1000,
+      "height": 760
+    },
+    {
+      "floor": 2,
+      "image": "floor_2.svg",
+      "width": 1000,
+      "height": 760
+    }
+  ]
+}

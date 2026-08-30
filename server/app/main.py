@@ -1,37 +1,38 @@
-"""商场 AI 私域服务助手 - 统一后端入口.
-
-双端（微信小程序 / Web）共用一套后端与私有数据源。
-"""
-from fastapi import FastAPI
+import logging, time, uuid
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-
+from fastapi.responses import JSONResponse
 from app.config import settings
-from app.api import scan, auth, chat, plan, parking, points, coupons, reservations
+from app.core.envelope import envelope
+from app.core.metrics import metrics
+from app.db import ensure_database
 
-app = FastAPI(title="商场 AI 私域服务助手", version="0.1.0")
+logging.basicConfig(level=logging.INFO,format="%(asctime)s %(levelname)s %(message)s")
+log=logging.getLogger("mall-assistant")
+@asynccontextmanager
+async def lifespan(_app):
+    ensure_database(); yield
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app=FastAPI(title="QD square AI 私域服务助手",version="1.0.0",lifespan=lifespan)
+app.add_middleware(CORSMiddleware,allow_origins=["*"],allow_credentials=False,allow_methods=["*"],allow_headers=["*"])
 
-# 统一路由前缀，所有接口返回 response_envelope
-for router in (
-    scan.router,
-    auth.router,
-    chat.router,
-    plan.router,
-    parking.router,
-    points.router,
-    coupons.router,
-    reservations.router,
-):
-    app.include_router(router, prefix="/api")
+@app.middleware("http")
+async def request_middleware(request:Request,call_next):
+    request_id=request.headers.get("X-Request-ID",str(uuid.uuid4())); request.state.request_id=request_id; start=time.perf_counter()
+    try: response=await call_next(request)
+    except Exception:
+        metrics.record_request(500,(time.perf_counter()-start)*1000); log.exception("request_failed request_id=%s path=%s",request_id,request.url.path); raise
+    latency=(time.perf_counter()-start)*1000; metrics.record_request(response.status_code,latency); response.headers["X-Request-ID"]=request_id
+    log.info("request_id=%s method=%s path=%s status=%s latency_ms=%.2f",request_id,request.method,request.url.path,response.status_code,latency); return response
 
+@app.exception_handler(HTTPException)
+async def http_error(request:Request,exc:HTTPException):
+    return JSONResponse(status_code=exc.status_code,content={"code":exc.status_code,"message":str(exc.detail),"request_id":getattr(request.state,"request_id",str(uuid.uuid4())),"timestamp":int(time.time()),"data":{}})
 
+@app.get("/health")
 @app.get("/api/health")
-def health():
-    return {"code": 0, "message": "ok", "data": {"status": "up"}}
+def health(): return envelope({"status":"up","mall":"QD square","llm_mode":settings.llm_mode,"tts_mode":settings.tts_mode})
+
+from app.api import auth, business, chat, debug, plan, scan, tts
+for router in (auth.router,scan.router,chat.router,plan.router,business.router,tts.router,debug.router): app.include_router(router,prefix="/api")

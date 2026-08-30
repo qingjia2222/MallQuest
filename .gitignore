@@ -16,6 +16,7 @@ venv/
 *.db
 *.sqlite3
 server/data/*.db
+server/data/audio/*.wav
 
 # ---- 前端 ----
 node_modules/
@@ -31,3 +32,8 @@ project.private.config.json
 .DS_Store
 Thumbs.db
 ~$*
+
+# ---- 本次实施的本地工作目录 ----
+.upstream/
+.skill-staging/
+.docx-qa/

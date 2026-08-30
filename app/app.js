@@ -1,0 +1,1 @@
+App({globalData:{apiBase:'http://127.0.0.1:8000',token:'',userId:'',sessionId:'',mallId:'mall_demo',currentPlan:null},onLaunch(){const saved=wx.getStorageSync('mallAuth');if(saved)Object.assign(this.globalData,saved)}})

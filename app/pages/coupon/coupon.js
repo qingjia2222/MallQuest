@@ -1,0 +1,1 @@
+const{request}=require('../../utils/request');Page({data:{result:'等待查询'},async load(){const a=getApp(),d=await request(`/api/deals?session_id=${a.globalData.sessionId}`);this.setData({result:JSON.stringify(d,null,2)})}})

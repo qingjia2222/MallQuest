@@ -1,0 +1,1 @@
+.map{position:relative;width:100%;height:570rpx;background:#fff;border-radius:24rpx;overflow:hidden}.map image,.canvas{position:absolute;left:0;top:0;width:100%;height:570rpx}

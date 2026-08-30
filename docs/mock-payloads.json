@@ -1,0 +1,10 @@
+{
+  "web_login": {"username": "demo", "password": "demo123"},
+  "wx_login": {"code": "mock-demo"},
+  "scan": {"mall_id": "mall_demo"},
+  "chat": {"session_id": "<from scan>", "message": "停车场还有空位吗？"},
+  "date_plan": {"session_id": "<from scan>", "scene": "date", "slots": {"time": "今晚7点", "people": 2, "budget_per_person": 250, "cuisine": "川菜", "want_movie": true}},
+  "confirm": {"plan_id": "<from plan>", "decision": "confirm"},
+  "tts": {"text": "已为你规划好今天的行程。"},
+  "envelope": {"code": 0, "message": "ok", "request_id": "uuid", "timestamp": 0, "data": {}}
+}
