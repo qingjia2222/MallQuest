@@ -1,4 +1,5 @@
 .chat-page { height: 100vh; display: flex; flex-direction: column; background: var(--bg); }
+.chat-page > .mall-strip { margin: 0; flex-shrink: 0; }
 .chat-scroll { flex: 1; overflow: hidden; }
 .msg-list { padding: 24rpx 28rpx 20rpx; }
 

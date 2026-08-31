@@ -1,0 +1,4 @@
+{
+  "navigationStyle": "custom",
+  "usingComponents": { "mini-map": "/components/mini-map/mini-map" }
+}

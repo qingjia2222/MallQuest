@@ -1,6 +1,6 @@
 // pages/chat/chat.js - 对话主页（接队友后端 /api/chat，含 Qwen agent + 卡片）
 const mock = require('../../utils/mock');
-const { request } = require('../../utils/request');
+const { request, BASE_URL } = require('../../utils/request');
 const { formatTime } = require('../../utils/format');
 const cleanReply = text => String(text || '').replace(/\*/g, '');
 
@@ -78,8 +78,13 @@ Page({
     try {
       const text = e.currentTarget.dataset.text || '欢迎来到星河里';
       const data = await request('/api/tts', { method: 'POST', data: { text } });
-      const audio = wx.createInnerAudioContext(); audio.src = 'http://127.0.0.1:8000' + data.audio_url; audio.play();
+      const audio = wx.createInnerAudioContext(); audio.src = BASE_URL + data.audio_url; audio.play();
     } catch (err) { wx.showToast({ title: err.message || '播报失败', icon: 'none' }); }
+  },
+
+  onShow() {
+    const app = getApp();
+    if (app.globalData.chatPrefill) { this.setData({ input: app.globalData.chatPrefill }); app.globalData.chatPrefill = ''; }
   },
 
   closeNavigation() {
@@ -101,7 +106,7 @@ Page({
     this.setData({
       navStep: step,
       navFloor: floor,
-      navMapUrl: `http://127.0.0.1:8000/api/maps/mall_demo/floor_${floor}.svg`
+      navMapUrl: `${BASE_URL}/api/maps/mall_demo/floor_${floor}.svg`
     }, () => this.drawNavigation());
     if (step < nodes.length - 1) this.navTimer = setTimeout(() => this.playNavigationStep(step + 1), 520);
   },

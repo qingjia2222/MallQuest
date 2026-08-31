@@ -47,5 +47,5 @@ Page({
   },
 
   onParticleDone() {},
-  enterHome() { if (this.data.connected) wx.reLaunch({ url: '/pages/chat/chat' }); }
+  enterHome() { if (this.data.connected) wx.reLaunch({ url: '/pages/home/home' }); }
 });

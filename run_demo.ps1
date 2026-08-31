@@ -33,13 +33,21 @@ Write-Host "Using Python: $Python"
 
 # ---- 2) Init demo data ----
 & $Python server/scripts/init_demo.py
-Write-Host 'Backend: http://127.0.0.1:8000  Swagger: http://127.0.0.1:8000/docs'
+$LanAddress = '192.168.40.24'
+$LanConfig = Join-Path $PSScriptRoot 'configure_mini_lan.ps1'
+if (Test-Path -LiteralPath $LanConfig) {
+  & $LanConfig
+  $RequestSource = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'app\utils\request.js') -Raw
+  if ($RequestSource -match "BASE_URL = 'http://([^']+):8000'") { $LanAddress = $Matches[1] }
+}
+Write-Host "Backend (PC): http://127.0.0.1:8000  Swagger: http://127.0.0.1:8000/docs"
+Write-Host "Backend (phone): http://${LanAddress}:8000"
 
 # ---- 3) Start Web dev server ----
 $Npm = Get-Command npm.cmd -ErrorAction SilentlyContinue
 if ($Npm) {
-  Start-Process -WindowStyle Hidden -FilePath $Npm.Source -ArgumentList 'run','dev','--','--host','127.0.0.1' -WorkingDirectory (Join-Path $PSScriptRoot 'web')
-  Write-Host 'Web: http://127.0.0.1:5173'
+  Start-Process -WindowStyle Hidden -FilePath $Npm.Source -ArgumentList 'run','dev','--','--host','0.0.0.0' -WorkingDirectory (Join-Path $PSScriptRoot 'web')
+  Write-Host "Web (PC): http://127.0.0.1:5173  Web (phone): http://${LanAddress}:5173"
 } else {
   Write-Host 'npm not found; run npm install and npm run dev inside web manually.'
 }

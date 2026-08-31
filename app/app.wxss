@@ -95,3 +95,10 @@ view, text, button, input, textarea { box-sizing: border-box; }
 
 /* 底部安全区 */
 .safe-bottom { height: env(safe-area-inset-bottom); }
+
+/* 甲组新版四栏游客端统一商场页头 */
+.mall-strip { margin: -24rpx -28rpx 22rpx; padding: calc(22rpx + env(safe-area-inset-top)) 220rpx 22rpx 28rpx; display: flex; align-items: flex-end; gap: 18rpx; color: #fff; background: linear-gradient(105deg,#7C3AED,#06B6D4); }
+.mall-strip-logo { width: 68rpx; height: 68rpx; border-radius: 20rpx; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,.18); font-size: 38rpx; }
+.mall-strip-main { flex: 1; display: flex; flex-direction: column; }
+.mall-strip-name { font-size: 31rpx; font-weight: 800; }
+.mall-strip-addr { font-size: 21rpx; color: rgba(255,255,255,.88); margin-top: 2rpx; }

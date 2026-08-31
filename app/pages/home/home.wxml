@@ -1,0 +1,15 @@
+<view class="home-page page">
+  <view class="mall-strip"><view class="mall-strip-logo">🛍️</view><view class="mall-strip-main"><text class="mall-strip-name">星河里 · 购物中心</text><text class="mall-strip-addr">上海市黄浦区南京东路 168 号</text></view></view>
+  <view class="home-title">星河里 · 购物中心</view>
+  <view class="home-sub">点击店铺查看实时状态 · 规划后在「规划」页看路线</view>
+  <mini-map stores="{{stores}}" route="{{route}}" activeId="{{activeId}}" bind:storetap="onStoreTap" />
+  <view class="store-head"><text>店铺一览</text><text>{{stores.length}} 家</text></view>
+  <view wx:if="{{loading}}" class="empty">加载中…</view>
+  <view class="store-grid">
+    <view wx:for="{{stores}}" wx:key="id" class="store-card" data-store="{{item}}" bindtap="onStoreTap">
+      <view class="store-icon">{{item.category === '咖啡' ? '☕' : item.category === '甜品' ? '🍰' : item.category === '影院' ? '🎬' : '🏬'}}</view>
+      <view class="store-main"><text class="store-name">{{item.name}}</text><text class="store-meta">{{item.category}} · {{item.floor}}F</text><view class="store-tags"><text class="wait">排 {{item.waiting}} 分钟</text><text>余 {{item.seats_available}}</text><text class="open">营业中</text></view></view>
+    </view>
+  </view>
+  <view wx:if="{{showDetail && focusStore}}" class="detail-mask" bindtap="closeDetail"><view class="detail" catchtap="noop"><view class="detail-title">{{focusStore.name}}</view><view>{{focusStore.category}} · {{focusStore.floor}}F</view><view class="detail-live">排队 {{focusStore.waiting}} 分钟 · 余位 {{focusStore.seats_available}}</view><button class="button" bindtap="goChat">去对话规划</button></view></view>
+</view>

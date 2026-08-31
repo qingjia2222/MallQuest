@@ -2,7 +2,9 @@
 // 【接后端提醒】当前 demoMode=true 时，页面直接读 utils/mock 数据；
 // 关闭演示模式后，把这些调用切到真实接口即可，见下方 <to-fetch> 注释。
 
-const BASE_URL = 'http://127.0.0.1:8000'; // 队友后端(星河里)地址
+// 真机与电脑必须处于同一 Wi-Fi。当前开发机 WLAN 地址为 192.168.40.24；
+// IP 变化时运行项目根目录 configure_mini_lan.ps1 自动刷新此文件。
+const BASE_URL = 'http://192.168.40.24:8000';
 
 /**
  * 发起请求并解包 {code, message, data}。

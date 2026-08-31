@@ -1,5 +1,6 @@
 // src/api/index.js - 接队友后端(星河里, 8000)的统一 API 层（用原生 fetch，无需额外依赖）
-export const BASE = 'http://127.0.0.1:8000';
+// localhost 访问时仍走本机；用手机/局域网访问 Web 时自动复用页面主机名。
+export const BASE = `${window.location.protocol}//${window.location.hostname}:8000`;
 export let TOKEN = localStorage.getItem('mall_token') || '';
 export function setToken(t) { TOKEN = t; if (t) localStorage.setItem('mall_token', t); else localStorage.removeItem('mall_token'); }
 export let SESSION_ID = localStorage.getItem('mall_session') || '';

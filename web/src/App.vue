@@ -7,10 +7,10 @@ const router = useRouter();
 onBeforeUnmount(() => stopQueueWatch());
 
 const tabs = [
-  { path: '/home', label: '首页', icon: 'home' },
-  { path: '/chat', label: '对话', icon: 'chat' },
-  { path: '/map', label: '地图', icon: 'map' },
-  { path: '/profile', label: '我的', icon: 'profile' }
+  { path: '/home', label: '首页', icon: '🏠' },
+  { path: '/chat', label: '对话', icon: '💬' },
+  { path: '/map', label: '规划', icon: '🗺️' },
+  { path: '/profile', label: '我的', icon: '👤' }
 ];
 
 const showTabs = () => !!route.meta.tab && (localStorage.getItem('mall_role') || 'visitor') === 'visitor';
@@ -21,10 +21,10 @@ const showTabs = () => !!route.meta.tab && (localStorage.getItem('mall_role') ||
     <!-- 顶部商场信息栏（登录后页面统一显示，登录页除外） -->
     <header v-if="route.path !== '/login'" class="mall-header">
       <div v-if="!showTabs()" class="mall-back" @click="router.back()">←</div>
-      <div v-else class="mall-logo">星</div>
+      <div v-else class="mall-logo">🛍️</div>
       <div class="mall-info">
-        <div class="mall-name">星河里 · 智慧商场</div>
-        <div class="mall-addr">已连接商场私域数据与实时服务</div>
+        <div class="mall-name">星河里 · 购物中心</div>
+        <div class="mall-addr">上海市黄浦区南京东路 168 号</div>
       </div>
     </header>
 
@@ -50,10 +50,7 @@ const showTabs = () => !!route.meta.tab && (localStorage.getItem('mall_role') ||
     <nav v-if="showTabs()" class="tabbar">
       <div v-for="t in tabs" :key="t.path" class="tab"
            :class="{ active: route.path === t.path }" @click="router.push(t.path)">
-        <svg v-if="t.icon==='home'" class="tab-icon" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8"/><path d="M5 10v11h14V10M9 21v-7h6v7"/></svg>
-        <svg v-else-if="t.icon==='chat'" class="tab-icon" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4V5Z"/><path d="M8 9h8M8 12h5"/></svg>
-        <svg v-else-if="t.icon==='map'" class="tab-icon" viewBox="0 0 24 24"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Z"/><path d="M9 3v15M15 6v15"/></svg>
-        <svg v-else class="tab-icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c.7-5 3.3-7 8-7s7.3 2 8 7"/></svg>
+        <span class="tab-icon">{{ t.icon }}</span>
         <span class="tab-label">{{ t.label }}</span>
       </div>
     </nav>
@@ -92,5 +89,5 @@ const showTabs = () => !!route.meta.tab && (localStorage.getItem('mall_role') ||
   color: #9CA3AF; cursor: pointer; font-size: 12px;
 }
 .tab.active { color: var(--primary); }
-.tab-icon { width: 22px; height: 22px; margin-bottom: 2px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.tab-icon { font-size: 20px; line-height: 22px; margin-bottom: 2px; }
 </style>

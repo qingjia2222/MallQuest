@@ -1,4 +1,5 @@
 <view class="pf-page">
+  <view class="mall-strip"><view class="mall-strip-logo">🛍️</view><view class="mall-strip-main"><text class="mall-strip-name">星河里 · 购物中心</text><text class="mall-strip-addr">上海市黄浦区南京东路 168 号</text></view></view>
   <!-- 头部 -->
   <view class="pf-hero">
     <view class="pf-avatar">🦸</view>
@@ -25,12 +26,12 @@
     <view class="pa"><text class="pa-num">0</text><text class="pa-label">待评价</text></view>
   </view>
 
-  <!-- 积分规则 -->
-  <view class="section-title">📖 积分规则（可问我）</view>
-  <view class="pf-card card">
-    <view wx:for="{{pointsRules}}" wx:key="index" class="pf-rule" bindtap="onPointsRule" data-text="{{item}}">
-      <text class="pf-dot"></text><text class="pf-rule-t">{{item}}</text>
-    </view>
+  <view class="section-title">💡 试试对我说</view>
+  <view class="chip-wrap">
+    <view class="chip active" bindtap="goChatWith" data-text="帮我规划约会">帮我规划约会</view>
+    <view class="chip" bindtap="goChatWith" data-text="停车还有空位吗">停车还有空位吗</view>
+    <view class="chip" bindtap="goChatWith" data-text="积分多久过期">积分多久过期</view>
+    <view class="chip" bindtap="goChatWith" data-text="今日特惠">今日特惠</view>
   </view>
 
   <button class="pf-exit" bindtap="logout">退出游客 / 会员端</button>

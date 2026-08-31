@@ -40,7 +40,15 @@ def map_scene(mall_id:str,auth:AuthContext=Depends(require_auth)):
         mall=db.execute("SELECT * FROM malls WHERE id=?",(mall_id,)).fetchone()
         if not mall: raise HTTPException(status_code=404,detail="mall not found")
         job=db.execute("SELECT * FROM map_jobs WHERE mall_id=? ORDER BY created_at DESC LIMIT 1",(mall_id,)).fetchone()
-        stores=db.execute("SELECT s.id,s.name,s.category,s.floor,s.pos_x,s.pos_y,ss.open_status,ss.queue_minutes,ss.seats_available,sp.business_hours,sp.service_tags FROM stores s LEFT JOIN store_status ss ON ss.store_id=s.id LEFT JOIN store_profiles sp ON sp.store_id=s.id WHERE s.mall_id=?",(mall_id,)).fetchall()
+        stores=db.execute("""SELECT s.id,s.name,s.category,s.floor,s.pos_x,s.pos_y,
+            ss.open_status,ss.queue_minutes,ss.seats_available,sp.business_hours,sp.service_tags,
+            mb.source_key AS map_slot,mb.source_label AS map_label,mb.map_x,mb.map_z,
+            mb.map_width,mb.map_depth,mb.source AS map_source
+            FROM stores s
+            LEFT JOIN store_status ss ON ss.store_id=s.id
+            LEFT JOIN store_profiles sp ON sp.store_id=s.id
+            LEFT JOIN store_map_bindings mb ON mb.store_id=s.id AND mb.mall_id=s.mall_id
+            WHERE s.mall_id=? ORDER BY s.floor,s.id""",(mall_id,)).fetchall()
     return envelope({"mall_id":mall_id,"mall_name":mall["name"],"map_mode":job["map_mode"] if job else "demo_2_5d","status":job["status"] if job else "published","stores":[{**dict(row),"shape":{"x":row["pos_x"]-55,"y":row["pos_y"]-30,"width":110,"height":60}} for row in stores]})
 
 @router.get("/stores/{store_id}/public-status")

@@ -14,6 +14,7 @@ const floorsRef = ref(null);
 const parking = reactive({ free: 0, total: 0, areas: [] });
 const focus = reactive({ show: false, store: null, aiReply: '', asking: false });
 const live = ref([]);              // 方案中各店实时状态 + 预定情况
+const sceneStores = ref([]);       // 后端合并后的甲组 3D 槽位 + 乙组实时店铺主数据
 let liveTimer = null;
 
 const hasPlan = computed(() => !!(planStore.current && planStore.current.itinerary && planStore.current.itinerary.length));
@@ -26,10 +27,12 @@ const route3d = computed(() => {
   if (!plan || !plan.itinerary || !plan.itinerary.length) return null;
   const stops = plan.itinerary.map((s, i) => {
     const floor = 'F' + (s.floor || 1);
+    const bound = sceneStores.value.find(r => r.id === s.store_id || r.name === s.name);
     const pool = floor === 'F1' ? oakPlan.gd : oakPlan.up;
     const slot = pool.find(r => r.name === s.name);
     let px = 0, pz = 0;
-    if (slot) { px = slot.cx; pz = slot.cz; }
+    if (bound && bound.map_x != null && bound.map_z != null) { px = bound.map_x; pz = bound.map_z; }
+    else if (slot) { px = slot.cx; pz = slot.cz; }
     else { px = ((s.pos_x || 500) - 500) / 1000 * 30; pz = ((s.pos_y || 500) - 500) / 1000 * 30; }
     return { floor, x: px, z: pz, name: s.name, seq: i + 1 };
   });
@@ -38,10 +41,11 @@ const route3d = computed(() => {
 
 async function load() {
   try {
-    const p = await api.parking();
+    const [p, scene] = await Promise.all([api.parking(), api.mapScene()]);
     parking.free = p.total_free || 0;
     parking.total = (p.areas || []).reduce((a, x) => a + (x.total || 0), 0);
     parking.areas = p.areas || [];
+    sceneStores.value = (scene && scene.stores) || [];
   } catch (e) {}
 }
 
@@ -105,7 +109,7 @@ function actionLabel(a) {
 <template>
   <div class="map-page">
     <div class="map-top">
-      <div><div class="mt-name">3D 地图</div><div class="mt-sub">即时导航 · 方案路线 · 店铺实时状态</div></div>
+      <div><div class="mt-name">规划</div><div class="mt-sub">即时导航 · 方案路线 · 店铺实时状态 · 预定情况</div></div>
     </div>
 
     <!-- 方案详情 + 店铺状态/预定情况（同步自 Chat 规划） -->

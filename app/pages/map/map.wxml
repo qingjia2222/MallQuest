@@ -1,8 +1,9 @@
 <view class="map-page">
+  <view class="mall-strip"><view class="mall-strip-logo">🛍️</view><view class="mall-strip-main"><text class="mall-strip-name">星河里 · 购物中心</text><text class="mall-strip-addr">上海市黄浦区南京东路 168 号</text></view></view>
   <view class="map-title-bar">
     <view>
-      <view class="mt-name">室内导览地图</view>
-      <view class="mt-sub">店铺状态由商户端实时同步</view>
+      <view class="mt-name">规划</view>
+      <view class="mt-sub">方案路线 · 店铺实时状态 · 预定情况</view>
     </view>
     <view class="mt-btn" bindtap="goPlan">帮我规划</view>
   </view>

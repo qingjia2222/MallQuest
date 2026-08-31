@@ -1,4 +1,5 @@
 {
+  "navigationStyle": "custom",
   "usingComponents": {
     "rich-card": "/components/rich-card/rich-card",
     "voice-input": "/components/voice-input/voice-input"

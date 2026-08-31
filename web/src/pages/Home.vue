@@ -45,8 +45,8 @@ function statusText(s) { return s.open_status === 'open' ? '营业中' : '未营
 <template>
   <div class="home-page">
     <div class="home-hero">
-      <div class="hh-title">星河里 · 智慧商场</div>
-      <div class="hh-sub">点击店铺查看实时状态 · 规划后在「地图」页看 3D 路线</div>
+      <div class="hh-title">星河里 · 购物中心</div>
+      <div class="hh-sub">点击店铺查看实时状态 · 规划后在「规划」页看 3D 路线</div>
     </div>
 
     <!-- 页面中心：商场地图 -->

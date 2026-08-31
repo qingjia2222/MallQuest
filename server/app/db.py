@@ -46,6 +46,18 @@ CREATE TABLE IF NOT EXISTS manager_access(user_id TEXT NOT NULL REFERENCES users
 CREATE TABLE IF NOT EXISTS mall_service_codes(code TEXT PRIMARY KEY, mall_id TEXT NOT NULL REFERENCES malls(id), entry_node TEXT NOT NULL, active INTEGER NOT NULL, label TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS analytics_snapshots(id TEXT PRIMARY KEY, mall_id TEXT NOT NULL, grain TEXT NOT NULL, label TEXT NOT NULL, footfall INTEGER NOT NULL, revenue REAL NOT NULL, conversion_rate REAL NOT NULL, updated_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS map_jobs(id TEXT PRIMARY KEY, mall_id TEXT NOT NULL, source_name TEXT NOT NULL, map_mode TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS store_map_bindings(
+  store_id TEXT PRIMARY KEY REFERENCES stores(id),
+  mall_id TEXT NOT NULL REFERENCES malls(id),
+  source_key TEXT NOT NULL,
+  source_label TEXT NOT NULL,
+  floor INTEGER NOT NULL,
+  map_x REAL NOT NULL,
+  map_z REAL NOT NULL,
+  map_width REAL NOT NULL,
+  map_depth REAL NOT NULL,
+  source TEXT NOT NULL
+);
 """
 
 MAIN_STORES = [
@@ -60,6 +72,33 @@ MAIN_STORES = [
  ("s17","臻味轩","高端餐厅",2,790,610,480,5,1,22,"商务,高端,安静"),("s18","星河里服务台","服务台",1,160,610,0,0,0,0,"服务"),
  ("s19","花间礼盒","礼品",1,340,610,320,0,0,0,"家宴,礼物"),("s20","南风烘焙","烘焙",1,520,610,55,2,0,16,"甜品,亲子"),
  ("s21","轻食工坊","轻食",2,520,610,72,7,1,18,"商务"),("s22","海味坊","粤菜",2,340,610,230,11,1,30,"家宴,包间")]
+
+# 甲组 3D 地图几何与乙组业务店铺的稳定绑定。业务状态仍以 stores/store_status 为准；
+# source_key/map_* 保留甲组 oakwood_plan 的槽位与坐标，公共设施继续留在前端地图中。
+STORE_MAP_BINDINGS = [
+ ("s01","shop102114","蜀香小院",1,-12.60,5.66,5.08,2.49),
+ ("s02","shop204","锦城宴府",2,-12.60,9.45,5.08,4.90),
+ ("s03","shop220","樱海日料",2,0.61,0.00,3.23,7.83),
+ ("s04","shop203_tl","Luma西餐厅",2,-18.58,0.00,6.90,9.91),
+ ("s05","shop206","青岚茶社",2,-5.06,9.45,3.30,4.90),
+ ("s06","shop106","星云咖啡",1,4.91,0.00,3.38,4.86),
+ ("s07","shop103113","茉语奶茶",1,-18.56,4.03,6.94,5.75),
+ ("s08","shop101118_tr","糖屿甜品",1,17.49,0.00,8.35,8.90),
+ ("s09","shop201","星河里星幕影院",2,-11.04,0.00,5.34,7.83),
+ ("s10","儿童乐园","奇趣儿童乐园",1,9.00,-1.00,11.00,8.00),
+ ("s11","shop107","木棉亲子餐厅",1,8.20,0.00,3.26,4.86),
+ ("s12","shop108","童梦玩具屋",1,11.59,0.00,3.56,4.86),
+ ("s13","shop103","拾光礼物研究所",1,-6.20,0.00,3.45,4.86),
+ ("s14","shop205","雾岛香氛",2,-8.39,9.45,3.41,4.90),
+ ("s15","shop216","墨白设计集",2,-2.63,0.00,3.30,7.83),
+ ("s16","观影天桥","云庭商务会客厅",2,-0.79,0.61,8.20,6.00),
+ ("s17","shop224","臻味轩",2,8.61,0.00,5.64,7.83),
+ ("s18","shop101118_tl","星河里服务台",1,-18.52,0.00,7.01,8.90),
+ ("s19","shopinfo","花间礼盒",1,17.60,3.77,8.12,3.93),
+ ("s20","shop101","南风烘焙",1,-13.10,0.00,4.08,4.86),
+ ("s21","shop203_bl","轻食工坊",2,-18.56,8.37,6.94,7.09),
+ ("s22","shop222","海味坊",2,4.01,0.00,3.64,7.83),
+]
 
 def seed_commercial(db) -> None:
     now=now_iso()
@@ -85,6 +124,11 @@ def seed_commercial(db) -> None:
         ("a_year_3","year","2024",6120000,438000000,0.191),("a_year_2","year","2025",6840000,502000000,0.207),("a_year_1","year","2026",7310000,548000000,0.221)]
     db.executemany("INSERT OR IGNORE INTO analytics_snapshots VALUES(?,?,?,?,?,?,?,?)",[(i,"mall_demo",grain,label,footfall,revenue,rate,now) for i,grain,label,footfall,revenue,rate in metrics])
     db.execute("INSERT OR IGNORE INTO map_jobs VALUES(?,?,?,?,?,?)",("map_demo_seed","mall_demo","星河里-demo.svg","demo_2_5d","published",now))
+    db.executemany(
+        "INSERT OR REPLACE INTO store_map_bindings VALUES(?,?,?,?,?,?,?,?,?,?)",
+        [(store_id,"mall_demo",key,label,floor,x,z,width,depth,"party_a_oakwood_plan")
+         for store_id,key,label,floor,x,z,width,depth in STORE_MAP_BINDINGS],
+    )
 
 def reset_and_seed() -> None:
     path=Path(settings.mall_db_path)

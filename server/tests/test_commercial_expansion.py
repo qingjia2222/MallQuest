@@ -40,6 +40,17 @@ def test_manager_analytics_store_code_and_map_job():
     job=client.post("/api/manager/maps",headers=headers,json={"mall_id":"mall_demo","source_name":"floor-plan.png"})
     assert job.status_code==200 and job.json()["data"]["requires_manual_review"] is True
 
+def test_party_a_map_geometry_is_merged_with_backend_store_data():
+    reset_and_seed(); client=TestClient(app); headers,_=login_scan(client)
+    response=client.get("/api/maps/mall_demo/scene",headers=headers)
+    assert response.status_code==200
+    stores=response.json()["data"]["stores"]
+    assert len(stores)==22
+    assert all(s["map_source"]=="party_a_oakwood_plan" for s in stores)
+    target=next(s for s in stores if s["id"]=="s01")
+    assert target["name"]=="蜀香小院" and target["map_slot"]=="shop102114"
+    assert target["map_x"]==-12.6 and target["queue_minutes"]==12
+
 def test_role_workspaces_do_not_leak_permissions():
     reset_and_seed(); client=TestClient(app); visitor,_=login_scan(client)
     denied=client.get("/api/manager/analytics",headers=visitor,params={"mall_id":"mall_demo"})
