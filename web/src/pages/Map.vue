@@ -6,7 +6,6 @@ import Floors3D from '../components/Floors3D.vue';
 import ItineraryCard from '../components/ItineraryCard.vue';
 import { planStore, setCurrentPlan, setNavigateTarget } from '../store/plan';
 import { renderMd } from '../utils/md';
-import oakPlan from '../store/oakwood_plan.json';
 
 const router = useRouter();
 const floorsRef = ref(null);
@@ -25,47 +24,14 @@ let liveTimer = null;
 const hasPlan = computed(() => !!(planStore.current && planStore.current.itinerary && planStore.current.itinerary.length));
 const isDone = computed(() => !!planStore.current && planStore.current.state === 'DONE');
 
-// 规划路线：按后端 itinerary 店名，在 oakwood 对应层找同名店的精确矩形坐标(cx/cz)
+// 规划路线完全使用后端生成的走廊图节点，3D 组件只负责渲染，不再二次规划。
 const route3d = computed(() => {
   const plan = planStore.current;
-  if (!plan || !plan.itinerary || !plan.itinerary.length) return null;
-  const st = (planStore.navigateTarget && planStore.navigateTarget.start) || { name: '当前位置', x: 1.69, z: 6.73 };
-  const startFloor = Number(st.floor) || 1;
-  const stops = [{ floor: startFloor, x: st.x ?? 1.69, z: st.z ?? 6.73, name: st.name || '当前位置', seq: 1 }];
-  plan.itinerary.forEach((s, i) => {
-    const floor = Number(s.floor) || 1;
-    const pool = floor === 1 ? oakPlan.gd : oakPlan.up;
-    const slot = pool.find(r => r.name === s.name);
-    let px = 0, pz = 0;
-    if (slot) { px = slot.cx; pz = slot.cz; }
-    else { px = ((s.pos_x || 500) - 500) / 1000 * 30; pz = ((s.pos_y || 500) - 500) / 1000 * 30; }
-    stops.push({ floor, x: px, z: pz, name: s.name, seq: i + 2 });
-  });
-  return { stops, vertical_mode: previewVerticalMode.value || (plan.route && plan.route.vertical_mode) || 'elevator' };
+  if (!plan || !plan.route || !Array.isArray(plan.route.nodes) || plan.route.nodes.length < 2) return null;
+  const stops = [{ floor: 1, name: '当前位置' }, ...(plan.itinerary || []).map((s) => ({ floor: Number(s.floor) || 1, name: s.name }))];
+  return { ...plan.route, stops, vertical_mode: previewVerticalMode.value || plan.route.vertical_mode || 'elevator' };
 });
-// 导航到单店：起点（同层出入口/电梯）→ 目标店铺，绿色路线
-const navRoute = computed(() => {
-  const t = planStore.navigateTarget;
-  if (!t || !t.name) return null;
-  const floor = t.floor ? 'F' + t.floor : 'F1';
-  const pool = floor === 'F1' ? oakPlan.gd : oakPlan.up;
-  const slot = pool.find(r => r.name === t.name);
-  let tx, tz;
-  if (slot) { tx = slot.cx; tz = slot.cz; }
-  else { tx = ((t.pos_x || 500) - 500) / 1000 * 30; tz = ((t.pos_y || 500) - 500) / 1000 * 30; }
-  const st = (t.start && typeof t.start.x === 'number') ? t.start
-    : (floor === 'F1'
-       ? (oakPlan.gd_core && oakPlan.gd_core.find(r => r.type === 'entrance')) || { x: 1.69, z: 6.73 }
-       : (oakPlan.up_core && oakPlan.up_core.find(r => r.type === 'lift')) || { x: 0.9, z: 3.22 });
-  const sX = st.x, sZ = st.z;
-  return { stops: [
-    { floor, x: sX, z: sZ, name: '起点', seq: 1 },
-    { floor, x: tx, z: sZ, name: '走廊', seq: 2 },
-    { floor, x: tx, z: tz, name: t.name, seq: 3 }
-  ] };
-});
-const displayRoute = computed(() => planStore.navigateTarget ? (navRoute.value || route3d.value) : route3d.value);
-const isCrossFloorRoute = computed(() => route3d.value && new Set(route3d.value.stops.map((stop) => Number(stop.floor))).size > 1);
+const isCrossFloorRoute = computed(() => route3d.value && new Set(route3d.value.nodes.map((node) => Number(node.floor))).size > 1);
 
 async function load() {
   try {
@@ -107,7 +73,13 @@ async function refreshPlan() {
   try { setCurrentPlan(await api.getPlan(plan.plan_id)); }
   catch (e) {
     if (!/plan not found|not found/i.test(e.message || '')) throw e;
-    await makeEditableCopy();
+    try { await makeEditableCopy(); }
+    catch (copyError) {
+      // 地图目录升级后旧 store_id 已失效：静默清除客户端快照，避免继续显示
+      // “plan not found”或把旧点位重新写回新地图。
+      if (!/invalid store|not found/i.test(copyError.message || '')) throw copyError;
+      setCurrentPlan(null); setNavigateTarget(null); editNotice.value = ''; editError.value = '';
+    }
   }
 }
 onMounted(async () => {
@@ -221,7 +193,8 @@ async function goNavigate() {
   let start = { name: '主入口', floor: 1, x: 1.69, z: 6.73 };
   try { const loc = await api.location(); if (loc) start = { name: loc.name || '主入口', floor: loc.floor || 1, x: loc.x, z: loc.z }; } catch (e) {}
   const geoloc = await getGeoloc();
-  setNavigateTarget({ name: s.name, floor: s.floor || 1, pos_x: s.pos_x, pos_y: s.pos_y, start, geoloc });
+  const route = await api.navigationResolve(`怎么去${s.name}`, 'f1_entrance');
+  setNavigateTarget({ name: s.name, floor: s.floor || 1, pos_x: s.pos_x, pos_y: s.pos_y, start, geoloc, vertical_mode: route.vertical_mode || 'elevator', route });
   focus.show = false;
 }
 function formatArea(a) { return `${a.area} ${a.free}/${a.total}`; }
@@ -246,9 +219,13 @@ async function switchPlanVertical(mode) {
     await nextTick(); replayPreview();
   } catch (e) { editError.value = '换层路线切换失败：' + (e.message || ''); }
 }
-function switchNavVertical(mode) {
+async function switchNavVertical(mode) {
   if (!planStore.navigateTarget) return;
-  setNavigateTarget({ ...planStore.navigateTarget, vertical_mode: mode });
+  try {
+    const target = planStore.navigateTarget;
+    const route = await api.navigationResolve(`请走${mode === 'escalator' ? '扶梯' : '直梯'}去${target.name}`, 'f1_entrance');
+    setNavigateTarget({ ...target, vertical_mode: mode, route });
+  } catch (e) { editError.value = '导航路线切换失败：' + (e.message || ''); }
 }
 
 function toStops(it) {
@@ -354,7 +331,7 @@ function actionLabel(a) {
     </div>
 
     <div id="plan-map">
-      <Floors3D ref="floorsRef" :route="route3d" :navigate="planStore.navigateTarget ? { name: planStore.navigateTarget.name, floor: planStore.navigateTarget.floor, vertical_mode: planStore.navigateTarget.vertical_mode || 'elevator' } : null" @select="onSelect" @floorschanged="onFloorsChanged" />
+      <Floors3D ref="floorsRef" :route="route3d" :navigate="planStore.navigateTarget || null" @select="onSelect" @floorschanged="onFloorsChanged" />
     </div>
 
     <div v-if="routePreviewOpen && route3d" class="route-preview-mask">

@@ -158,6 +158,7 @@ function buildCorners(group, fl, flNum, edged, armLen) {
     group.add(armZ);
     // 角店可点击：把两臂合并成一个可点区域，userData 存店名 + 详情
     const info = infoOf(cornerNames[k]);
+    const isFacility = info.category === '服务设施';
     const cornerStore = { name: cornerNames[k], floor: fl, floor2: flNum, cat: '零售',
       category: info.category, desc: info.desc, tags: info.tags, floorName: fl, loc: '『' + fl + '』· 转角商铺', id: 'corner_'+flNum+'_'+k };
     // 转角店的导航终点放在朝中庭的内角门口，不把路线画进 L 形店体中心。
@@ -165,9 +166,11 @@ function buildCorners(group, fl, flNum, edged, armLen) {
       x: cx, z: cz, floor: flNum,
       entrance: { x: sx * INNER, z: sz * INNER, floor: flNum }
     };
-    armX.userData = { store: cornerStore };
-    armZ.userData = { store: cornerStore };
-    storeMeshes.push(armX); storeMeshes.push(armZ);
+    if (!isFacility) {
+      armX.userData = { store: cornerStore };
+      armZ.userData = { store: cornerStore };
+      storeMeshes.push(armX); storeMeshes.push(armZ);
+    }
     // 两臂在角点交叉自然形成 L（无独立角块），标签放角部
     addLabel(group, cornerNames[k], cx, 2.2, cz, 4.5);
   });
@@ -178,8 +181,8 @@ function floorLabelY() { return 2.2; }
 // 放一家中段小店：平铺矩形 + 门面
 function placeShop(group, r, px, pz, size, fl, flNum) {
   const [sx, sz] = size;
-  const isFac = r.fac === 'true' || /卫生间|服务台|信息台/.test(r.name);
   const info = infoOf(r.name);
+  const isFac = r.fac === 'true' || info.category === '服务设施' || /卫生间|服务台|信息台/.test(r.name);
   const color = isFac ? 0xB8B2A6 : catColor(info.category || '零售');   // 卫生间等设施用灰色；其余按分类上色
   const tile = new THREE.Mesh(new THREE.BoxGeometry(sx, 0.3, sz),
     new THREE.MeshLambertMaterial({ color }));   // Lambert 无自发光，显示本色，避免被光照洗白
@@ -387,7 +390,7 @@ function drawRoute(route) {
   clearRoute();
   if (!scene) return;
   if (props.navigate) return;   // 正在导航时不叠加方案路线，避免多条线/废线
-  if (!route || !route.stops || route.stops.length < 2) { setAnimationPath([]); return; }
+  if (!route) { setAnimationPath([]); return; }
   const PAL = [0x2BB673, 0xE8616E, 0x4EA8E8, 0xE8912B, 0x9C6ADE];   // 绿/红/蓝/橙/紫，按方案顺序分段着色
   const animation = [];
   const addPath = (path, color) => {
@@ -397,6 +400,28 @@ function drawRoute(route) {
     }
     animation.push(...path);
   };
+  // 后端已经在唯一的走廊图上完成寻路。前端按节点原样绘制，杜绝二次寻路造成
+  // 穿店、绕圈或遗漏方案途经点。
+  if (Array.isArray(route.nodes) && route.nodes.length >= 2) {
+    const points = route.nodes.map((node) => ({
+      x: Number(node.x), z: Number(node.y), floor: Number(node.floor) || 1,
+      node_id: node.node_id || '', type: node.type || ''
+    }));
+    for (let i = 0; i < points.length - 1; i++) {
+      const color = PAL[Math.min(i, PAL.length - 1) % PAL.length];
+      const a = points[i], b = points[i + 1];
+      const mesh = a.floor === b.floor ? segMesh(a, b, color, 0.6) : linkMesh(a, b, color, 0.65);
+      if (mesh) { scene.add(mesh); routeLines.push(mesh); }
+    }
+    const byId = Object.fromEntries(points.map((point) => [point.node_id, point]));
+    (route.waypoints || []).forEach((waypoint, index) => {
+      const point = byId[waypoint.node_id];
+      if (point) addWaypoint(point, index + 1);
+    });
+    setAnimationPath(points);
+    return;
+  }
+  if (!route.stops || route.stops.length < 2) { setAnimationPath([]); return; }
   const resolvedStops = route.stops.map(routePoint);
   resolvedStops.slice(1).forEach((point,index) => addWaypoint(point,index+1));
   for (let i = 0; i < resolvedStops.length - 1; i++) {
@@ -532,6 +557,17 @@ function navSeg(a, b) { const m = segMesh(a, b, 0x219653, 0.7); if (m) { scene.a
 function drawNav(nav) {
   clearNav();
   if (!scene || !nav || !nav.name) return;
+  if (nav.route && Array.isArray(nav.route.nodes) && nav.route.nodes.length >= 2) {
+    const points = nav.route.nodes.map((node) => ({ x: Number(node.x), z: Number(node.y), floor: Number(node.floor) || 1 }));
+    for (let i = 0; i < points.length - 1; i++) {
+      const a = points[i], b = points[i + 1];
+      const mesh = a.floor === b.floor ? segMesh(a, b, 0x219653, 0.7) : linkMesh(a, b, 0x219653, 0.7);
+      if (mesh) { scene.add(mesh); navLines.push(mesh); }
+    }
+    setAnimationPath(points);
+    focusFloor('all');
+    return;
+  }
   const target = storePositions[nav.name];
   if (!target) return;
   const animation = [];

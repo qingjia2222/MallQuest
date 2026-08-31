@@ -13,7 +13,7 @@ class ScanBody(BaseModel): mall_id:str|None="mall_demo"; service_code:str|None=N
 @router.post("/scan")
 def scan(body:ScanBody,auth:AuthContext=Depends(require_auth)):
     service_code=(body.service_code or "").strip().upper()
-    entry_node="f1_c0"; entry_source="manual"
+    entry_node="f1_entrance"; entry_source="manual"
     if service_code:
         with connection() as db: qr=db.execute("SELECT * FROM mall_service_codes WHERE code=? AND active=1",(service_code,)).fetchone()
         if not qr: raise HTTPException(status_code=404,detail="AI 服务二维码无效或已停用")

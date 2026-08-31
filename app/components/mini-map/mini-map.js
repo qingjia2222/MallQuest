@@ -170,7 +170,12 @@ Component({
       gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(marker),gl.DYNAMIC_DRAW);gl.uniform4f(l.color,0.94,0.13,0.18,1);gl.uniform1f(l.point,13*this._dpr);gl.drawArrays(gl.POINTS,0,1);
       gl.enableVertexAttribArray(l.normal);
     },
-    nodePoint(n){return [(Number(n.x||500)/10-50)*0.42,Number(n.floor)===2?7.95:0.75,(Number(n.y||380)/7.6-50)*0.32];},
+    nodePoint(n){
+      const x=Number(n.x),z=Number(n.y),floor=Number(n.floor)===2?7.95:0.75;
+      // 新路线直接使用与 Web 3D 地图一致的 three-world x/z 坐标；兼容旧版 1000×760 数据。
+      if(Number.isFinite(x)&&Number.isFinite(z)&&Math.abs(x)<=40&&Math.abs(z)<=40)return[x,floor,z];
+      return [((Number.isFinite(x)?x:500)/10-50)*0.42,floor,((Number.isFinite(z)?z:380)/7.6-50)*0.32];
+    },
     setFloor(e){this.setData({floor:Number(e.currentTarget.dataset.f)});},
     replayRoute(){this._routeStarted=Date.now();},
     onStoreTap(e){this.triggerEvent('storetap',{store:e.currentTarget.dataset.store});},

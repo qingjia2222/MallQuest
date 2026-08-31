@@ -8,7 +8,14 @@ Page({
       try {
         const fresh=await request(`/api/plan/${existing.plan_id}`); getApp().globalData.currentPlan=fresh; getApp().setPlanState({current:fresh}); this.present(fresh,fresh.state==='DONE'?5:4);
       } catch(e) {
-        if(/plan not found|not found/i.test(e.message||'')) { const restored=await this.copyForEdit(existing); this.present(restored,4); wx.showToast({title:'方案已恢复',icon:'none'}); }
+        if(/plan not found|not found/i.test(e.message||'')) {
+          try { const restored=await this.copyForEdit(existing); this.present(restored,4); }
+          catch(copyError) {
+            if(!/invalid store|not found/i.test(copyError.message||'')) throw copyError;
+            getApp().globalData.currentPlan=null; getApp().setPlanState({current:null});
+            const goalText=wx.getStorageSync('planGoal')||'我今天约会'; this.setData({goalText,plan:null,itinerary:{}}); this.startUnderstand();
+          }
+        }
         else { this.present(existing,existing.state==='DONE'?5:4); wx.showToast({title:e.message||'方案校验失败',icon:'none'}); }
       }
       return;

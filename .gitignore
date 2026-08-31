@@ -18,6 +18,7 @@ venv/
 server/data/*.db
 server/data/audio/*.wav
 server/data/runtime/
+server/runtime/
 
 # ---- 前端 ----
 node_modules/

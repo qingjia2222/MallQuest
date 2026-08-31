@@ -59,6 +59,9 @@ export default {
   parking: () => req('GET', '/api/parking', { session_id: getSession() }),
   stores: () => req('GET', '/api/stores', { session_id: getSession() }),
   location: () => req('GET', '/api/location'),
+  navigationResolve: (query, current_node = 'f1_entrance') => req('POST', '/api/navigation/resolve', {
+    session_id: getSession(), query, current_node
+  }),
   memberPoints: () => req('GET', '/api/member/points', { session_id: getSession() }),
   deals: () => req('GET', '/api/deals', { session_id: getSession() }),
   coupons: () => req('GET', '/api/coupons', { session_id: getSession() }),

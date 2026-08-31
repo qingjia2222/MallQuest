@@ -10,7 +10,7 @@ sys.path.insert(0,str(SERVER))
 
 from app.config import settings
 from app.core.router import write_demo_maps
-from app.db import assert_database_ready, ensure_database
+from app.db import assert_database_ready, ensure_database, reconcile_demo_catalog
 
 
 def backup_database(keep: int = 5) -> Path | None:
@@ -32,12 +32,18 @@ def main() -> None:
     parser=argparse.ArgumentParser(description="星河里启动前数据库备份和业务一致性检查")
     parser.add_argument("--no-backup",action="store_true",help="仅检查，不创建启动备份")
     parser.add_argument("--keep",type=int,default=5,help="保留最近 N 份启动备份")
+    parser.add_argument("--reconcile-map",action="store_true",help="备份后按 3D 地图店铺目录迁移 SQLite")
     args=parser.parse_args()
     backup=None if args.no_backup else backup_database(args.keep)
     ensure_database()
+    migration=None
+    if args.reconcile_map:
+        if backup is None:
+            raise RuntimeError("地图目录迁移前必须先创建可恢复数据库备份")
+        migration=reconcile_demo_catalog()
     write_demo_maps()
     status=assert_database_ready()
-    print(json.dumps({"ready":True,"backup":str(backup) if backup else None,"database":status},ensure_ascii=False))
+    print(json.dumps({"ready":True,"backup":str(backup) if backup else None,"migration":migration,"database":status},ensure_ascii=False))
 
 
 if __name__=="__main__":

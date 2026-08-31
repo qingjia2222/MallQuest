@@ -33,7 +33,7 @@ def _destination(mall_id:str,query:str):
 
 def resolve_navigation(mall_id:str,query:str,current_node:str|None=None):
     if not is_navigation_intent(query): raise HTTPException(status_code=422,detail="message is not a navigation request")
-    store=_destination(mall_id,query); start=current_node or "f1_c0"
+    store=_destination(mall_id,query); start=current_node or "f1_entrance"
     vertical_mode="escalator" if "扶梯" in query else "elevator"
     route=route_between_nodes(mall_id,start,store["route_node"],vertical_mode)
     floors=list(dict.fromkeys(node["floor"] for node in route["nodes"]))

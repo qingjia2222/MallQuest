@@ -4,7 +4,6 @@ from pydantic import BaseModel, Field
 from app.core.auth import AuthContext, issue_token, require_auth
 from app.core.envelope import envelope
 from app.core.navigation import resolve_navigation
-from app.core.router import write_demo_maps
 from app.db import connection, now_iso, rows_to_dicts
 
 router=APIRouter(tags=["commercial-expansion"])
@@ -120,15 +119,16 @@ class ManagerStoreBody(BaseModel):
 
 @router.post("/manager/stores")
 def create_store(body:ManagerStoreBody,auth:AuthContext=Depends(require_auth)):
-    manager_mall(auth,body.mall_id); store_id="s"+uuid.uuid4().hex[:6]; store_code=f"QD-{store_id.upper()}-{uuid.uuid4().hex[:4].upper()}"; merchant_user="merchant_"+uuid.uuid4().hex[:8]; now=now_iso()
+    manager_mall(auth,body.mall_id)
     with connection() as db:
-        db.execute("INSERT INTO users VALUES(?,?,?)",(merchant_user,f"{body.name}商户",now))
-        db.execute("INSERT INTO stores VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",(store_id,body.mall_id,body.name,body.category,body.floor,body.pos_x,body.pos_y,f"f{body.floor}_{store_id}",0,"closed",0,0,0,"新入驻"))
-        db.execute("INSERT INTO store_status VALUES(?,?,?,?,?,?,?)",(store_id,body.mall_id,"closed",0,0,0,now))
-        db.execute("INSERT INTO store_profiles VALUES(?,?,?,?,?,?,?,?)",(store_id,store_code,"待填写","[]","待填写","待填写","待填写",now))
-        db.execute("INSERT INTO merchant_store_access VALUES(?,?,?)",(merchant_user,body.mall_id,store_id))
-    if body.mall_id=="mall_demo": write_demo_maps()
-    return envelope({"store_id":store_id,"store_code":store_code,"merchant_user_id":merchant_user,"status":"created","map_rebuild":"completed"})
+        row=db.execute("""SELECT s.id,s.name,s.floor,sp.store_code
+          FROM stores s JOIN store_map_bindings mb ON mb.store_id=s.id
+          LEFT JOIN store_profiles sp ON sp.store_id=s.id
+          WHERE s.mall_id=? AND s.name=?""",(body.mall_id,body.name.strip())).fetchone()
+        if not row:
+            raise HTTPException(status_code=409,detail="该店名尚无 3D 地图点位，请先在地图目录中新增并校准点位后再创建编码")
+        store_code=row["store_code"]
+    return envelope({"store_id":row["id"],"store_code":store_code,"status":"mapped","floor":row["floor"],"map_rebuild":"not_required"})
 
 class MapJobBody(BaseModel): mall_id:str="mall_demo"; source_name:str
 

@@ -54,12 +54,16 @@ async function goNavigate() {
   let start = { name: '主入口', floor: 1, x: 1.69, z: 6.73 };
   try { const loc = await api.location(); if (loc) start = { name: loc.name || '主入口', floor: loc.floor || 1, x: loc.x, z: loc.z }; } catch (e) {}
   const geoloc = await getGeoloc();
-  setNavigateTarget({ name: s.name, floor: s.floor || 1, pos_x: s.pos_x, pos_y: s.pos_y, start, geoloc, vertical_mode: 'elevator' });
+  const route = await api.navigationResolve(`怎么去${s.name}`, 'f1_entrance');
+  setNavigateTarget({ name: s.name, floor: s.floor || 1, pos_x: s.pos_x, pos_y: s.pos_y, start, geoloc, vertical_mode: route.vertical_mode || 'elevator', route });
   close();
   // 导航路线直接显示在首页的 3D 地图上，不跳转
 }
-function switchVertical(mode) {
-  if (planStore.navigateTarget) setNavigateTarget({ ...planStore.navigateTarget, vertical_mode: mode });
+async function switchVertical(mode) {
+  if (!planStore.navigateTarget) return;
+  const target = planStore.navigateTarget;
+  const route = await api.navigationResolve(`请走${mode === 'escalator' ? '扶梯' : '直梯'}去${target.name}`, 'f1_entrance');
+  setNavigateTarget({ ...target, vertical_mode: mode, route });
 }
 async function askAI() {
   const s = focus.value;
@@ -107,7 +111,7 @@ function statusText(s) { return s.open_status === 'open' ? '营业中' : '未营
 
     <!-- 页面中心：商场地图 -->
     <div class="home-map">
-      <Floors3D ref="floorsRef" :route="null" :navigate="planStore.navigateTarget ? { name: planStore.navigateTarget.name, floor: planStore.navigateTarget.floor, vertical_mode: planStore.navigateTarget.vertical_mode || 'elevator' } : null" @select="open" />
+      <Floors3D ref="floorsRef" :route="null" :navigate="planStore.navigateTarget || null" @select="open" />
     </div>
 
     <div class="card home-parking">

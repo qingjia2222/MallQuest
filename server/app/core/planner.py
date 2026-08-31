@@ -8,15 +8,15 @@ from app.db import connection, now_iso
 
 STATES=["IDLE","UNDERSTAND","COLLECT","PLAN","ROUTE","CONFIRM","EXECUTE","DONE"]
 TEMPLATES={
- "date":{"required":["time","people","budget_per_person","cuisine","want_movie"],"stores":["s01","s07","s09"],"actions":["reserve_restaurant","claim_coupon","buy_ticket"]},
- "banquet":{"required":["time","people","total_budget","cuisine","private_room"],"stores":["s02","s19"],"actions":["reserve_restaurant","claim_coupon"]},
- "gift":{"required":["recipient","budget","preferences","occasion"],"stores":["s13","s14","s06"],"actions":["claim_coupon"]},
- "family_day":{"required":["child_age","duration","budget","interests","meal_preference"],"stores":["s10","s12","s11"],"actions":["buy_ticket","reserve_restaurant","claim_coupon"]},
- "business":{"required":["time","people","total_budget","level","quiet","meal_preference"],"stores":["s16","s05","s17"],"actions":["reserve_business_space","reserve_restaurant","claim_coupon"]},
- "casual":{"required":[],"stores":["s06","s13"],"actions":[]}}
+ "date":{"required":["time","people","budget_per_person","cuisine","want_movie"],"stores":["蜀签成都串串香","世界茶饮"],"actions":["reserve_restaurant","claim_coupon"]},
+ "banquet":{"required":["time","people","total_budget","cuisine","private_room"],"stores":["川食公馆","金伯利"],"actions":["reserve_restaurant","claim_coupon"]},
+ "gift":{"required":["recipient","budget","preferences","occasion"],"stores":["金伯利","大众书局","阅江轩"],"actions":["claim_coupon"]},
+ "family_day":{"required":["child_age","duration","budget","interests","meal_preference"],"stores":["格瑞特运动馆","拼桌茶餐厅","满记甜品"],"actions":["buy_ticket","reserve_restaurant","claim_coupon"]},
+ "business":{"required":["time","people","total_budget","level","quiet","meal_preference"],"stores":["星巴克","川食公馆"],"actions":["reserve_restaurant","claim_coupon"]},
+ "casual":{"required":[],"stores":["途尚咖啡","大众书局"],"actions":[]}}
 # 场景默认槽位：用户只说出「目标」(如「帮我规划约会」)但没给明细时，用默认值直接生成方案，避免空方案
 DEFAULT_SLOTS={
- "date":{"time":"今晚7点","people":2,"budget_per_person":200,"cuisine":"川菜","want_movie":True},
+ "date":{"time":"今晚7点","people":2,"budget_per_person":200,"cuisine":"川菜","want_movie":False},
  "banquet":{"time":"周末6点","people":6,"total_budget":1000,"cuisine":"川菜","private_room":True},
  "gift":{"recipient":"朋友","budget":300,"preferences":"设计感小物","occasion":"礼物"},
  "family_day":{"child_age":6,"duration":4,"budget":500,"interests":"游乐","meal_preference":"亲子餐"},
@@ -160,8 +160,8 @@ def _candidate_groups(scene,stores,slots):
         return groups
     if scene=="banquet": return [restaurants,_category(stores,["礼品","零售"])]
     if scene=="gift": return [_category(stores,["礼品","香氛","设计零售","玩具","零售"])]
-    if scene=="family_day": return [_category(stores,["儿童乐园","玩具","亲子"]),_category(stores,["亲子餐厅","餐饮"]),_category(stores,["饮品甜品","甜品","奶茶","烘焙"])]
-    if scene=="business": return [_category(stores,["商务空间"]),_category(stores,["茶歇","咖啡","轻食","饮品甜品"]),_category(stores,["高端餐厅","粤菜","川菜","餐饮"])]
+    if scene=="family_day": return [_category(stores,["儿童乐园","玩具","亲子","运动","书店"]),_category(stores,["亲子餐厅","餐饮"]),_category(stores,["饮品甜品","甜品","奶茶","烘焙"])]
+    if scene=="business": return [_category(stores,["商务空间","咖啡","办公"]),_category(stores,["茶歇","咖啡","轻食","饮品甜品"]),_category(stores,["高端餐厅","粤菜","川菜","餐饮"])]
     if scene=="casual": return [_category(stores,["零售","饮品甜品","咖啡","甜品","礼品","设计零售"])]
     return []
 

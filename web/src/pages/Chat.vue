@@ -5,6 +5,8 @@ import api, { BASE } from '../api';
 import { startQueueWatch } from '../store/queue';
 import RichCard from '../components/RichCard.vue';
 import PlanOverlay from '../components/PlanOverlay.vue';
+import PlanFlow from '../components/PlanFlow.vue';
+import ItineraryCard from '../components/ItineraryCard.vue';
 import { setCurrentPlan } from '../store/plan';
 import { setSession } from '../api';
 import { renderMd } from '../utils/md';

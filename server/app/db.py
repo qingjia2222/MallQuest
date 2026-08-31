@@ -6,6 +6,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from app.config import settings
+from app.core.map_catalog import map_catalog, stable_store_id
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -92,49 +93,23 @@ def _party_a_assets():
     if not info_path.exists(): return {}, {"stores":[],"corners":{}}
     return json.loads(info_path.read_text(encoding="utf-8")), json.loads(ring_path.read_text(encoding="utf-8"))
 
-def _stable_catalog_id(name: str) -> str:
-    return "map_"+hashlib.sha1(name.encode("utf-8")).hexdigest()[:10]
-
 def seed_party_a_catalog(db) -> None:
-    """Import Party-A's actual 69-store catalog into SQLite.
+    """Import only the business blocks that the active 3D map really renders.
 
-    The JSON files remain frozen 3D/render seed assets. All application reads and
-    writes after initialization use SQLite and stable store ids.
+    Bathrooms, security, front desk, waterfall hall and vertical facilities stay
+    in the map occupancy model but are not exposed as merchant stores.
     """
-    info,ring=_party_a_assets()
-    if not info: return
-    aliases={"QD星幕影院":"星河里星幕影院","QD服务台":"星河里服务台"}
-    existing={row["name"]:row["id"] for row in db.execute("SELECT id,name FROM stores WHERE mall_id='mall_demo'")}
-    for old,new in aliases.items():
-        if new in existing: existing[old]=existing[new]
-    ring_slots={}
-    for item in ring.get("stores",[]):
-        ring_slots.setdefault(item["name"],item)
-    for floor,names in ring.get("corners",{}).items():
-        for index,name in enumerate(names):
-            ring_slots.setdefault(name,{"name":name,"floor":int(str(floor).replace("F","")),"side":4,"sid":index,"per":4})
-    for index,(asset_name,details) in enumerate(info.items()):
-        db_name=aliases.get(asset_name,asset_name); store_id=existing.get(asset_name) or existing.get(db_name) or _stable_catalog_id(asset_name)
-        floor=int(details.get("floor") or 1); queue=int(details.get("queue_minutes") or 0); seats=int(details.get("seats_available") or 0)
-        category=details.get("category") or "零售"; tags=",".join(details.get("tags") or [])
-        if store_id not in existing.values():
-            pos_x=140+(index%8)*105; pos_y=180+((index//8)%5)*105
-            reservable=int(category in {"餐饮","影院","商务空间","儿童乐园"})
-            avg_price=60 if category=="餐饮" else 45 if category=="饮品甜品" else 120
-            db.execute("INSERT OR IGNORE INTO stores VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",(store_id,"mall_demo",db_name,category,floor,pos_x,pos_y,f"f{floor}_{store_id}",avg_price,details.get("open_status") or "open",queue,reservable,seats,tags))
-            existing[db_name]=store_id
-        else:
-            db.execute("UPDATE stores SET category=?,floor=?,open_status=?,queue_minutes=?,seats_available=?,tags=? WHERE id=?",(category,floor,details.get("open_status") or "open",queue,seats,tags,store_id))
-        db.execute("INSERT OR REPLACE INTO store_details VALUES(?,?)",(store_id,json.dumps({**details,"asset_name":asset_name},ensure_ascii=False)))
+    for entry in map_catalog()["businesses"]:
+        details=entry.get("details") or {}; name=entry["name"]; store_id=stable_store_id(name); floor=entry["floor"]
+        queue=int(details.get("queue_minutes") or 0); seats=int(details.get("seats_available") or 0); category=details.get("category") or "零售"; tags=",".join(details.get("tags") or [])
+        avg_price=88 if category=="餐饮" else 38 if category=="饮品甜品" else 160
+        pos_x=round((entry["x"]+29)/58*1000,2); pos_y=round((entry["z"]+29)/58*760,2); route_node=f"f{floor}_store_{store_id}"
+        db.execute("""INSERT INTO stores(id,mall_id,name,category,floor,pos_x,pos_y,route_node,avg_price,open_status,queue_minutes,reservable,seats_available,tags)
+          VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,category=excluded.category,floor=excluded.floor,pos_x=excluded.pos_x,pos_y=excluded.pos_y,route_node=excluded.route_node,avg_price=excluded.avg_price,open_status=excluded.open_status,queue_minutes=excluded.queue_minutes,reservable=excluded.reservable,seats_available=excluded.seats_available,tags=excluded.tags""",
+          (store_id,"mall_demo",name,category,floor,pos_x,pos_y,route_node,avg_price,details.get("open_status") or "open",queue,int(category=="餐饮"),seats,tags))
+        db.execute("INSERT OR REPLACE INTO store_details VALUES(?,?)",(store_id,json.dumps({**details,"asset_name":name},ensure_ascii=False)))
         db.execute("INSERT OR IGNORE INTO store_status VALUES(?,?,?,?,?,?,?)",(store_id,"mall_demo",details.get("open_status") or "open",queue,seats,0,now_iso()))
-        slot=ring_slots.get(asset_name)
-        if slot:
-            side=int(slot.get("side",0)); sid=int(slot.get("sid",0)); per=max(1,int(slot.get("per",5)))
-            # Stable adapter coordinates; Floors3D retains ownership of visual geometry.
-            angle=(side+(sid+0.5)/per)*1.57079632679
-            x=round(14.5*__import__("math").cos(angle),2); z=round(9.2*__import__("math").sin(angle),2)
-            source_key=f"ring_f{floor}_s{side}_{sid}"
-            db.execute("INSERT OR REPLACE INTO store_map_bindings VALUES(?,?,?,?,?,?,?,?,?,?)",(store_id,"mall_demo",source_key,asset_name,floor,x,z,3.2,2.4,"party_a_mall_ring"))
+        db.execute("INSERT OR REPLACE INTO store_map_bindings VALUES(?,?,?,?,?,?,?,?,?,?)",(store_id,"mall_demo",entry["source_key"],name,floor,entry["x"],entry["z"],entry["width"],entry["depth"],"party_a_mall_ring"))
 
 MAIN_STORES = [
  ("s01","蜀香小院","川菜",1,220,210,180,12,1,26,"约会,家宴,包间"),("s02","锦城宴府","川菜",2,250,180,260,8,1,36,"家宴,包间,高端"),
@@ -179,20 +154,19 @@ STORE_MAP_BINDINGS = [
 def seed_commercial(db) -> None:
     now=now_iso()
     db.execute("UPDATE malls SET name=? WHERE id=?",("星河里","mall_demo"))
-    db.execute("UPDATE stores SET name=? WHERE id=?",("星河里服务台","s18"))
-    db.execute("UPDATE stores SET name=? WHERE id=?",("星河里星幕影院","s09"))
     phone_salt="mall-phone-demo-salt"
     db.execute("INSERT OR IGNORE INTO web_credentials VALUES(?,?,?,?)",("11111111111","user_demo",phone_salt,hash_password("123456",phone_salt)))
-    db.executemany("INSERT OR IGNORE INTO mall_service_codes VALUES(?,?,?,?,?)",[("QD-AI-DEMO","mall_demo","f1_c0",1,"星河里 AI 服务二维码"),("ALT-AI-DEMO","mall_alt","a_a03",1,"邻里荟 AI 服务二维码")])
+    db.executemany("INSERT OR REPLACE INTO mall_service_codes VALUES(?,?,?,?,?)",[("QD-AI-DEMO","mall_demo","f1_entrance",1,"星河里 AI 服务二维码"),("ALT-AI-DEMO","mall_alt","a_a03",1,"邻里荟 AI 服务二维码")])
     db.execute("INSERT OR IGNORE INTO users VALUES(?,?,?)",("manager_demo","星河里管理员",now))
-    db.execute("INSERT OR IGNORE INTO users VALUES(?,?,?)",("merchant_s01","蜀香小院商户",now))
+    demo_merchant_store=stable_store_id("蜀签成都串串香")
+    db.execute("INSERT OR IGNORE INTO users VALUES(?,?,?)",("merchant_s01","蜀签成都串串香商户",now))
     salt="mall-manager-salt"; db.execute("INSERT OR IGNORE INTO web_credentials VALUES(?,?,?,?)",("manager","manager_demo",salt,hash_password("manager123",salt)))
     db.execute("INSERT OR IGNORE INTO manager_access VALUES(?,?)",("manager_demo","mall_demo"))
-    db.execute("INSERT OR IGNORE INTO merchant_store_access VALUES(?,?,?)",("merchant_s01","mall_demo","s01"))
+    db.execute("INSERT OR IGNORE INTO merchant_store_access VALUES(?,?,?)",("merchant_s01","mall_demo",demo_merchant_store))
     stores=db.execute("SELECT id,name,tags FROM stores WHERE mall_id='mall_demo'").fetchall()
     for index,store in enumerate(stores,1):
-        code=f"QD-{store['id'].upper()}-DEMO"
-        manager="陈店长" if store["id"]=="s01" else f"{store['name'][:1]}店长"
+        code="QD-S01-DEMO" if store["id"]==demo_merchant_store else f"QD-{store['id'].upper()}-DEMO"
+        manager="陈店长" if store["id"]==demo_merchant_store else f"{store['name'][:1]}店长"
         db.execute("INSERT OR IGNORE INTO store_profiles VALUES(?,?,?,?,?,?,?,?)",(store["id"],code,manager,json.dumps(["值班员工A","值班员工B"],ensure_ascii=False),"10:00-22:00",store["tags"] or "到店服务","400-800-%04d"%index,now))
     metrics=[
         ("a_day_1","day","08-25",18620,1286000,0.184),("a_day_2","day","08-26",19480,1362000,0.191),("a_day_3","day","08-27",20310,1428000,0.196),("a_day_4","day","08-28",21890,1586000,0.204),("a_day_5","day","08-29",24760,1812000,0.218),("a_day_6","day","08-30",28640,2159000,0.231),("a_day_7","day","08-31",26380,1984000,0.226),
@@ -200,11 +174,15 @@ def seed_commercial(db) -> None:
         ("a_year_3","year","2024",6120000,438000000,0.191),("a_year_2","year","2025",6840000,502000000,0.207),("a_year_1","year","2026",7310000,548000000,0.221)]
     db.executemany("INSERT OR IGNORE INTO analytics_snapshots VALUES(?,?,?,?,?,?,?,?)",[(i,"mall_demo",grain,label,footfall,revenue,rate,now) for i,grain,label,footfall,revenue,rate in metrics])
     db.execute("INSERT OR IGNORE INTO map_jobs VALUES(?,?,?,?,?,?)",("map_demo_seed","mall_demo","星河里-demo.svg","demo_2_5d","published",now))
-    db.executemany(
-        "INSERT OR REPLACE INTO store_map_bindings VALUES(?,?,?,?,?,?,?,?,?,?)",
-        [(store_id,"mall_demo",key,label,floor,x,z,width,depth,"party_a_oakwood_plan")
-         for store_id,key,label,floor,x,z,width,depth in STORE_MAP_BINDINGS],
-    )
+
+def seed_marketplace(db) -> None:
+    ids={name:stable_store_id(name) for name in ("蜀签成都串串香","格瑞特运动馆","金伯利","星巴克","川食公馆","世界茶饮","拼桌茶餐厅")}
+    deals=[("d1",ids["蜀签成都串串香"],"川味双人餐",238,30),("d2",ids["格瑞特运动馆"],"双人运动体验",108,50),("d3",ids["格瑞特运动馆"],"亲子运动体验票",88,40),("d4",ids["金伯利"],"礼赠满减",399,12),("d5",ids["星巴克"],"商务咖啡套餐",68,30),("d6",ids["川食公馆"],"商务晚宴套餐",688,10),("d7",ids["世界茶饮"],"第二杯半价",18,80),("d8",ids["拼桌茶餐厅"],"家庭套餐",198,25)]
+    db.executemany("INSERT OR REPLACE INTO deals VALUES(?,?,?,?,?,?)",[(i,"mall_demo",s,t,p,stock) for i,s,t,p,stock in deals])
+    coupons=[("c1",ids["蜀签成都串串香"],"蜀签成都串串香满200减30",50),("c2",ids["金伯利"],"礼赠满300减50",30),("c3",ids["格瑞特运动馆"],"运动体验减20",40),("c4",ids["星巴克"],"商务咖啡减10",30),("c5",ids["川食公馆"],"川食公馆满500减60",20),("c6",ids["世界茶饮"],"茶饮第二杯半价券",60)]
+    db.executemany("INSERT OR REPLACE INTO coupons VALUES(?,?,?,?,?)",[(i,"mall_demo",s,t,stock) for i,s,t,stock in coupons])
+    db.execute("DELETE FROM ticket_products WHERE mall_id='mall_demo' AND id!='t_sport'")
+    db.execute("INSERT OR REPLACE INTO ticket_products VALUES(?,?,?,?,?,?)",("t_sport","mall_demo",ids["格瑞特运动馆"],"格瑞特运动馆单次体验票",88,120))
 
 def reset_and_seed() -> None:
     path=Path(settings.mall_db_path)
@@ -217,28 +195,62 @@ def reset_and_seed() -> None:
         for username,user_id,password in [("demo","user_demo","demo123"),("alt","user_alt","alt123")]:
             salt=f"mall-{username}-salt"; db.execute("INSERT INTO web_credentials VALUES(?,?,?,?)",(username,user_id,salt,hash_password(password,salt)))
         db.executemany("INSERT INTO wx_identities VALUES(?,?)",[("mock-openid-demo","user_demo"),("mock-openid-alt","user_alt")])
-        for sid,name,cat,floor,x,y,price,queue,reservable,seats,tags in MAIN_STORES:
-            db.execute("INSERT INTO stores VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",(sid,"mall_demo",name,cat,floor,x,y,f"f{floor}_{sid}",price,"open",queue,reservable,seats,tags))
         alt=[("a01","邻里咖啡","咖啡",1,250,250,35,2,0,10,"休息"),("a02","邻里餐厅","家常菜",1,500,250,80,5,1,16,"家庭"),("a03","邻里服务台","服务台",1,150,500,0,0,0,0,"服务"),("a04","邻里亲子屋","儿童乐园",1,500,500,50,3,0,0,"亲子")]
         for sid,name,cat,floor,x,y,price,queue,reservable,seats,tags in alt:
             db.execute("INSERT INTO stores VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",(sid,"mall_alt",name,cat,floor,x,y,f"a_{sid}",price,"open",queue,reservable,seats,tags))
         seed_party_a_catalog(db)
         db.executemany("INSERT INTO parking VALUES(?,?,?,?,?,?)",[("p1","mall_demo","B1-A",320,86,now_iso()),("p2","mall_demo","B1-B",280,42,now_iso()),("p3","mall_demo","B2-C",260,119,now_iso()),("pa","mall_alt","地面停车区",80,21,now_iso())])
         db.executemany("INSERT INTO members VALUES(?,?,?,?,?)",[("user_demo","mall_demo",2680,"金卡","2027-12-31"),("user_demo","mall_alt",120,"普卡","2027-06-30"),("user_alt","mall_demo",60,"普卡","2027-03-31")])
-        deals=[("d1","s01","川菜双人餐",238,30),("d2","s09","双人电影套票",108,50),("d3","s10","儿童乐园下午票",88,40),("d4","s13","生日礼物满减",399,12),("d5","s16","商务会议两小时",680,8),("d6","s17","商务晚宴套餐",1288,10),("d7","s07","第二杯半价",18,80),("d8","s11","亲子套餐",198,25)]
-        db.executemany("INSERT INTO deals VALUES(?,?,?,?,?,?)",[(i,"mall_demo",s,t,p,stock) for i,s,t,p,stock in deals])
-        coupons=[("c1","s01","蜀香小院满200减30",50),("c2","s13","礼物研究所满300减50",30),("c3","s10","儿童乐园减20",40),("c4","s16","商务空间减100",12),("c5","s17","臻味轩满1000减120",20),("c6","s07","奶茶第二杯半价券",60)]
-        db.executemany("INSERT INTO coupons VALUES(?,?,?,?,?)",[(i,"mall_demo",s,t,stock) for i,s,t,stock in coupons])
-        products=[("t_movie","s09","星河里星幕影院电影票",54,120),("t_child","s10","奇趣儿童乐园单次票",88,80)]
-        db.executemany("INSERT INTO ticket_products VALUES(?,?,?,?,?,?)",[(i,"mall_demo",s,t,p,stock) for i,s,t,p,stock in products])
+        seed_marketplace(db)
         rows=db.execute("SELECT id,mall_id,open_status,queue_minutes,seats_available FROM stores").fetchall()
-        db.executemany("INSERT OR REPLACE INTO store_status VALUES(?,?,?,?,?,?,?)",[(r["id"],r["mall_id"],r["open_status"],r["queue_minutes"],r["seats_available"],120 if r["id"]=="s09" else 80 if r["id"]=="s10" else 0,now_iso()) for r in rows])
+        ticket_store=stable_store_id("格瑞特运动馆")
+        db.executemany("INSERT OR REPLACE INTO store_status VALUES(?,?,?,?,?,?,?)",[(r["id"],r["mall_id"],r["open_status"],r["queue_minutes"],r["seats_available"],120 if r["id"]==ticket_store else 0,now_iso()) for r in rows])
         seed_commercial(db)
+
+LEGACY_STORE_REPLACEMENTS={
+    "s01":"蜀签成都串串香","s02":"川食公馆","s03":"鸿匠铁板烧日本料理","s04":"吉布鲁牛排海鲜自助餐厅",
+    "s05":"星巴克","s06":"途尚咖啡","s07":"世界茶饮","s08":"满记甜品","s09":"格瑞特运动馆",
+    "s10":"格瑞特运动馆","s11":"拼桌茶餐厅","s12":"小米之家","s13":"金伯利","s14":"阅江轩",
+    "s15":"大众书局","s16":"星巴克","s17":"川食公馆","s18":"蜀签成都串串香","s19":"福气糖",
+    "s20":"面包新语","s21":"星巴克","s22":"鱼螺满筐",
+}
+
+def reconcile_demo_catalog() -> dict:
+    """Destructively align mall_demo to the visible 3D map after an external backup."""
+    target={stable_store_id(entry["name"]) for entry in map_catalog()["businesses"]}
+    with connection(immediate=True) as db:
+        current={row["id"]:row["name"] for row in db.execute("SELECT id,name FROM stores WHERE mall_id='mall_demo'").fetchall()}
+        extras=sorted(set(current)-target)
+        for old_id,new_name in LEGACY_STORE_REPLACEMENTS.items():
+            db.execute("UPDATE reservations SET store_id=? WHERE mall_id='mall_demo' AND store_id=?",(stable_store_id(new_name),old_id))
+        if extras:
+            marks=",".join("?" for _ in extras)
+            db.execute(f"DELETE FROM reservations WHERE mall_id='mall_demo' AND store_id IN ({marks})",extras)
+            db.execute(f"DELETE FROM merchant_store_access WHERE mall_id='mall_demo' AND store_id IN ({marks})",extras)
+            db.execute(f"DELETE FROM store_profiles WHERE store_id IN ({marks})",extras)
+            db.execute(f"DELETE FROM store_details WHERE store_id IN ({marks})",extras)
+            db.execute(f"DELETE FROM store_map_bindings WHERE mall_id='mall_demo' AND store_id IN ({marks})",extras)
+            db.execute(f"DELETE FROM store_status WHERE mall_id='mall_demo' AND store_id IN ({marks})",extras)
+            db.execute(f"DELETE FROM stores WHERE mall_id='mall_demo' AND id IN ({marks})",extras)
+        plan_ids=[row[0] for row in db.execute("SELECT id FROM plans WHERE mall_id='mall_demo'").fetchall()]
+        if plan_ids:
+            marks=",".join("?" for _ in plan_ids); db.execute(f"DELETE FROM plan_snapshots WHERE plan_id IN ({marks})",plan_ids)
+            db.execute(f"DELETE FROM plans WHERE id IN ({marks})",plan_ids)
+        db.execute("UPDATE sessions SET plan_id=NULL,plan_state='IDLE',updated_at=? WHERE mall_id='mall_demo'",(now_iso(),))
+        # Rebuild all map-derived rows so names, codes, positions and live status share one source.
+        db.execute("DELETE FROM merchant_store_access WHERE mall_id='mall_demo'")
+        db.execute("DELETE FROM store_profiles WHERE store_id IN (SELECT id FROM stores WHERE mall_id='mall_demo')")
+        db.execute("DELETE FROM store_map_bindings WHERE mall_id='mall_demo'")
+        seed_party_a_catalog(db); seed_marketplace(db); seed_commercial(db)
+        ticket_store=stable_store_id("格瑞特运动馆")
+        db.execute("UPDATE store_status SET ticket_stock=CASE WHEN store_id=? THEN 120 ELSE 0 END WHERE mall_id='mall_demo'",(ticket_store,))
+        final=db.execute("SELECT COUNT(*) FROM stores WHERE mall_id='mall_demo'").fetchone()[0]
+    return {"before":len(current),"removed":len(extras),"removed_stores":[{"id":item,"name":current[item]} for item in extras],"after":final,"map_businesses":len(target),"plans_invalidated":len(plan_ids)}
 
 def ensure_database() -> None:
     with connection() as db:
         db.executescript(SCHEMA); _ensure_columns(db); exists=db.execute("SELECT 1 FROM malls LIMIT 1").fetchone()
-        if exists: seed_party_a_catalog(db); seed_commercial(db)
+        if exists: seed_party_a_catalog(db); seed_marketplace(db); seed_commercial(db)
     if not exists: reset_and_seed()
 
 def database_health() -> dict:
@@ -259,9 +271,11 @@ def database_health() -> dict:
         if foreign_key_errors: issues.append(f"foreign_key_errors={foreign_key_errors}")
         if missing: issues.append("missing_tables="+",".join(missing))
         if stores<=0: issues.append("default_mall_has_no_stores")
+        expected=map_catalog()["business_store_count"] if settings.default_mall_id=="mall_demo" else stores
+        if stores!=expected: issues.append(f"map_catalog_mismatch={stores}/{expected}")
         if statuses!=stores: issues.append(f"store_status_mismatch={statuses}/{stores}")
         if bindings!=stores: issues.append(f"map_binding_mismatch={bindings}/{stores}")
-        return {"ok":not issues,"instance_id":instance[0] if instance else None,"integrity":integrity,"foreign_key_errors":foreign_key_errors,"stores":stores,"store_statuses":statuses,"map_bindings":bindings,"issues":issues}
+        return {"ok":not issues,"instance_id":instance[0] if instance else None,"integrity":integrity,"foreign_key_errors":foreign_key_errors,"stores":stores,"expected_map_stores":expected,"store_statuses":statuses,"map_bindings":bindings,"issues":issues}
     except (sqlite3.Error,OSError) as exc:
         return {"ok":False,"instance_id":None,"issues":[f"database_unavailable:{type(exc).__name__}:{exc}"]}
 
