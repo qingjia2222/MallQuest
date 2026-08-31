@@ -2,6 +2,7 @@
 const mock = require('../../utils/mock');
 const { request } = require('../../utils/request');
 const { formatTime } = require('../../utils/format');
+const cleanReply = text => String(text || '').replace(/\*/g, '');
 
 Page({
   data: {
@@ -42,7 +43,7 @@ Page({
       const card = navigation ? null : (data.cards && data.cards[0]) || null;
       const plan = data.plan || null;
       this.setData({
-        [`messages[${idx}]`]: { role: 'ai', text: data.reply || '好的，已为你处理。', card, plan, time: formatTime(Date.now()) }
+        [`messages[${idx}]`]: { role: 'ai', text: cleanReply(data.reply || '好的，已为你处理。'), card, plan, time: formatTime(Date.now()) }
       });
       // 保存方案供地图/预约页使用
       if (plan) { app.setPlanState({ current: plan }); app.globalData.currentPlan = plan; }
@@ -57,7 +58,7 @@ Page({
 
   push(role, text) {
     const msgs = this.data.messages;
-    msgs.push({ role, text, time: formatTime(Date.now()) });
+    msgs.push({ role, text: role === 'ai' ? cleanReply(text) : text, time: formatTime(Date.now()) });
     this.setData({ messages: msgs });
     this.scrollBottom();
   },

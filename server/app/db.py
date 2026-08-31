@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS plans(id TEXT PRIMARY KEY, session_id TEXT NOT NULL, 
 CREATE TABLE IF NOT EXISTS store_profiles(store_id TEXT PRIMARY KEY REFERENCES stores(id), store_code TEXT NOT NULL UNIQUE, manager_name TEXT NOT NULL, employees_json TEXT NOT NULL, business_hours TEXT NOT NULL, service_tags TEXT NOT NULL, contact TEXT NOT NULL, updated_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS merchant_store_access(user_id TEXT NOT NULL REFERENCES users(id), mall_id TEXT NOT NULL, store_id TEXT NOT NULL REFERENCES stores(id), PRIMARY KEY(user_id,store_id));
 CREATE TABLE IF NOT EXISTS manager_access(user_id TEXT NOT NULL REFERENCES users(id), mall_id TEXT NOT NULL, PRIMARY KEY(user_id,mall_id));
+CREATE TABLE IF NOT EXISTS mall_service_codes(code TEXT PRIMARY KEY, mall_id TEXT NOT NULL REFERENCES malls(id), entry_node TEXT NOT NULL, active INTEGER NOT NULL, label TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS analytics_snapshots(id TEXT PRIMARY KEY, mall_id TEXT NOT NULL, grain TEXT NOT NULL, label TEXT NOT NULL, footfall INTEGER NOT NULL, revenue REAL NOT NULL, conversion_rate REAL NOT NULL, updated_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS map_jobs(id TEXT PRIMARY KEY, mall_id TEXT NOT NULL, source_name TEXT NOT NULL, map_mode TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL);
 """
@@ -62,6 +63,9 @@ MAIN_STORES = [
 
 def seed_commercial(db) -> None:
     now=now_iso()
+    phone_salt="mall-phone-demo-salt"
+    db.execute("INSERT OR IGNORE INTO web_credentials VALUES(?,?,?,?)",("11111111111","user_demo",phone_salt,hash_password("123456",phone_salt)))
+    db.executemany("INSERT OR IGNORE INTO mall_service_codes VALUES(?,?,?,?,?)",[("QD-AI-DEMO","mall_demo","f1_c0",1,"QD square AI 服务二维码"),("ALT-AI-DEMO","mall_alt","a_a03",1,"邻里荟 AI 服务二维码")])
     db.execute("INSERT OR IGNORE INTO users VALUES(?,?,?)",("manager_demo","QD square 管理员",now))
     db.execute("INSERT OR IGNORE INTO users VALUES(?,?,?)",("merchant_s01","蜀香小院商户",now))
     salt="mall-manager-salt"; db.execute("INSERT OR IGNORE INTO web_credentials VALUES(?,?,?,?)",("manager","manager_demo",salt,hash_password("manager123",salt)))

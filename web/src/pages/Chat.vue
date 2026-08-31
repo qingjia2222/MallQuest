@@ -24,7 +24,7 @@ onMounted(() => {
   if (prefill) { localStorage.removeItem('prefill'); send(prefill); }
 });
 
-function push(role, text) { messages.value.push({ role, text, cards: [] }); }
+function push(role, text) { messages.value.push({ role, text: role === 'ai' ? String(text || '').replace(/\*/g, '') : text, cards: [] }); }
 function scroll() { requestAnimationFrame(() => { const el = document.querySelector('.chat-scroll'); if (el) el.scrollTop = el.scrollHeight; }); }
 
 // 把后端的 cards 映射成前端富卡片类型

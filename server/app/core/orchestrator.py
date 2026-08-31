@@ -3,6 +3,7 @@ from pathlib import Path
 from app.config import settings
 from app.core.metrics import metrics
 from app.core.tools import run_tool, schemas
+from app.core.text import plain_text
 
 log=logging.getLogger("mall-assistant.orchestrator")
 PROMPTS=Path(__file__).resolve().parents[1]/"prompts"
@@ -16,7 +17,7 @@ def run_online_tool_loop(user_message,context):
         completion=client.chat.completions.create(model=settings.llm_model,messages=messages,tools=tools,tool_choice="auto"); msg=completion.choices[0].message
         messages.append(msg.model_dump(exclude_none=True))
         if not msg.tool_calls:
-            metrics.increment("llm_online_count"); return {"reply":msg.content or "已完成查询。","tool_calls":observations,"degraded":False,"mode":"online"}
+            metrics.increment("llm_online_count"); return {"reply":plain_text(msg.content or "已完成查询。"),"tool_calls":observations,"degraded":False,"mode":"online"}
         for call in msg.tool_calls:
             args=json.loads(call.function.arguments or "{}"); result=run_tool(call.function.name,context,args); observations.append({"name":call.function.name,"arguments":args,"result":result}); messages.append({"role":"tool","tool_call_id":call.id,"content":json.dumps(result,ensure_ascii=False)})
     raise RuntimeError("LLM tool loop exceeded 6 iterations")

@@ -10,27 +10,33 @@ App({
     token: '',
     userId: '',
     sessionId: '',
+    loginChannel: '',
+    serviceCode: '',
     demoMode: false,        // false = 接真实后端；true = 纯 mock（无后端演示）
     wxOnline: true,         // 已配置真实小程序 AppID；自动测试仍强制 mock
     planState: null,
     currentPlan: null
   },
 
-  onLaunch() {
+  onLaunch(options) {
+    const scene = options && options.query && options.query.scene;
+    if (scene) this.globalData.serviceCode = decodeURIComponent(scene).trim().toUpperCase();
     // 恢复登录态
     const saved = wx.getStorageSync('mallAuth');
     if (saved && saved.token) {
       this.globalData.token = saved.token;
       this.globalData.userId = saved.userId;
       this.globalData.sessionId = saved.sessionId;
+      this.globalData.loginChannel = saved.loginChannel || '';
       this.globalData.mallId = saved.mallId || 'mall_demo';
+      this.globalData.serviceCode = this.globalData.serviceCode || saved.serviceCode || '';
       this.globalData.user = this.globalData.user || { nickname: '会员' };
     }
   },
 
   // 确保已登录并建立会话（供页面调用）
   async ensureSession() {
-    if (!this.globalData.token) await auth.login();
+    if (!this.globalData.token) throw new Error('请先使用手机号登录');
     if (!this.globalData.sessionId) await auth.scan();
     return this.globalData;
   },

@@ -4,7 +4,7 @@
 
 ## 自动化结果
 
-- `python -m pytest -q server/tests`：12 passed，覆盖鉴权、扫码建会话、RAG 来源、私有数据隔离、中文槽位、五类规划、确认门、路线、目的地动画、商户同步、管理看板、三角色越权阻断和注入防护。
+- `python -m pytest -q server/tests`：14 passed，覆盖手机号鉴权、AI 服务码解析与优先绑定、无效服务码、回复星号清洗、微信兼容登录、扫码建会话、RAG 来源、私有数据隔离、中文槽位、五类规划、确认门、路线、目的地动画、商户同步、管理看板、三角色越权阻断和注入防护。
 - `server/scripts/smoke_demo.py`：连续运行 2 次均 `SMOKE DEMO PASSED`；每次 17 个请求、0 错误，五个规划场景均到达 DONE。
 - `server/scripts/load_test.py`：120/120 成功、0 错误、16 并发、吞吐 319.58 req/s、平均 47.21 ms、P50 49.41 ms、P95 74.72 ms。
 - Python `compileall`、Web/小程序 JavaScript 语法、全部小程序 JSON 解析均通过。

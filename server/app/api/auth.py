@@ -1,4 +1,5 @@
 import uuid
+import re
 import httpx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -10,15 +11,27 @@ from app.db import connection, hash_password, now_iso
 router=APIRouter(prefix="/auth",tags=["auth"])
 class WebLogin(BaseModel):
     username:str|None=None; password:str|None=None; phone:str|None=None; pwd:str|None=None
+class PhoneLogin(BaseModel): phone:str; password:str
 class WxLogin(BaseModel): code:str
+
+def authenticate(username:str,password:str):
+    with connection() as db: row=db.execute("SELECT * FROM web_credentials WHERE username=?",(username,)).fetchone()
+    if not row or hash_password(password,row["salt"])!=row["password_hash"]: raise HTTPException(status_code=401,detail="手机号或密码错误")
+    return row
 
 @router.post("/web-login")
 def web_login(body:WebLogin):
     username=body.username or body.phone; password=body.password or body.pwd
     if not username or not password: raise HTTPException(status_code=422,detail="username and password are required")
-    with connection() as db: row=db.execute("SELECT * FROM web_credentials WHERE username=?",(username,)).fetchone()
-    if not row or hash_password(password,row["salt"])!=row["password_hash"]: raise HTTPException(status_code=401,detail="invalid credentials")
+    row=authenticate(username,password)
     return envelope({"token":issue_token(row["user_id"],"web"),"user_id":row["user_id"],"login_channel":"web"})
+
+@router.post("/phone-login")
+def phone_login(body:PhoneLogin):
+    phone=body.phone.strip()
+    if not re.fullmatch(r"1\d{10}",phone): raise HTTPException(status_code=422,detail="请输入11位手机号")
+    row=authenticate(phone,body.password)
+    return envelope({"token":issue_token(row["user_id"],"phone"),"user_id":row["user_id"],"login_channel":"phone","phone_masked":phone[:3]+"****"+phone[-4:]})
 
 @router.post("/wx-login")
 async def wx_login(body:WxLogin):

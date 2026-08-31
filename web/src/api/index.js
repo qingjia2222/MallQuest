@@ -22,8 +22,9 @@ async function req(method, path, data, tokenOverride) {
 
 export default {
   webLogin: (username, password) => req('POST', '/api/auth/web-login', { username, password }),
+  phoneLogin: (phone, password) => req('POST', '/api/auth/phone-login', { phone, password }, ''),
   wxLogin: (code) => req('POST', '/api/auth/wx-login', { code }),
-  scan: (mall_id = 'mall_demo') => req('POST', '/api/scan', { mall_id, session_id: SESSION_ID || null }),
+  scan: (mall_id = 'mall_demo', service_code = null) => req('POST', '/api/scan', { mall_id, service_code, session_id: SESSION_ID || null }),
   chat: (message) => req('POST', '/api/chat', { session_id: SESSION_ID, message }),
   createPlan: (scene, slots = {}) => req('POST', '/api/plan/goal', { session_id: SESSION_ID, scene, slots }),
   getPlan: (plan_id) => req('GET', `/api/plan/${plan_id}`),

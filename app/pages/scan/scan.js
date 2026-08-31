@@ -1,27 +1,51 @@
-// pages/scan/scan.js - 扫码入口页
-const { login, scan } = require('../../utils/auth');
+const { phoneLogin, scan } = require('../../utils/auth');
 
 Page({
   data: {
-    playing: true,
-    connected: false
+    phone: '11111111111',
+    password: '123456',
+    serviceCode: '',
+    qrDetected: false,
+    connecting: false,
+    connected: false,
+    playing: false,
+    mallName: 'QD square',
+    sourceText: ''
   },
 
-  async onLoad() {
+  onLoad(options) {
+    const app = getApp();
+    const scene = options && options.scene ? decodeURIComponent(options.scene).trim().toUpperCase() : '';
+    const serviceCode = scene || app.globalData.serviceCode || '';
+    app.globalData.serviceCode = serviceCode;
+    this.setData({ serviceCode, qrDetected: Boolean(serviceCode) });
+  },
+
+  field(e) { this.setData({ [e.currentTarget.dataset.key]: e.detail.value }); },
+
+  async submitLogin() {
+    if (!/^1\d{10}$/.test(this.data.phone)) {
+      wx.showToast({ title: '请输入11位手机号', icon: 'none' });
+      return;
+    }
+    if (!this.data.password) {
+      wx.showToast({ title: '请输入密码', icon: 'none' });
+      return;
+    }
+    this.setData({ connecting: true, playing: true });
     try {
-      await login();
-      const data = await scan();
-      getApp().globalData.mall = { id: data.mall_id || 'mall_demo', name: data.mall_name || 'QD square' };
-      this.setData({ connected: true });
-      setTimeout(() => this.enterHome(), 1000);
+      await phoneLogin(this.data.phone, this.data.password);
+      const data = await scan(this.data.serviceCode);
+      getApp().globalData.mall = { id: data.mall_id, name: data.mall_name };
+      const sourceText = ((data.datasource_connection && data.datasource_connection.sources) || []).map(item => item.label).join(' · ');
+      this.setData({ connected: true, mallName: data.mall_name || 'QD square', sourceText });
+      setTimeout(() => this.enterHome(), 1400);
     } catch (e) {
-      wx.showModal({ title: '连接失败', content: e.message || '请确认后端已启动', showCancel: false });
+      this.setData({ connecting: false, playing: false });
+      wx.showModal({ title: '登录或连接失败', content: e.message || '请确认后端已启动', showCancel: false });
     }
   },
 
   onParticleDone() {},
-
-  enterHome() {
-    wx.reLaunch({ url: '/pages/chat/chat' });
-  }
+  enterHome() { if (this.data.connected) wx.reLaunch({ url: '/pages/chat/chat' }); }
 });

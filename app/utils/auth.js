@@ -1,1 +1,41 @@
-const{request}=require('./request');async function login(){const app=getApp();let code='mock-demo';try{if(wx.login){const r=await new Promise((resolve,reject)=>wx.login({success:resolve,fail:reject}));if(r.code&&app.globalData.wxOnline)code=r.code}}catch(e){console.warn('wx.login unavailable, using mock',e)}const auth=await request('/api/auth/wx-login',{method:'POST',data:{code}});Object.assign(app.globalData,{token:auth.token,userId:auth.user_id});wx.setStorageSync('mallAuth',{token:auth.token,userId:auth.user_id});return auth}async function scan(){const app=getApp(),data=await request('/api/scan',{method:'POST',data:{mall_id:app.globalData.mallId}});app.globalData.sessionId=data.session_id;wx.setStorageSync('mallAuth',{token:app.globalData.token,userId:app.globalData.userId,sessionId:data.session_id,mallId:app.globalData.mallId});return data}module.exports={login,scan}
+const { request } = require('./request');
+
+function saveAuth(auth) {
+  const app = getApp();
+  Object.assign(app.globalData, { token: auth.token, userId: auth.user_id, loginChannel: auth.login_channel });
+  wx.setStorageSync('mallAuth', { token: auth.token, userId: auth.user_id, loginChannel: auth.login_channel });
+}
+
+async function phoneLogin(phone, password) {
+  const auth = await request('/api/auth/phone-login', { method: 'POST', token: '', data: { phone, password } });
+  saveAuth(auth);
+  return auth;
+}
+
+async function wxLogin() {
+  const app = getApp();
+  let code = 'mock-demo';
+  if (app.globalData.wxOnline && wx.login) {
+    const result = await new Promise((resolve, reject) => wx.login({ success: resolve, fail: reject }));
+    if (result.code) code = result.code;
+  }
+  const auth = await request('/api/auth/wx-login', { method: 'POST', token: '', data: { code } });
+  saveAuth(auth);
+  return auth;
+}
+
+async function scan(serviceCode) {
+  const app = getApp();
+  const data = await request('/api/scan', {
+    method: 'POST',
+    data: {
+      mall_id: serviceCode ? null : app.globalData.mallId,
+      service_code: serviceCode || app.globalData.serviceCode || null
+    }
+  });
+  Object.assign(app.globalData, { sessionId: data.session_id, mallId: data.mall_id, serviceCode: data.service_code || '' });
+  wx.setStorageSync('mallAuth', { token: app.globalData.token, userId: app.globalData.userId, loginChannel: app.globalData.loginChannel, sessionId: data.session_id, mallId: data.mall_id, serviceCode: data.service_code || '' });
+  return data;
+}
+
+module.exports = { phoneLogin, wxLogin, scan };
