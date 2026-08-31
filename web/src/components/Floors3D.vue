@@ -26,10 +26,11 @@ let floorGroups = { F1: null, F2: null };
 const W = 58;
 const EDGE = 8;
 const INNER = W/2 - EDGE;            // 店内边缘(朝中庭)
-const DARK = 0x12163a;
-const FLOOR_Y = { F1: 0, F2: 8 };
-const CAT = { 餐饮: 0x7C3AED, 零售: 0x06B6D4, 教育: 0xF59E0B, 设施: 0x9CA3AF,
-  food: 0x5b6bff, lift: 0x06B6D4, esc: 0xEF4444, bridge: 0x7C3AED, entrance: 0x10B981 };
+const DARK = 0xF7F3FA;               // 参考图风：近白淡紫背景
+const FLOOR_Y = { F1: 0, F2: 12 };   // 两层楼高差拉大，区分更明显
+// 参考图配色：淡粉/淡紫/淡蓝/淡灰的低饱和浅色块，柔和淡雅
+const CAT = { 餐饮: 0xF2A9C0, 饮品甜品: 0xB89BE0, 零售: 0x9BB4E8, 服务设施: 0xC7CFDA,
+  food: 0xF2A9C0, lift: 0x9BB4E8, esc: 0xF2A9C0, bridge: 0xB89BE0, entrance: 0x6FBF8F };
 
 function init() {
   try {
@@ -38,15 +39,15 @@ function init() {
     scene.background = new THREE.Color(DARK);
     scene.fog = new THREE.Fog(DARK, 80, 180);
     camera = new THREE.PerspectiveCamera(50, 1, 0.1, 500);
-    camera.position.set(30, 34, 42); camera.lookAt(0, 4, 0);
+    camera.position.set(36, 42, 56); camera.lookAt(0, 16, 0);
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setClearColor(DARK, 1);
     el.value.appendChild(renderer.domElement);
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true; controls.dampingFactor = 0.1; controls.target.set(0, 4, 0);
-    const amb = new THREE.AmbientLight(0xffffff, 0.75); scene.add(amb);
-    const dir = new THREE.DirectionalLight(0xffffff, 0.8); dir.position.set(20, 40, 20); scene.add(dir);
-    const p = new THREE.PointLight(0x7C3AED, 1.2, 90); p.position.set(-20, 20, -20); scene.add(p);
+    const amb = new THREE.AmbientLight(0xfdfbff, 0.55); scene.add(amb);
+    const dir = new THREE.DirectionalLight(0xffffff, 0.5); dir.position.set(20, 40, 20); scene.add(dir);
+    const p = new THREE.PointLight(0xFFFFFF, 0.35, 90); p.position.set(-20, 20, -20); scene.add(p);
 
     buildFloor('F1'); buildFloor('F2'); buildElevator();
     renderer.domElement.addEventListener('click', onCanvasClick);
@@ -63,14 +64,16 @@ function makeLabel(text) {
   const ctx = c.getContext('2d');
   let size = 40; ctx.font = `bold ${size}px "PingFang SC","Microsoft YaHei",sans-serif`;
   while (ctx.measureText(text).width > 236 && size > 14) { size -= 2; ctx.font = `bold ${size}px "PingFang SC","Microsoft YaHei",sans-serif`; }
-  ctx.fillStyle = 'rgba(30,27,75,0.92)'; ctx.fillRect(0, 0, 256, 80);
-  ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, 128, 42);
+  ctx.clearRect(0, 0, 256, 80);
+  ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.fillRect(0, 0, 256, 80);
+  ctx.strokeStyle = 'rgba(150,120,110,0.5)'; ctx.lineWidth = 3; ctx.strokeRect(0, 0, 256, 80);
+  ctx.fillStyle = '#5A4B3C'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, 128, 42);
   return new THREE.CanvasTexture(c);
 }
 function catColor(cat) { return CAT[cat] || 0x9CA3AF; }
 // 悬浮文字标签
 function addLabel(group, text, x, y, z, scale) {
-  const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: makeLabel(text), depthTest: false }));
+  const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: makeLabel(text), depthTest: false, transparent: true }));
   spr.scale.set((scale || 6.4), 1.6, 1);
   spr.position.set(x, y, z);
   group.add(spr);
@@ -82,9 +85,9 @@ function buildFloor(fl) {
   const group = new THREE.Group(); group.position.y = floorY;
 
   // 平台底（浅色 + 中庭走道）
-  const base = new THREE.Mesh(new THREE.BoxGeometry(W, 1.0, W), new THREE.MeshStandardMaterial({ color: 0xdfe3f2, transparent: true, opacity: 0.7 }));
+  const base = new THREE.Mesh(new THREE.BoxGeometry(W, 1.0, W), new THREE.MeshStandardMaterial({ color: 0xFDFBF7, transparent: true, opacity: 0.8 }));
   group.add(base);
-  const walk = new THREE.Mesh(new THREE.BoxGeometry(W - 2*EDGE, 0.2, W - 2*EDGE), new THREE.MeshStandardMaterial({ color: 0xbfd4ff, transparent: true, opacity: 0.45 }));
+  const walk = new THREE.Mesh(new THREE.BoxGeometry(W - 2*EDGE, 0.2, W - 2*EDGE), new THREE.MeshStandardMaterial({ color: 0xECEAF3, transparent: true, opacity: 0.55 }));
   walk.position.y = 0.55; group.add(walk);
 
   // 四角 L 形转角店 + 四边一排小店 + 设施
@@ -134,7 +137,7 @@ function buildCorners(group, fl, flNum, edged, armLen) {
   const cornerNames = (ringPlan.corners && ringPlan.corners[fl]) || ['转角店A', '转角店B', '转角店C', '转角店D'];
   const cornerPos = [[-1,-1],[1,-1],[1,1],[-1,1]];  // 角符号
   const arm = EDGE - 0.4;        // 臂厚(外/内缘对齐)
-  const mat = new THREE.MeshStandardMaterial({ color: catColor('零售'), emissive: catColor('零售'), emissiveIntensity: 0.3 });
+  const mat = new THREE.MeshLambertMaterial({ color: catColor('餐饮') });
   cornerPos.forEach(([sx, sz], k) => {
     const cx = sx * edged, cz = sz * edged;   // 角中心(环中线)
     // 横向臂(沿 x)：位于角的上/下边带，从角点向内伸 armLen
@@ -163,11 +166,11 @@ function floorLabelY() { return 2.2; }
 function placeShop(group, r, px, pz, size, fl, flNum) {
   const [sx, sz] = size;
   const isFac = r.fac === 'true' || /卫生间|服务台|信息台/.test(r.name);
-  const color = isFac ? 0x9CA3AF : catColor(r.cat || '零售');   // 卫生间等设施用灰色
-  const tile = new THREE.Mesh(new THREE.BoxGeometry(sx, 0.3, sz),
-    new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: isFac ? 0.3 : 0.22 }));
-  tile.position.set(px, 0.9, pz);
   const info = infoOf(r.name);
+  const color = isFac ? 0xB8B2A6 : catColor(info.category || '零售');   // 卫生间等设施用灰色；其余按分类上色
+  const tile = new THREE.Mesh(new THREE.BoxGeometry(sx, 0.3, sz),
+    new THREE.MeshLambertMaterial({ color }));   // Lambert 无自发光，显示本色，避免被光照洗白
+  tile.position.set(px, 0.9, pz);
   tile.userData = { store: {
     name: r.name, floor: fl, floor2: flNum,
     cat: r.cat || (isFac ? '设施' : '零售'),
@@ -184,10 +187,10 @@ function placeShop(group, r, px, pz, size, fl, flNum) {
 
 // 中央核心快布局
 function buildCenter(group, fl, flNum) {
-  const fcMat = new THREE.MeshStandardMaterial({ color: 0x5b6bff, transparent: true, opacity: 0.5 });
+  const fcMat = new THREE.MeshStandardMaterial({ color: 0xB89BE0, transparent: true, opacity: 0.5 });
   if (fl === 'F1') {
     // 一楼：一侧服务台、另一侧瀑布厅
-    const svc = new THREE.Mesh(new THREE.BoxGeometry(11, 0.5, 8), new THREE.MeshStandardMaterial({ color: 0x06B6D4, transparent: true, opacity: 0.45 }));
+    const svc = new THREE.Mesh(new THREE.BoxGeometry(11, 0.5, 8), new THREE.MeshStandardMaterial({ color: 0xC7CFDA, transparent: true, opacity: 0.5 }));
     svc.position.set(-9, 0.6, -1); group.add(svc);
     addLabel(group, '服务台', -9, 1.6, -1, 5.2);
     const falls = new THREE.Mesh(new THREE.BoxGeometry(11, 0.5, 8), fcMat);
@@ -195,22 +198,22 @@ function buildCenter(group, fl, flNum) {
     addLabel(group, '瀑布厅', 9, 1.6, -1, 5.2);
   } else {
     // 二楼：一侧儿童乐园、另一侧美食广场
-    const kid = new THREE.Mesh(new THREE.BoxGeometry(11, 0.5, 8), new THREE.MeshStandardMaterial({ color: 0xF59E0B, transparent: true, opacity: 0.4 }));
+    const kid = new THREE.Mesh(new THREE.BoxGeometry(11, 0.5, 8), new THREE.MeshStandardMaterial({ color: 0x9BD5AB, transparent: true, opacity: 0.4 }));
     kid.position.set(-9, 0.6, -1); group.add(kid);
     addLabel(group, '儿童乐园', -9, 1.6, -1, 5.2);
-    const fc2 = new THREE.Mesh(new THREE.BoxGeometry(11, 0.5, 8), new THREE.MeshStandardMaterial({ color: 0x8b5cf6, transparent: true, opacity: 0.45 }));
+    const fc2 = new THREE.Mesh(new THREE.BoxGeometry(11, 0.5, 8), new THREE.MeshStandardMaterial({ color: 0xF2A9C0, transparent: true, opacity: 0.5 }));
     fc2.position.set(9, 0.6, -1); group.add(fc2);
     addLabel(group, '美食广场', 9, 1.6, -1, 5.2);
   }
   // 平铺的电梯（贴本层地面，看哪层都是平的）
   // 电梯平台：中庭中央（青色，平铺）；扶梯为跨层斜梯(见 buildElevator)，这里不再平铺重复
-  const lift = new THREE.Mesh(new THREE.BoxGeometry(6, 0.25, 6), new THREE.MeshStandardMaterial({ color: 0x06B6D4, emissive: 0x06B6D4, emissiveIntensity: 0.3 }));
+  const lift = new THREE.Mesh(new THREE.BoxGeometry(6, 0.25, 6), new THREE.MeshStandardMaterial({ color: 0x9BB4E8, emissive: 0x9BB4E8, emissiveIntensity: 0.25 }));
   lift.position.set(0, 0.7, 0); group.add(lift);
   addLabel(group, '电梯', 0, 1.5, 0, 4);
 
   // 主入口(下边中央,F1 留空处)：贴地绿色块 + 标签
   if (fl === 'F1') {
-    const ent = new THREE.Mesh(new THREE.BoxGeometry(4, 0.25, 2), new THREE.MeshStandardMaterial({ color: 0x10B981, emissive: 0x10B981, emissiveIntensity: 0.3 }));
+    const ent = new THREE.Mesh(new THREE.BoxGeometry(4, 0.25, 2), new THREE.MeshStandardMaterial({ color: 0x6FBF8F, emissive: 0x6FBF8F, emissiveIntensity: 0.25 }));
     ent.position.set(0, 0.7, INNER + 0.5); group.add(ent);
     addLabel(group, '主入口', 0, 1.5, INNER + 0.5, 4);
   }
@@ -259,10 +262,10 @@ function focusFloor(fl) {
   // 相机聚焦
   if (fl === 'all') {
     controls.target.set(0, (FLOOR_Y.F1 + FLOOR_Y.F2) / 2, 0);
-    camera.position.set(34, 20, 40);
+    camera.position.set(44, 30, 60);
   } else {
     controls.target.set(0, FLOOR_Y[fl], 0);
-    camera.position.set(28, FLOOR_Y[fl] + 26, 38);
+    camera.position.set(33, FLOOR_Y[fl] + 26, 48);
   }
   emit('floorschanged', fl);
 }
@@ -274,7 +277,7 @@ function drawRoute(route) {
   if (!scene) return;   // 场景还没初始化（onMounted init 之前），跳过，避免 scene.add 报错
   clearRoute();
   if (!route || !route.stops || !route.stops.length) return;
-  const mat = new THREE.LineBasicMaterial({ color: 0xEF4444 });
+  const mat = new THREE.LineBasicMaterial({ color: 0x2BB673 });   // 参考图路线绿色
   route.stops.forEach((s, i) => {
     if (i >= route.stops.length - 1) return;
     const b = route.stops[i + 1];
@@ -304,10 +307,10 @@ defineExpose({ focusFloor, drawRoute });
 </template>
 
 <style scoped>
-.f3d { position: relative; width: 100%; background: #12163a; border-radius: 18px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+.f3d { position: relative; width: 100%; background: #F7F3FA; border-radius: 18px; overflow: hidden; box-shadow: 0 8px 24px rgba(120,110,140,0.14); }
 .f3d-canvas { width: 100%; height: 480px; }
 .f3d-floors { position: absolute; top: 12px; left: 12px; display: flex; flex-direction: column; gap: 6px; }
-.f3d-floor { width: 34px; height: 30px; border-radius: 8px; background: rgba(255,255,255,0.18); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; cursor: pointer; }
-.f3d-floor.active { background: linear-gradient(135deg, #7C3AED, #06B6D4); color: #fff; }
-.f3d-hint { position: absolute; bottom: 10px; width: 100%; text-align: center; color: rgba(255,255,255,0.6); font-size: 12px; pointer-events: none; }
+.f3d-floor { width: 34px; height: 30px; border-radius: 8px; background: rgba(0,0,0,0.04); color: #7A6E8C; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; cursor: pointer; }
+.f3d-floor.active { background: linear-gradient(135deg, #C9B6E8, #C5D0E8); color: #3A3550; }
+.f3d-hint { position: absolute; bottom: 10px; width: 100%; text-align: center; color: rgba(122,110,140,0.7); font-size: 12px; pointer-events: none; }
 </style>
