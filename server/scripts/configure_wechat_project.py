@@ -13,5 +13,15 @@ if not app_id:
 private_path = ROOT / "app" / "project.private.config.json"
 config = json.loads(private_path.read_text(encoding="utf-8")) if private_path.exists() else {}
 config["appid"] = app_id
+miniprogram = config.setdefault("condition", {}).setdefault("miniprogram", {})
+compile_modes = miniprogram.setdefault("list", [])
+qr_mode = {
+    "name": "AI 服务二维码",
+    "pathName": "pages/scan/scan",
+    "query": "scene=QD-AI-DEMO",
+    "scene": None,
+}
+compile_modes[:] = [item for item in compile_modes if item.get("name") != qr_mode["name"]]
+compile_modes.append(qr_mode)
 private_path.write_text(json.dumps(config, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-print("WeChat DevTools private AppID configured. The value was not printed.")
+print("WeChat DevTools private AppID and AI QR compile mode configured. The AppID was not printed.")
