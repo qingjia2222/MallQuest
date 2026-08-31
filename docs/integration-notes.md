@@ -7,4 +7,4 @@
 - 地图当前为 QD square 两层 Demo SVG；未来替换真实地图时保留 1000×760 坐标系或同步更新 `route_graph.json`，接口无需改变。
 - `WX_APP_ID` 在微信公众平台“小程序后台 → 开发 → 开发管理 → 开发设置”查看；`WX_APP_SECRET` 在同页生成或重置，只放 `server/.env`。没有这两项时保留 `WX_AUTH_MODE=mock`。
 - 微信开发者工具已安装并导入 `app/`；本地录屏优先用开发者工具，最终发布前再用真机检查网络、权限、性能和机型适配。
-- AI 服务小程序码位于 `docs/assets/qd-ai-service-code.png`，开发版扫码者必须已被加入该小程序的开发成员。二维码路径固定为 `pages/scan/scan`，`scene=QD-AI-DEMO`；页面保存 scene，手机号登录成功后调用 `/api/scan` 完成私有数据源绑定。
+- AI 服务码路径固定为 `pages/scan/scan`，`scene=QD-AI-DEMO`；页面保存 scene，手机号登录成功后调用 `/api/scan` 完成私有数据源绑定。开发版码可能过期，现场测试应设置相同自定义编译参数后点击开发者工具“预览”，扫描刚生成的码；长期固定码需体验版或正式版。
