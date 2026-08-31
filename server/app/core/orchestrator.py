@@ -2,7 +2,6 @@ import json, logging
 from pathlib import Path
 from app.config import settings
 from app.core.metrics import metrics
-from app.core.text import plain_text
 from app.core.tools import run_tool, schemas
 
 log=logging.getLogger("mall-assistant.orchestrator")
@@ -28,8 +27,7 @@ def _run_tool_loop(system_prompt,user_message,context,available_kinds=("read",),
         messages.append(msg.model_dump(exclude_none=True))
         if not msg.tool_calls:
             metrics.increment("llm_online_count")
-            reply=msg.content or "已完成查询。"
-            result={"reply":reply if collect else plain_text(reply),"tool_calls":observations,"degraded":False,"mode":"online"}
+            result={"reply":msg.content or "已完成查询。","tool_calls":observations,"degraded":False,"mode":"online"}
             return collect(result) if collect else result
         for call in msg.tool_calls:
             args=json.loads(call.function.arguments or "{}"); result=run_tool(call.function.name,context,args)
@@ -67,18 +65,20 @@ def _extract_plan_json(text):
     except Exception as exc:
         log.warning("plan_json_parse_failed error=%s",type(exc).__name__); return None
 
-def run_planning_tool_loop(user_message,context,scene):
+def run_planning_tool_loop(user_message,context,scene,existing=None):
     system=(PROMPTS/"system.md").read_text(encoding="utf-8")+"\n"+(PROMPTS/"planning.md").read_text(encoding="utf-8")
+    if existing:
+        system+="\n\n## 用户当前已有方案（请在此基础上增补/调整，不要抛弃原有站，只需在需要时新增或替换个别站）\n当前方案："+existing
     def collect(result):
         raw=result["reply"]
         idx=raw.find(PLAN_JSON_HEADER)
         if idx>=0: result["reply"]=raw[:idx].rstrip()
         result["plan_json"]=_extract_plan_json(raw); result["scene"]=scene
         return result
-    return _run_tool_loop(system,user_message,context,("read",),max_iter=8,collect=collect)
+    return _run_tool_loop(system,user_message,context,("read",),max_iter=10,collect=collect)
 
-def try_online_planning(user_message,context,scene):
+def try_online_planning(user_message,context,scene,existing=None):
     if not _online_enabled(): return None
-    try: return run_planning_tool_loop(user_message,context,scene)
+    try: return run_planning_tool_loop(user_message,context,scene,existing)
     except Exception as exc:
         log.exception("online_planning_failed error_type=%s",type(exc).__name__); metrics.increment("llm_fallback_count"); return None

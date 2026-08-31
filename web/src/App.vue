@@ -13,7 +13,7 @@ const tabs = [
   { path: '/profile', label: '我的', icon: '👤' }
 ];
 
-const showTabs = () => !!route.meta.tab && (localStorage.getItem('mall_role') || 'visitor') === 'visitor';
+const showTabs = () => !!route.meta.tab;
 </script>
 
 <template>
@@ -89,5 +89,5 @@ const showTabs = () => !!route.meta.tab && (localStorage.getItem('mall_role') ||
   color: #9CA3AF; cursor: pointer; font-size: 12px;
 }
 .tab.active { color: var(--primary); }
-.tab-icon { font-size: 20px; line-height: 22px; margin-bottom: 2px; }
+.tab-icon { font-size: 20px; margin-bottom: 2px; }
 </style>

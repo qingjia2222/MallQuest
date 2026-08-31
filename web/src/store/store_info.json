@@ -1,405 +1,1302 @@
 {
  "面包新语": {
   "category": "餐饮",
-  "desc": "特色美食，热门人气餐厅，适合聚餐约会",
+  "desc": "新式烘焙连锁，现烤面包与欧包每天新鲜出炉，麦香浓郁，是早餐与下午茶的人气之选。",
+  "recommend": [
+   "现烤牛角包",
+   "芝士软欧包",
+   "岩烧乳酪"
+  ],
   "tags": [
-   "美食",
-   "聚餐",
-   "人气"
-  ]
+   "烘焙",
+   "面包",
+   "早餐"
+  ],
+  "hero": "🍜",
+  "open_status": "open",
+  "queue_minutes": 20,
+  "seats_available": 25,
+  "floor": 1
  },
  "思百食Spiceee": {
   "category": "餐饮",
-  "desc": "特色美食，热门人气餐厅，适合聚餐约会",
+  "desc": "主打东南亚风味的香辣简餐，咖喱与香茅气息浓郁，口味开胃，适合一人食或上班族午市。",
+  "recommend": [
+   "冬阴功汤",
+   "马来椰浆饭",
+   "招牌香辣面"
+  ],
   "tags": [
-   "美食",
-   "聚餐",
-   "人气"
-  ]
+   "东南亚",
+   "简餐",
+   "香辣"
+  ],
+  "hero": "🍛",
+  "open_status": "open",
+  "queue_minutes": 10,
+  "seats_available": 15,
+  "floor": 1
  },
  "卫生间": {
   "category": "服务设施",
-  "desc": "商场服务设施，为顾客提供便利",
+  "desc": "商场内公共卫生间，设有母婴室与无障碍设施，动线便捷、干净整洁。",
+  "recommend": [],
   "tags": [
    "服务",
-   "便民"
-  ]
+   "便民",
+   "洗手间"
+  ],
+  "hero": "🚻",
+  "open_status": "open",
+  "queue_minutes": 0,
+  "seats_available": 0,
+  "floor": 2
  },
  "途尚咖啡": {
   "category": "饮品甜品",
-  "desc": "精致饮品与甜品，休闲小憩好去处",
+  "desc": "精品手冲咖啡店，豆子每日现磨，环境安静，适合独自办公或朋友小聚。",
+  "recommend": [
+   "手冲单品",
+   "鲜奶拿铁",
+   "冷萃咖啡"
+  ],
   "tags": [
-   "饮品",
-   "下午茶",
-   "甜品"
-  ]
+   "咖啡",
+   "手冲",
+   "下午茶"
+  ],
+  "hero": "☕",
+  "open_status": "open",
+  "queue_minutes": 4,
+  "seats_available": 12,
+  "floor": 1
  },
  "天辣小馆": {
   "category": "餐饮",
-  "desc": "特色美食，热门人气餐厅，适合聚餐约会",
+  "desc": "川湘风味小馆，麻辣鲜香、锅气足，下饭利器，适合无辣不欢的食客。",
+  "recommend": [
+   "麻辣香锅",
+   "水煮鱼",
+   "辣子鸡"
+  ],
   "tags": [
-   "美食",
-   "聚餐",
-   "人气"
-  ]
+   "川菜",
+   "麻辣",
+   "下饭"
+  ],
+  "hero": "🌶️",
+  "open_status": "open",
+  "queue_minutes": 33,
+  "seats_available": 38,
+  "floor": 1
  },
  "吟松日本料理": {
   "category": "餐饮",
-  "desc": "特色美食，热门人气餐厅，适合聚餐约会",
+  "desc": "日式料理专门店，食材每日空运，摆盘精致，性价比与仪式感兼具。",
+  "recommend": [
+   "刺身拼盘",
+   "蒲烧鳗鱼饭",
+   "天妇罗"
+  ],
   "tags": [
-   "美食",
-   "聚餐",
-   "人气"
-  ]
+   "日料",
+   "刺身",
+   "精致"
+  ],
+  "hero": "🍣",
+  "open_status": "open",
+  "queue_minutes": 19,
+  "seats_available": 24,
+  "floor": 1
  },
  "世界茶饮": {
   "category": "饮品甜品",
-  "desc": "精致饮品与甜品，休闲小憩好去处",
+  "desc": "新式茶饮品牌，鲜果与芝士奶盖搭配，颜值与口感在线，逛街必买。",
+  "recommend": [
+   "芝士奶盖茶",
+   "水果茶",
+   "椰椰奶茶"
+  ],
   "tags": [
-   "饮品",
-   "下午茶",
-   "甜品"
-  ]
+   "茶饮",
+   "奶茶",
+   "鲜果"
+  ],
+  "hero": "🧋",
+  "open_status": "open",
+  "queue_minutes": 6,
+  "seats_available": 22,
+  "floor": 1
  },
  "丸龟制面": {
   "category": "餐饮",
-  "desc": "特色美食，热门人气餐厅，适合聚餐约会",
+  "desc": "日式乌冬专门店，现煮弹牙乌冬，汤底清爽，出品快，人气快餐之选。",
+  "recommend": [
+   "牛肉乌冬",
+   "咖喱乌冬",
+   "天妇罗乌冬"
+  ],
   "tags": [
-   "美食",
-   "聚餐",
-   "人气"
-  ]
+   "乌冬",
+   "面食",
+   "快餐"
+  ],
+  "hero": "🍜",
+  "open_status": "open",
+  "queue_minutes": 21,
+  "seats_available": 26,
+  "floor": 1
  },
  "拼桌茶餐厅": {
   "category": "餐饮",
-  "desc": "特色美食，热门人气餐厅，适合聚餐约会",
+  "desc": "港式茶餐厅，菠萝油与丝袜奶茶是一绝，烟火气十足，适合朋友拼桌唠嗑。",
+  "recommend": [
+   "菠萝油",
+   "干炒牛河",
+   "丝袜奶茶"
+  ],
   "tags": [
-   "美食",
-   "聚餐",
-   "人气"
-  ]
+   "港式",
+   "茶餐厅",
+   "奶茶"
+  ],
+  "hero": "🍵",
+  "open_status": "open",
+  "queue_minutes": 26,
+  "seats_available": 31,
+  "floor": 1
  },
  "爪财猫寿司": {
   "category": "餐饮",
-  "desc": "特色美食，热门人气餐厅，适合聚餐约会",
+  "desc": "日式寿司手作店，米饭醋香自然，食材新鲜，一人食或外带都合适。",
+  "recommend": [
+   "三文鱼寿司",
+   "鳗鱼寿司",
+   "加州卷"
+  ],
   "tags": [
-   "美食",
-   "聚餐",
-   "人气"
-  ]
+   "寿司",
+   "日料",
+   "手作"
+  ],
+  "hero": "🍣",
+  "open_status": "open",
+  "queue_minutes": 24,
+  "seats_available": 29,
+  "floor": 1
  },
  "手工茶坊": {
   "category": "饮品甜品",
-  "desc": "精致饮品与甜品，休闲小憩好去处",
+  "desc": "手作鲜奶与珍珠茶饮，用料实在，黑糖香气浓郁，是年轻人喜爱的茶饮铺。",
+  "recommend": [
+   "黑糖珍珠鲜奶",
+   "柠檬茶",
+   "芋圆奶茶"
+  ],
   "tags": [
-   "饮品",
-   "下午茶",
-   "甜品"
-  ]
+   "茶饮",
+   "珍珠",
+   "鲜奶"
+  ],
+  "hero": "🧋",
+  "open_status": "open",
+  "queue_minutes": 9,
+  "seats_available": 13,
+  "floor": 1
  },
  "吉布鲁牛排海鲜自助餐厅": {
   "category": "餐饮",
-  "desc": "特色美食，热门人气餐厅，适合聚餐约会",
+  "desc": "大型自助餐厅，现切牛排、海鲜刺身与甜品档应有尽有，聚餐吃到满足。",
+  "recommend": [
+   "现切牛排",
+   "海鲜刺身",
+   "甜品自助"
+  ],
   "tags": [
-   "美食",
-   "聚餐",
-   "人气"
-  ]
+   "自助",
+   "牛排",
+   "海鲜"
+  ],
+  "hero": "🥩",
+  "open_status": "open",
+  "queue_minutes": 5,
+  "seats_available": 10,
+  "floor": 1
  },
  "米桃餐厅": {
   "category": "餐饮",
-  "desc": "特色美食，热门人气餐厅，适合聚餐约会",
+  "desc": "创意融合菜馆，中西做法结合，摆盘讲究，适合约会与商务小聚。",
+  "recommend": [
+   "红酒牛腩",
+   "秘制烤鸡",
+   "时令蔬食"
+  ],
   "tags": [
-   "美食",
-   "聚餐",
-   "人气"
-  ]
+   "创意菜",
+   "融合",
+   "精致"
+  ],
+  "hero": "🍽️",
+  "open_status": "open",
+  "queue_minutes": 33,
+  "seats_available": 38,
+  "floor": 1
  },
  "渝利火锅": {
   "category": "餐饮",
-  "desc": "特色美食，热门人气餐厅，适合聚餐约会",
+  "desc": "重庆老火锅，牛油锅底麻辣醇厚，毛肚鸭血新鲜，朋友聚会气氛热烈。",
+  "recommend": [
+   "招牌毛肚",
+   "鲜鸭血",
+   "特色牛油锅底"
+  ],
   "tags": [
-   "美食",
-   "聚餐",
-   "人气"
-  ]
+   "火锅",
+   "重庆",
+   "麻辣"
+  ],
+  "hero": "🍲",
+  "open_status": "open",
+  "queue_minutes": 9,
+  "seats_available": 14,
+  "floor": 1
  },
  "麻省理功深海烤鱼": {
   "category": "餐饮",
-  "desc": "特色美食，热门人气餐厅，适合聚餐约会",
+  "desc": "深海烤鱼专门店，麻辣与蒜香两种经典口味，鱼皮焦香肉质细嫩。",
+  "recommend": [
+   "招牌麻辣烤鱼",
+   "蒜香烤鱼",
+   "辅菜拼盘"
+  ],
   "tags": [
-   "美食",
-   "聚餐",
-   "人气"
-  ]
+   "烤鱼",
+   "麻辣",
+   "聚餐"
+  ],
+  "hero": "🐟",
+  "open_status": "open",
+  "queue_minutes": 25,
+  "seats_available": 30,
+  "floor": 1
  },
  "见面": {
   "category": "餐饮",
-  "desc": "特色美食，热门人气餐厅，适合聚餐约会",
+  "desc": "川味面馆，现浇臊子浓香，一碗热面暖心暖胃，性价比高。",
+  "recommend": [
+   "重庆小面",
+   "担担面",
+   "红烧牛肉面"
+  ],
   "tags": [
-   "美食",
-   "聚餐",
-   "人气"
-  ]
+   "面食",
+   "川味",
+   "快餐"
+  ],
+  "hero": "🍜",
+  "open_status": "open",
+  "queue_minutes": 14,
+  "seats_available": 19,
+  "floor": 1
  },
  "沃德面包": {
   "category": "餐饮",
-  "desc": "特色美食，热门人气餐厅，适合聚餐约会",
+  "desc": "欧式烘焙店，可颂与欧包外酥内软，配咖啡是完美下午茶。",
+  "recommend": [
+   "黄油可颂",
+   "全麦欧包",
+   "奶油泡芙"
+  ],
   "tags": [
-   "美食",
-   "聚餐",
-   "人气"
-  ]
+   "烘焙",
+   "欧包",
+   "甜品"
+  ],
+  "hero": "🍜",
+  "open_status": "open",
+  "queue_minutes": 32,
+  "seats_available": 37,
+  "floor": 1
  },
  "北疆饭店": {
   "category": "餐饮",
-  "desc": "特色美食，热门人气餐厅，适合聚餐约会",
+  "desc": "新疆风味餐厅，大盘鸡与羊肉串是招牌，肉质鲜嫩，份量扎实。",
+  "recommend": [
+   "大盘鸡",
+   "羊肉串",
+   "新疆拌面"
+  ],
   "tags": [
-   "美食",
-   "聚餐",
-   "人气"
-  ]
+   "新疆菜",
+   "烤肉",
+   "大盘鸡"
+  ],
+  "hero": "🍢",
+  "open_status": "open",
+  "queue_minutes": 30,
+  "seats_available": 35,
+  "floor": 1
  },
  "小杨生煎": {
   "category": "餐饮",
-  "desc": "特色美食，热门人气餐厅，适合聚餐约会",
+  "desc": "上海特色生煎，皮薄汁多底脆，咬开爆汁，配上牛肉粉丝汤绝佳。",
+  "recommend": [
+   "招牌生煎",
+   "蟹粉生煎",
+   "牛肉粉丝汤"
+  ],
   "tags": [
-   "美食",
-   "聚餐",
-   "人气"
-  ]
+   "生煎",
+   "小吃",
+   "上海"
+  ],
+  "hero": "🥟",
+  "open_status": "open",
+  "queue_minutes": 26,
+  "seats_available": 31,
+  "floor": 1
  },
  "藤尾食堂": {
   "category": "餐饮",
-  "desc": "特色美食，热门人气餐厅，适合聚餐约会",
+  "desc": "日式定食食堂，照烧与唐扬做法地道，出餐快，适合工作日简餐。",
+  "recommend": [
+   "照烧鸡定食",
+   "牛丼",
+   "唐扬鸡块"
+  ],
   "tags": [
-   "美食",
-   "聚餐",
-   "人气"
-  ]
+   "日式",
+   "定食",
+   "快餐"
+  ],
+  "hero": "🍱",
+  "open_status": "open",
+  "queue_minutes": 32,
+  "seats_available": 37,
+  "floor": 1
  },
  "鮨谷": {
   "category": "零售",
-  "desc": "品类丰富的优质店铺，值得一逛",
+  "desc": "日式生活杂货店，售卖精致食器、香薰与手作好物，适合淘伴手礼。",
+  "recommend": [
+   "手作陶瓷杯",
+   "香薰蜡烛",
+   "日式便当盒"
+  ],
   "tags": [
-   "购物",
-   "零售"
-  ]
+   "日式",
+   "生活",
+   "杂货"
+  ],
+  "hero": "🎁",
+  "open_status": "open",
+  "queue_minutes": 0,
+  "seats_available": 58,
+  "floor": 2
  },
  "格瑞特运动馆": {
   "category": "零售",
-  "desc": "零售概念店，潮流好物聚集地",
+  "desc": "运动主题零售店，跑步鞋、运动服与健身装备齐全，运动达人常逛。",
+  "recommend": [
+   "轻量跑鞋",
+   "速干运动服",
+   "运动水壶"
+  ],
   "tags": [
-   "购物",
-   "零售"
-  ]
+   "运动",
+   "装备",
+   "健身"
+  ],
+  "hero": "🧢",
+  "open_status": "open",
+  "queue_minutes": 0,
+  "seats_available": 55,
+  "floor": 2
  },
  "酷锐视觉": {
   "category": "零售",
-  "desc": "品类丰富的优质店铺，值得一逛",
+  "desc": "时尚眼镜店，镜框款式新潮，提供专业验光配镜服务。",
+  "recommend": [
+   "时尚镜框",
+   "偏光太阳镜",
+   "验光配镜"
+  ],
   "tags": [
-   "购物",
-   "零售"
-  ]
+   "眼镜",
+   "时尚",
+   "验光"
+  ],
+  "hero": "👓",
+  "open_status": "open",
+  "queue_minutes": 0,
+  "seats_available": 43,
+  "floor": 2
  },
  "星巴克": {
-  "category": "零售",
-  "desc": "品类丰富的优质店铺，值得一逛",
+  "category": "饮品甜品",
+  "desc": "经典连锁咖啡，环境舒适、插座充足，白领办公与朋友叙旧的常去之地。",
+  "recommend": [
+   "拿铁",
+   "馥芮白",
+   "星冰乐"
+  ],
   "tags": [
-   "购物",
-   "零售"
-  ]
+   "咖啡",
+   "连锁",
+   "办公"
+  ],
+  "hero": "☕",
+  "open_status": "open",
+  "queue_minutes": 5,
+  "seats_available": 17,
+  "floor": 2
  },
  "不二烫捞": {
   "category": "零售",
-  "desc": "品类丰富的优质店铺，值得一逛",
+  "desc": "潮流买手集合店，精选设计师服饰与配饰，风格前卫。",
+  "recommend": [
+   "设计师卫衣",
+   "潮流帽饰",
+   "小众香水"
+  ],
   "tags": [
-   "购物",
-   "零售"
-  ]
+   "潮牌",
+   "买手",
+   "服饰"
+  ],
+  "hero": "👕",
+  "open_status": "open",
+  "queue_minutes": 0,
+  "seats_available": 30,
+  "floor": 2
  },
  "小米之家": {
   "category": "零售",
-  "desc": "品类丰富的优质店铺，值得一逛",
+  "desc": "小米官方零售店，手机、智能家居与穿戴设备一站式体验。",
+  "recommend": [
+   "智能手机",
+   "智能手表",
+   "智能家电"
+  ],
   "tags": [
-   "购物",
-   "零售"
-  ]
+   "数码",
+   "智能",
+   "手机"
+  ],
+  "hero": "📱",
+  "open_status": "open",
+  "queue_minutes": 0,
+  "seats_available": 52,
+  "floor": 2
  },
  "八点醒": {
   "category": "零售",
-  "desc": "品类丰富的优质店铺，值得一逛",
+  "desc": "潮流美妆个护店，精选彩妆、护肤与香氛，适合选购伴手礼。",
+  "recommend": [
+   "气垫粉底",
+   "身体乳",
+   "香氛喷雾"
+  ],
   "tags": [
-   "购物",
-   "零售"
-  ]
+   "美妆",
+   "个护",
+   "潮流"
+  ],
+  "hero": "💄",
+  "open_status": "open",
+  "queue_minutes": 0,
+  "seats_available": 32,
+  "floor": 2
  },
  "消防兼安保": {
-  "category": "零售",
-  "desc": "品类丰富的优质店铺，值得一逛",
+  "category": "服务设施",
+  "desc": "商场消防与安保服务点，提供问询、失物招领与应急协助。",
+  "recommend": [],
   "tags": [
-   "购物",
-   "零售"
-  ]
+   "服务",
+   "安保",
+   "消防"
+  ],
+  "hero": "🛎️",
+  "open_status": "closed",
+  "queue_minutes": 0,
+  "seats_available": 0,
+  "floor": 2
  },
  "福气糖": {
   "category": "饮品甜品",
-  "desc": "精致饮品与甜品，休闲小憩好去处",
+  "desc": "手工甜品与糖果铺，牛轧糖、曲奇与伴手礼盒精致又讨喜。",
+  "recommend": [
+   "手工牛轧糖",
+   "黄油曲奇",
+   "伴手礼盒"
+  ],
   "tags": [
-   "饮品",
-   "下午茶",
-   "甜品"
-  ]
+   "甜品",
+   "糖果",
+   "伴手礼"
+  ],
+  "hero": "🍬",
+  "open_status": "open",
+  "queue_minutes": 5,
+  "seats_available": 17,
+  "floor": 2
  },
  "撒露": {
-  "category": "零售",
-  "desc": "品类丰富的优质店铺，值得一逛",
+  "category": "饮品甜品",
+  "desc": "手工冰淇淋店，口味丰富、奶香浓郁，夏天逛街必尝。",
+  "recommend": [
+   "手工冰淇淋",
+   "现做华夫",
+   "圣代杯"
+  ],
   "tags": [
-   "购物",
-   "零售"
-  ]
+   "冰淇淋",
+   "甜品",
+   "夏日"
+  ],
+  "hero": "🍦",
+  "open_status": "open",
+  "queue_minutes": 4,
+  "seats_available": 16,
+  "floor": 2
  },
  "开心丽果": {
-  "category": "零售",
-  "desc": "品类丰富的优质店铺，值得一逛",
+  "category": "饮品甜品",
+  "desc": "鲜榨果汁铺，水果现切现榨，健康清爽，健身与轻食人群首选。",
+  "recommend": [
+   "鲜榨橙汁",
+   "综合果切",
+   "酸奶杯"
+  ],
   "tags": [
-   "购物",
-   "零售"
-  ]
+   "果汁",
+   "鲜果",
+   "健康"
+  ],
+  "hero": "🧃",
+  "open_status": "open",
+  "queue_minutes": 9,
+  "seats_available": 25,
+  "floor": 2
  },
  "翠华": {
-  "category": "零售",
-  "desc": "品类丰富的优质店铺，值得一逛",
+  "category": "餐饮",
+  "desc": "老牌港式茶餐厅，咖喱与奶茶是招牌，全天候供应，港味浓厚。",
+  "recommend": [
+   "招牌咖喱牛腩",
+   "菠萝油",
+   "丝袜奶茶"
+  ],
   "tags": [
-   "购物",
-   "零售"
-  ]
+   "港式",
+   "茶餐厅",
+   "咖喱"
+  ],
+  "hero": "🍵",
+  "open_status": "open",
+  "queue_minutes": 12,
+  "seats_available": 17,
+  "floor": 2
  },
  "立方铁": {
-  "category": "零售",
-  "desc": "品类丰富的优质店铺，值得一逛",
+  "category": "餐饮",
+  "desc": "日式铁板烧专门店，厨师现场烹饪，火焰与香气兼具，观赏性十足。",
+  "recommend": [
+   "铁板牛排",
+   "铁板海鲜",
+   "火焰炒饭"
+  ],
   "tags": [
-   "购物",
-   "零售"
-  ]
+   "铁板烧",
+   "日料",
+   "现场烹饪"
+  ],
+  "hero": "🍳",
+  "open_status": "open",
+  "queue_minutes": 7,
+  "seats_available": 12,
+  "floor": 2
  },
  "欧凯萨": {
   "category": "零售",
-  "desc": "品类丰富的优质店铺，值得一逛",
+  "desc": "时尚买手店，搜集设计感女装与配饰，简约又有质感。",
+  "recommend": [
+   "设计师连衣裙",
+   "质感风衣",
+   "潮流包袋"
+  ],
   "tags": [
-   "购物",
-   "零售"
-  ]
+   "服饰",
+   "时尚",
+   "买手"
+  ],
+  "hero": "👗",
+  "open_status": "open",
+  "queue_minutes": 0,
+  "seats_available": 36,
+  "floor": 2
  },
  "大众书局": {
   "category": "零售",
-  "desc": "零售概念店，潮流好物聚集地",
+  "desc": "综合书店，图书、文具与文创周边齐全，还有阅读区可以小坐。",
+  "recommend": [
+   "畅销图书",
+   "文创手账",
+   "艺术文具"
+  ],
   "tags": [
-   "购物",
-   "零售"
-  ]
+   "书店",
+   "文具",
+   "文创"
+  ],
+  "hero": "📚",
+  "open_status": "open",
+  "queue_minutes": 0,
+  "seats_available": 38,
+  "floor": 2
  },
  "阅江轩": {
   "category": "零售",
-  "desc": "品类丰富的优质店铺，值得一逛",
+  "desc": "茶空间与文创铺，可品茶、选茶礼，伴手礼很有格调。",
+  "recommend": [
+   "明前龙井",
+   "茶礼盒",
+   "文创茶具"
+  ],
   "tags": [
-   "购物",
-   "零售"
-  ]
+   "茶",
+   "文创",
+   "伴手礼"
+  ],
+  "hero": "🍵",
+  "open_status": "open",
+  "queue_minutes": 0,
+  "seats_available": 49,
+  "floor": 2
  },
  "鱼螺满筐": {
-  "category": "零售",
-  "desc": "品类丰富的优质店铺，值得一逛",
+  "category": "餐饮",
+  "desc": "湘式烤鱼与海鲜大排档，口味重、份量大，适合朋友聚餐。",
+  "recommend": [
+   "湘式烤鱼",
+   "香辣田螺",
+   "爆炒花甲"
+  ],
   "tags": [
-   "购物",
-   "零售"
-  ]
+   "烤鱼",
+   "海鲜",
+   "聚餐"
+  ],
+  "hero": "🦐",
+  "open_status": "open",
+  "queue_minutes": 21,
+  "seats_available": 26,
+  "floor": 2
  },
  "金伯利": {
   "category": "零售",
-  "desc": "品类丰富的优质店铺，值得一逛",
+  "desc": "专业珠宝品牌，钻石与K金首饰工艺精湛，婚嫁与送礼佳选。",
+  "recommend": [
+   "钻戒",
+   "K金项链",
+   "珍珠耳饰"
+  ],
   "tags": [
-   "购物",
-   "零售"
-  ]
+   "珠宝",
+   "钻戒",
+   "首饰"
+  ],
+  "hero": "💎",
+  "open_status": "open",
+  "queue_minutes": 0,
+  "seats_available": 35,
+  "floor": 2
  },
  "满记甜品": {
   "category": "饮品甜品",
-  "desc": "精致饮品与甜品，休闲小憩好去处",
+  "desc": "港式甜品老牌，杨枝甘露与榴莲班戟是招牌，甜而不腻。",
+  "recommend": [
+   "杨枝甘露",
+   "榴莲班戟",
+   "芝麻糊"
+  ],
   "tags": [
-   "饮品",
-   "下午茶",
-   "甜品"
-  ]
+   "甜品",
+   "港式",
+   "糖水"
+  ],
+  "hero": "🍰",
+  "open_status": "open",
+  "queue_minutes": 5,
+  "seats_available": 17,
+  "floor": 2
  },
  "天御皇茶": {
   "category": "饮品甜品",
-  "desc": "精致饮品与甜品，休闲小憩好去处",
+  "desc": "台式奶盖茶饮，茶底现萃、奶盖绵密，口口清香。",
+  "recommend": [
+   "芝士茗茶",
+   "奶盖乌龙",
+   "四季春青茶"
+  ],
   "tags": [
-   "饮品",
-   "下午茶",
-   "甜品"
-  ]
+   "茶饮",
+   "奶盖",
+   "乌龙"
+  ],
+  "hero": "🧋",
+  "open_status": "open",
+  "queue_minutes": 2,
+  "seats_available": 26,
+  "floor": 1
  },
  "蜀签成都串串香": {
   "category": "餐饮",
-  "desc": "特色美食，热门人气餐厅，适合聚餐约会",
+  "desc": "成都串串香，麻辣锅底涮串串，配冰粉解辣，街头烟火气十足。",
+  "recommend": [
+   "麻辣串串",
+   "钵钵鸡",
+   "手工冰粉"
+  ],
   "tags": [
-   "美食",
-   "聚餐",
-   "人气"
-  ]
+   "串串",
+   "川味",
+   "小吃"
+  ],
+  "hero": "🍢",
+  "open_status": "open",
+  "queue_minutes": 10,
+  "seats_available": 15,
+  "floor": 1
  },
  "鸿匠铁板烧日本料理": {
   "category": "餐饮",
-  "desc": "特色美食，热门人气餐厅，适合聚餐约会",
+  "desc": "日式铁板烧主题餐厅，厨师现场表演，牛排与海鲜品质出色。",
+  "recommend": [
+   "铁板牛排",
+   "铁板大虾",
+   "火焰炒饭"
+  ],
   "tags": [
-   "美食",
-   "聚餐",
-   "人气"
-  ]
+   "铁板烧",
+   "日料",
+   "现场表演"
+  ],
+  "hero": "🍣",
+  "open_status": "open",
+  "queue_minutes": 11,
+  "seats_available": 16,
+  "floor": 1
  },
  "味千面食料理": {
   "category": "餐饮",
-  "desc": "特色美食，热门人气餐厅，适合聚餐约会",
+  "desc": "日式拉面连锁，猪骨汤底浓郁，面条劲道，快捷又暖胃。",
+  "recommend": [
+   "猪骨拉面",
+   "味噌拉面",
+   "叉烧饭"
+  ],
   "tags": [
-   "美食",
-   "聚餐",
-   "人气"
-  ]
+   "拉面",
+   "日式",
+   "快餐"
+  ],
+  "hero": "🍜",
+  "open_status": "open",
+  "queue_minutes": 12,
+  "seats_available": 17,
+  "floor": 1
  },
  "川食公馆": {
   "category": "餐饮",
-  "desc": "特色美食，热门人气餐厅，适合聚餐约会",
+  "desc": "家常川菜馆，水煮鱼与回锅肉地道入味，适合家庭聚餐。",
+  "recommend": [
+   "水煮鱼",
+   "回锅肉",
+   "麻婆豆腐"
+  ],
   "tags": [
-   "美食",
-   "聚餐",
-   "人气"
-  ]
+   "川菜",
+   "家常",
+   "下饭"
+  ],
+  "hero": "🌶️",
+  "open_status": "open",
+  "queue_minutes": 27,
+  "seats_available": 32,
+  "floor": 2
  },
  "秦香阁餐厅": {
   "category": "餐饮",
-  "desc": "特色美食，热门人气餐厅，适合聚餐约会",
+  "desc": "西北风味餐厅，肉夹馍与油泼面管饱，面食党的心头好。",
+  "recommend": [
+   "腊汁肉夹馍",
+   "油泼面",
+   "西北大盘鸡"
+  ],
   "tags": [
-   "美食",
-   "聚餐",
-   "人气"
-  ]
+   "西北菜",
+   "面食",
+   "肉夹馍"
+  ],
+  "hero": "🍽️",
+  "open_status": "open",
+  "queue_minutes": 6,
+  "seats_available": 11,
+  "floor": 2
  },
  "米芝莲": {
-  "category": "零售",
-  "desc": "品类丰富的优质店铺，值得一逛",
+  "category": "饮品甜品",
+  "desc": "港式甜品与饮品铺，鸡蛋仔现做现卖，搭配港式奶茶超满足。",
+  "recommend": [
+   "原味鸡蛋仔",
+   "港式奶茶",
+   "杨枝甘露"
+  ],
   "tags": [
-   "购物",
-   "零售"
-  ]
+   "甜品",
+   "港式",
+   "鸡蛋仔"
+  ],
+  "hero": "🍮",
+  "open_status": "open",
+  "queue_minutes": 1,
+  "seats_available": 29,
+  "floor": 2
  },
  "有线电视": {
-  "category": "零售",
-  "desc": "品类丰富的优质店铺，值得一逛",
+  "category": "服务设施",
+  "desc": "广电与有线电视业务办理点，提供开户、缴费与咨询等便民服务。",
+  "recommend": [],
   "tags": [
-   "购物",
-   "零售"
-  ]
+   "服务",
+   "缴费",
+   "便民"
+  ],
+  "hero": "📺",
+  "open_status": "closed",
+  "queue_minutes": 0,
+  "seats_available": 0,
+  "floor": 2
+ },
+ "蜀香小院": {
+  "category": "餐饮",
+  "desc": "地道川菜馆，麻辣鲜香，招牌酸菜鱼与夫妻肺片广受好评，适合约会与朋友小聚。",
+  "recommend": [
+   "酸菜鱼",
+   "水煮鱼",
+   "夫妻肺片"
+  ],
+  "tags": [
+   "川菜",
+   "约会",
+   "包间"
+  ],
+  "hero": "🌶️",
+  "open_status": "open",
+  "queue_minutes": 23,
+  "seats_available": 28,
+  "floor": 1
+ },
+ "锦城宴府": {
+  "category": "餐饮",
+  "desc": "高端川菜宴请餐厅，环境典雅，主打精致包间菜式。",
+  "recommend": [
+   "开水白菜",
+   "樟茶鸭",
+   "私房包间菜"
+  ],
+  "tags": [
+   "川菜",
+   "家宴",
+   "包间"
+  ],
+  "hero": "🌶️",
+  "open_status": "open",
+  "queue_minutes": 17,
+  "seats_available": 22,
+  "floor": 2
+ },
+ "樱海日料": {
+  "category": "餐饮",
+  "desc": "日式料理馆，食材新鲜，摆盘精致，夜晚约会氛围好。",
+  "recommend": [
+   "刺身拼盘",
+   "鳗鱼寿司",
+   "天妇罗"
+  ],
+  "tags": [
+   "日料",
+   "刺身",
+   "约会"
+  ],
+  "hero": "🍣",
+  "open_status": "open",
+  "queue_minutes": 9,
+  "seats_available": 14,
+  "floor": 2
+ },
+ "Luma西餐厅": {
+  "category": "餐饮",
+  "desc": "安静高端的西餐厅，落地窗与暖光卡座，适合深度交流与纪念日。",
+  "recommend": [
+   "安格斯牛排",
+   "奶油蘑菇意面",
+   "法式红酒"
+  ],
+  "tags": [
+   "西餐",
+   "高端",
+   "约会"
+  ],
+  "hero": "🍽️",
+  "open_status": "open",
+  "queue_minutes": 31,
+  "seats_available": 36,
+  "floor": 2
+ },
+ "青岚茶社": {
+  "category": "饮品甜品",
+  "desc": "商务茶歇空间，环境安静，适合会谈与休憩。",
+  "recommend": [
+   "明前龙井",
+   "茶点拼盘",
+   "商务茶"
+  ],
+  "tags": [
+   "茶",
+   "商务",
+   "安静"
+  ],
+  "hero": "🍵",
+  "open_status": "open",
+  "queue_minutes": 3,
+  "seats_available": 27,
+  "floor": 2
+ },
+ "星云咖啡": {
+  "category": "饮品甜品",
+  "desc": "精品咖啡店，手冲与特调出色，午后小憩的好去处。",
+  "recommend": [
+   "鲜奶拿铁",
+   "手冲单品",
+   "美式"
+  ],
+  "tags": [
+   "咖啡",
+   "休息",
+   "商务"
+  ],
+  "hero": "☕",
+  "open_status": "open",
+  "queue_minutes": 0,
+  "seats_available": 28,
+  "floor": 1
+ },
+ "茉语奶茶": {
+  "category": "饮品甜品",
+  "desc": "新式奶茶铺，茶香浓郁、配料丰富，逛街必点。",
+  "recommend": [
+   "茉香奶绿",
+   "珍珠奶茶",
+   "芝士奶盖"
+  ],
+  "tags": [
+   "奶茶",
+   "约会",
+   "茶饮"
+  ],
+  "hero": "🧋",
+  "open_status": "open",
+  "queue_minutes": 2,
+  "seats_available": 26,
+  "floor": 1
+ },
+ "糖屿甜品": {
+  "category": "饮品甜品",
+  "desc": "高颜值甜品店，法式蛋糕与手工冰淇淋，适合拍照打卡。",
+  "recommend": [
+   "海盐焦糖千层",
+   "杨枝甘露",
+   "手工冰淇淋"
+  ],
+  "tags": [
+   "甜品",
+   "亲子",
+   "约会"
+  ],
+  "hero": "🍰",
+  "open_status": "open",
+  "queue_minutes": 10,
+  "seats_available": 22,
+  "floor": 1
+ },
+ "QD星幕影院": {
+  "category": "影院",
+  "desc": "IMAX 影院，杜比全景声与豪华座椅，观影体验一流。",
+  "recommend": [
+   "IMAX 电影票",
+   "爆米花套餐",
+   "3D 眼镜"
+  ],
+  "now_showing": [
+   "星际穿越(重映)",
+   "流浪地球3(热映)",
+   "哪吒之魔童闹海"
+  ],
+  "tags": [
+   "影院",
+   "观影",
+   "IMAX"
+  ],
+  "hero": "🎬",
+  "open_status": "open",
+  "queue_minutes": 0,
+  "seats_available": 120,
+  "floor": 2
+ },
+ "奇趣儿童乐园": {
+  "category": "零售",
+  "desc": "儿童室内乐园，旋转木马与沙池一应俱全，遛娃首选。",
+  "recommend": [
+   "亲子套票",
+   "旋转木马",
+   "沙池畅玩"
+  ],
+  "tags": [
+   "亲子",
+   "儿童",
+   "乐园"
+  ],
+  "hero": "🎠",
+  "open_status": "open",
+  "queue_minutes": 0,
+  "seats_available": 48,
+  "floor": 1
+ },
+ "木棉亲子餐厅": {
+  "category": "餐饮",
+  "desc": "亲子主题餐厅，儿童套餐营养配比，家庭聚餐温馨。",
+  "recommend": [
+   "儿童营养套餐",
+   "亲子分享拼盘",
+   "鲜榨果汁"
+  ],
+  "tags": [
+   "亲子",
+   "儿童",
+   "餐厅"
+  ],
+  "hero": "🍼",
+  "open_status": "open",
+  "queue_minutes": 15,
+  "seats_available": 20,
+  "floor": 1
+ },
+ "童梦玩具屋": {
+  "category": "零售",
+  "desc": "玩具集合店，积木、拼图与手办齐全，孩子挑花眼。",
+  "recommend": [
+   "益智积木",
+   "拼图",
+   "动漫手办"
+  ],
+  "tags": [
+   "玩具",
+   "礼物",
+   "儿童"
+  ],
+  "hero": "🧸",
+  "open_status": "open",
+  "queue_minutes": 0,
+  "seats_available": 28,
+  "floor": 1
+ },
+ "拾光礼物研究所": {
+  "category": "零售",
+  "desc": "礼品定制店，可定制香氛与手作礼盒，送人有心意。",
+  "recommend": [
+   "定制香氛礼盒",
+   "手作陶瓷",
+   "伴手礼"
+  ],
+  "tags": [
+   "礼物",
+   "设计",
+   "香氛"
+  ],
+  "hero": "🎁",
+  "open_status": "open",
+  "queue_minutes": 0,
+  "seats_available": 21,
+  "floor": 1
+ },
+ "雾岛香氛": {
+  "category": "零售",
+  "desc": "小众香氛店，香水与香薰蜡烛，气味高级。",
+  "recommend": [
+   "定制香水",
+   "香薰蜡烛",
+   "香氛礼盒"
+  ],
+  "tags": [
+   "香氛",
+   "礼物",
+   "设计"
+  ],
+  "hero": "💐",
+  "open_status": "open",
+  "queue_minutes": 0,
+  "seats_available": 27,
+  "floor": 2
+ },
+ "墨白设计集": {
+  "category": "零售",
+  "desc": "设计零售概念店，文创与家居摆件，审美在线。",
+  "recommend": [
+   "设计师文创",
+   "家居摆件",
+   "香氛"
+  ],
+  "tags": [
+   "设计",
+   "礼物",
+   "文创"
+  ],
+  "hero": "🎨",
+  "open_status": "open",
+  "queue_minutes": 0,
+  "seats_available": 54,
+  "floor": 2
+ },
+ "云庭商务会客厅": {
+  "category": "零售",
+  "desc": "商务会客空间，提供会议室与茶歇，商务接待体面。",
+  "recommend": [
+   "会议室预订",
+   "商务茶歇",
+   "贵宾接待"
+  ],
+  "tags": [
+   "商务",
+   "安静",
+   "高端"
+  ],
+  "hero": "💼",
+  "open_status": "open",
+  "queue_minutes": 0,
+  "seats_available": 47,
+  "floor": 2
+ },
+ "臻味轩": {
+  "category": "餐饮",
+  "desc": "高端餐厅，主打粤式与融合宴请，菜品精致。",
+  "recommend": [
+   "鲍鱼扒",
+   "佛跳墙",
+   "商务宴套餐"
+  ],
+  "tags": [
+   "高端",
+   "商务",
+   "宴请"
+  ],
+  "hero": "🍽️",
+  "open_status": "open",
+  "queue_minutes": 10,
+  "seats_available": 15,
+  "floor": 2
+ },
+ "QD服务台": {
+  "category": "服务设施",
+  "desc": "商场服务中心，提供问询、失物招领与礼宾服务。",
+  "recommend": [],
+  "tags": [
+   "服务",
+   "便民",
+   "礼宾"
+  ],
+  "hero": "🛎️",
+  "open_status": "open",
+  "queue_minutes": 0,
+  "seats_available": 0,
+  "floor": 1
+ },
+ "花间礼盒": {
+  "category": "零售",
+  "desc": "花艺与伴手礼店，鲜花礼盒精美，适合节日送礼。",
+  "recommend": [
+   "鲜花礼盒",
+   "永生花",
+   "伴手礼"
+  ],
+  "tags": [
+   "礼物",
+   "花艺",
+   "伴手礼"
+  ],
+  "hero": "💐",
+  "open_status": "open",
+  "queue_minutes": 0,
+  "seats_available": 31,
+  "floor": 1
+ },
+ "南风烘焙": {
+  "category": "饮品甜品",
+  "desc": "现烤烘焙店，牛角包与蛋糕每天出炉，香气四溢。",
+  "recommend": [
+   "现烤牛角包",
+   "瑞士卷",
+   "生日蛋糕"
+  ],
+  "tags": [
+   "烘焙",
+   "甜品",
+   "亲子"
+  ],
+  "hero": "🥐",
+  "open_status": "open",
+  "queue_minutes": 5,
+  "seats_available": 17,
+  "floor": 1
+ },
+ "轻食工坊": {
+  "category": "餐饮",
+  "desc": "健康轻食店，沙拉与三明治清爽低卡，健身人群友好。",
+  "recommend": [
+   "鸡胸沙拉",
+   "牛油果吐司",
+   "鲜榨果汁"
+  ],
+  "tags": [
+   "轻食",
+   "健康",
+   "商务"
+  ],
+  "hero": "🥗",
+  "open_status": "open",
+  "queue_minutes": 20,
+  "seats_available": 25,
+  "floor": 2
+ },
+ "海味坊": {
+  "category": "餐饮",
+  "desc": "粤式海鲜餐厅，白灼虾与清蒸鱼鲜甜，适合家宴。",
+  "recommend": [
+   "白灼虾",
+   "清蒸海鱼",
+   "脆皮烧鹅"
+  ],
+  "tags": [
+   "粤菜",
+   "海鲜",
+   "家宴"
+  ],
+  "hero": "🦐",
+  "open_status": "open",
+  "queue_minutes": 21,
+  "seats_available": 26,
+  "floor": 2
  }
 }

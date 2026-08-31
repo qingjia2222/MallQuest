@@ -3,10 +3,9 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import api, { BASE } from '../api';
 import { startQueueWatch } from '../store/queue';
+import storeInfo from '../store/store_info.json';
 import RichCard from '../components/RichCard.vue';
 import PlanOverlay from '../components/PlanOverlay.vue';
-import PlanFlow from '../components/PlanFlow.vue';
-import ItineraryCard from '../components/ItineraryCard.vue';
 import { setCurrentPlan } from '../store/plan';
 import { setSession } from '../api';
 import { renderMd } from '../utils/md';
@@ -88,8 +87,10 @@ function htmlOf(m) {
 }
 
 onMounted(() => {
-  const name = '星河里';
+  const name = localStorage.getItem('mall_name') || 'QD square';
   push('ai', `已接入「${name}」私有数据。我是你的 AI 私域助手，可以问我停车、积分、特惠，或说「帮我规划约会」让我安排。`);
+  const ref = localStorage.getItem('plan_ref');
+  if (ref) { localStorage.removeItem('plan_ref'); push('ref', ref); }
   const prefill = localStorage.getItem('prefill');
   if (prefill) { localStorage.removeItem('prefill'); send(prefill); }
 });
@@ -104,26 +105,6 @@ function toCards(cards) {
     const type = c.type || (c.data && (Array.isArray(c.data) ? 'list' : 'generic'));
     return { type, data: c.data };
   });
-}
-
-function applyResponse(data) {
-  push('ai', data.reply || '好的，已为你处理。');
-  const msg = messages.value[messages.value.length - 1];
-  msg.cards = data.navigation ? [] : toCards(data.cards);
-  if (data.navigation && data.navigation.destination_store) {
-    const destination = data.navigation.destination_store;
-    const navPlan = {
-      state: 'NAVIGATION', source: 'navigation', navigation: data.navigation,
-      itinerary: [{ id: 's18', name: '星河里服务台', floor: 1 }, destination]
-    };
-    currentPlan.value = navPlan;
-    setCurrentPlan(navPlan);
-    setTimeout(() => router.push('/map'), 450);
-  } else if (data.plan) {
-    currentPlan.value = data.plan;
-    setCurrentPlan(data.plan);
-    msg.plan = data.plan;
-  }
 }
 
 // 把用户点选的选项文本 → 后端槽位期望的值
@@ -193,7 +174,14 @@ async function send(txt) {
   try {
     await api.ensureSession();  // 确保有 token + session，缺则自动补
     const data = await api.chat(text);
-    applyResponse(data);
+    let reply = data.reply || '好的，已为你处理。';
+    push('ai', reply);
+    const msg = messages.value[messages.value.length - 1];
+    msg.cards = toCards(data.cards);
+    if (data.plan) {
+      currentPlan.value = data.plan; setCurrentPlan(data.plan); msg.plan = data.plan;
+      setTimeout(() => openExecuteConfirm(data.plan), 700);   // 规划完成自动弹出确认申请
+    }
     scroll();
   } catch (e) {
     // session 失效：强制重扫建全新会话再试一次
@@ -202,7 +190,7 @@ async function send(txt) {
         const scan = await api.freshScan();
         setSession(scan.session_id);
         const data = await api.chat(text);
-        applyResponse(data);
+        push('ai', data.reply || '好的，已为你处理。');
         scroll();
       } catch (e2) {
         push('ai', '抱歉，请求后端失败：' + (e2.message || ''));
@@ -216,27 +204,27 @@ async function send(txt) {
 }
 
 // 换一版：重新发一句让后端重规划，生成新方案
+function movieOptions(plan) {
+  if (!plan || !plan.itinerary) return [];
+  for (const s of plan.itinerary) {
+    const info = storeInfo[s.name] || {};
+    if (info.now_showing && info.now_showing.length) return info.now_showing;
+  }
+  return [];
+}
 function onChangePlan(planId) {
   send('请重新规划一版方案，换一些店铺');
-}
-async function chooseStrategy(planId, strategy) {
-  if (!planId || !strategy) return;
-  loading.value = true;
-  try {
-    const updated = await api.confirmPlan(planId, 'modify', { strategy });
-    currentPlan.value = updated; setCurrentPlan(updated);
-    const target = [...messages.value].reverse().find(m => m.plan && m.plan.plan_id === planId);
-    if (target) target.plan = updated;
-  } catch (e) { push('ai', '方案切换失败：' + (e.message || '')); }
-  finally { loading.value = false; }
 }
 // —— 执行确认弹窗：提问是否按照方案执行 ——
 const showConfirm = ref(false);
 const pendingPlan = ref(null);
 const confirmStep = ref(1);          // 1=是否按方案执行  2=是否帮忙预约订票
+const chosenMovie = ref('');          // 方案含影院时，确认弹窗里选择的影片
 function openExecuteConfirm(plan) {
   pendingPlan.value = plan || null;
   confirmStep.value = 1;
+  const mvs = movieOptions(plan);
+  chosenMovie.value = mvs.length ? mvs[0] : '';
   showConfirm.value = true;
 }
 function cancelExecute() { showConfirm.value = false; pendingPlan.value = null; confirmStep.value = 1; }
@@ -268,17 +256,6 @@ function toStops(it) {
   if (!Array.isArray(it)) return [];
   return it.map((s, i) => ({ time: s.time_label || `${i + 1}`, name: s.name || '', floor: s.floor ?? '', category: s.category || '', waiting: s.waiting_time ?? (s.queue_minutes ?? null), desc: s.desc || '' }));
 }
-function itineraryView(plan) {
-  const alternatives = ((plan && plan.route && plan.route.alternatives) || []).map(a => ({
-    strategy: a.strategy, label: a.label,
-    estimated_total_minutes: a.metrics.estimated_total_minutes,
-    estimated_distance: a.metrics.estimated_distance,
-    estimated_wait_minutes: a.metrics.estimated_wait_minutes
-  }));
-  return { tag: plan.state === 'DONE' ? '已执行' : '为你定制', stops: toStops(plan.itinerary),
-    actions: (plan.action_results || []).map(a => ({ label: actionLabel(a), ok: !['failed','unavailable'].includes(a.status) })),
-    selectedStrategy: plan.route && plan.route.selected_strategy, alternatives };
-}
 function actionLabel(a) {
   if (!a) return '';
   if (a.label) return a.label;
@@ -290,7 +267,7 @@ function actionLabel(a) {
 function onCardTap(card) {
   if (card.type === 'parking') router.push('/map');
   else if (card.type === 'coupon' || card.type === 'deals') router.push('/coupon');
-  else if (['store', 'list', 'stores', 'queue'].includes(card.type)) router.push('/map');
+  else if (card.type === 'store' || card.type === 'list') router.push('/map');
 }
 // 点向导/快选项：采集中推进采集，否则作为普通消息发送
 function onQuickOption(q) {
@@ -305,6 +282,12 @@ function goMap() { router.push('/map'); }
     <div class="chat-scroll">
       <div v-for="(m, i) in messages" :key="i">
         <div v-if="m.role === 'user'" class="row user"><div class="bubble user-bubble">{{ m.text }}</div></div>
+        <div v-else-if="m.role === 'ref'" class="row ai">
+          <div class="ai-avatar">📋</div>
+          <div class="ai-body">
+            <div class="bubble ref-bubble">📋 引用方案：<span class="ref-text">{{ m.text }}</span></div>
+          </div>
+        </div>
         <div v-else class="row ai">
           <div class="ai-avatar">AI</div>
           <div class="ai-body">
@@ -318,9 +301,11 @@ function goMap() { router.push('/map'); }
             <div v-if="m.plan" class="plan-inline">
               <div class="pi-title">🎯 已生成方案<span v-if="m.plan.state === 'DONE'" class="pi-done">已确认</span></div>
               <PlanFlow :step="m.plan.state === 'DONE' ? 5 : 4" :step-names="['理解目标','采集偏好','生成方案','确认方案','执行']" />
-              <ItineraryCard v-if="m.plan.itinerary" :itinerary="itineraryView(m.plan)"
-                @confirm="openExecuteConfirm(m.plan)" @change="onChangePlan(m.plan.plan_id)"
-                @strategy="chooseStrategy(m.plan.plan_id, $event)" @stoptap="goMap" />
+              <ItineraryCard v-if="m.plan.itinerary" :itinerary="{
+                  tag: '为你定制',
+                  stops: toStops(m.plan.itinerary),
+                  actions: (m.plan.action_results || []).map(a => ({ label: actionLabel(a), ok: a.status !== 'failed' }))
+                }" @confirm="openExecuteConfirm(m.plan)" @change="onChangePlan(m.plan.plan_id)" @stoptap="goMap" />
               <div v-else class="pi-confirm">
                 <div class="pi-empty-t">🧠 大模型已生成这份智能方案，确认后即可为你预约 / 排号</div>
                 <div class="ic-btns">
@@ -331,12 +316,6 @@ function goMap() { router.push('/map'); }
             </div>
           </div>
         </div>
-      </div>
-    </div>
-
-    <div class="quick-bar">
-      <div class="quick-inner">
-        <span v-for="q in quickActions" :key="q" class="chip" @click="send(q)">{{ q }}</span>
       </div>
     </div>
 
@@ -357,6 +336,12 @@ function goMap() { router.push('/map'); }
           <div class="cf-sub">确认后为你预约 / 排号，并跳转「规划」页查看路线；选择「继续沟通」可留在对话里调整方案。</div>
           <div v-if="pendingPlan && pendingPlan.itinerary && pendingPlan.itinerary.length" class="cf-stops">
             <span v-for="(s, i) in pendingPlan.itinerary" :key="i" class="cf-stop">{{ s.name || s.title }}</span>
+          </div>
+          <div v-if="movieOptions(pendingPlan).length" class="cf-movie">
+            <div class="cf-movie-title">🎬 想看哪部影片？（默认选第一部）</div>
+            <div class="cf-movies">
+              <span v-for="mv in movieOptions(pendingPlan)" :key="mv" class="cf-chip" :class="{ on: chosenMovie === mv }" @click="chosenMovie = mv">{{ mv }}</span>
+            </div>
           </div>
           <div class="cf-actions">
             <button class="cf-btn ghost" @click="cancelExecute">继续沟通，不执行</button>
@@ -387,6 +372,8 @@ function goMap() { router.push('/map'); }
 .ai-avatar { width: 34px; height: 34px; border-radius: 10px; background: linear-gradient(135deg, #ede9fe, #e0f2fe); color: var(--primary); font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; margin-right: 10px; flex-shrink: 0; }
 .ai-body { flex: 1; }
 .ai-bubble { display: inline-block; background: #fff; color: var(--text); border: 1px solid var(--border); border-radius: 16px 16px 16px 4px; }
+.ref-bubble { background: #f3f4f6; color: #4b5563; border: 1px dashed #d1d5db; border-radius: 16px 16px 16px 4px; }
+.ref-text { font-weight: 600; }
 .ai-bubble :deep(p) { margin: 0 0 0.5em; }
 .ai-bubble :deep(p:last-child) { margin-bottom: 0; }
 .ai-bubble :deep(ul), .ai-bubble :deep(ol) { margin: 0.4em 0; padding-left: 1.3em; }
@@ -412,12 +399,16 @@ function goMap() { router.push('/map'); }
 .cf-sub { font-size: 13px; color: #6b7280; text-align: center; margin: 10px 0 16px; line-height: 1.6; }
 .cf-stops { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 16px; }
 .cf-stop { background: #ede9fe; color: #7C3AED; font-size: 13px; font-weight: 600; padding: 6px 14px; border-radius: 18px; }
+.cf-movie { margin: 4px 0 14px; }
+.cf-movie-title { font-size: 13px; color: #6b7280; margin-bottom: 8px; }
+.cf-movies { display: flex; flex-wrap: wrap; gap: 8px; }
+.cf-chip { font-size: 13px; padding: 6px 14px; border-radius: 18px; background: #f1f5f9; color: #475569; cursor: pointer; }
+.cf-chip.on { background: linear-gradient(135deg, var(--primary), var(--cyan)); color: #fff; }
 .cf-actions { display: flex; gap: 12px; }
 .cf-btn { flex: 1; border: none; border-radius: 22px; padding: 12px 0; font-size: 14px; font-weight: 600; cursor: pointer; }
 .cf-btn.ghost { background: #fff; color: var(--primary); border: 1px solid var(--border); }
 .cf-btn.primary { background: linear-gradient(135deg, var(--primary), var(--cyan)); color: #fff; }
-.quick-bar { white-space: nowrap; padding: 8px 0; border-top: 1px solid var(--border); overflow-x: auto; }
-.quick-inner { display: inline-flex; padding: 0 16px; }
+
 .composer { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: #fff; border-top: 1px solid var(--border); }
 .ci { flex: 1; background: var(--bg); border: none; border-radius: 24px; padding: 11px 16px; font-size: 15px; }
 .ci:focus { outline: none; }

@@ -1,8 +1,7 @@
-import itertools, json, math, re, uuid
+import json, re, uuid
 from fastapi import HTTPException
 from app.core.metrics import metrics
 from app.core.router import build_route
-from app.core.tools import live_store_status
 from app.db import connection, now_iso
 
 STATES=["IDLE","UNDERSTAND","COLLECT","PLAN","ROUTE","CONFIRM","EXECUTE","DONE"]
@@ -31,11 +30,7 @@ def extract_slots(scene,text):
         raw=num.group(1); slots["people"]=int(raw) if raw.isdigit() else {"一":1,"二":2,"两":2,"三":3,"四":4,"五":5,"六":6,"七":7,"八":8,"九":9,"十":10}[raw]
     if money: slots["budget_per_person" if "人均" in text and scene=="date" else "total_budget" if scene in ("banquet","business") else "budget"]=int(money.group(1))
     if time: slots["time"]=time.group(1).replace(" ","")
-    if scene=="date":
-        movie=None
-        if any(word in text for word in ("不要电影","不看电影","不观影")): movie=False
-        elif "电影" in text or "观影" in text: movie=True
-        slots.update({"cuisine":"川菜" if "川菜" in text else None,"want_movie":movie})
+    if scene=="date": slots.update({"cuisine":"川菜" if "川菜" in text else None,"want_movie":"电影" in text or "观影" in text})
     elif scene=="banquet": slots.update({"cuisine":"川菜" if "川菜" in text else "粤菜" if "粤菜" in text else None,"private_room":"包间" in text})
     elif scene=="gift": slots.update({"recipient":"22岁女生" if "22" in text else "朋友" if "朋友" in text else None,"preferences":"香氛和设计感小物" if "香氛" in text else None,"occasion":"生日" if "生日" in text else None})
     elif scene=="family_day":
@@ -45,7 +40,7 @@ def extract_slots(scene,text):
 
 def create_plan(user_id,mall_id,session_id,text,scene=None,slots=None):
     scene=scene or detect_scene(text)
-    if scene not in TEMPLATES: raise HTTPException(status_code=422,detail="无法识别规划场景")
+    if scene not in TEMPLATES: scene = detect_scene(text) or 'date'
     merged=extract_slots(scene,text); merged.update(slots or {})
     missing_original=[s for s in TEMPLATES[scene]["required"] if s not in merged]
     missing=missing_original
@@ -69,11 +64,32 @@ def create_plan(user_id,mall_id,session_id,text,scene=None,slots=None):
         db.execute("INSERT INTO plans VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",(plan_id,session_id,user_id,mall_id,scene,json.dumps(merged,ensure_ascii=False),state,json.dumps(itinerary,ensure_ascii=False),json.dumps(route,ensure_ascii=False),"[]",now,now))
     return {"plan_id":plan_id,"session_id":session_id,"scene":scene,"slots":merged,"missing_slots":missing_original,"state":state,"state_history":history,"itinerary":itinerary,"route":route,"card":{"type":"plan","title":f"{scene} 方案","status":state}}
 
-SCENE_NAMES={"date":"约会","banquet":"家宴","gift":"礼物","family_day":"带娃","business":"商务"}
+PLAN_KEYWORDS=['规划','方案','路线','行程','安排','休闲','娱乐','甜点','甜品','想吃','想喝','想买','逛逛','逛街','去逛','去玩','走走','玩玩','放松','休息','遛','怎么玩','散心','电影','影片','购物','买东西','买点','去哪','去哪里','吃什','喝什','带娃','带小孩','周末','一天','半日','有啥','推荐一下','陪','早餐','午餐','晚餐','夜宵','下午茶','西餐','中餐','日料','火锅','韩餐','补充','加上','还想','还要','再加','更新','修改','调整','顺便','顺道','晚上','下午','中午']
+def is_plan_request(text):
+    t=text or ''
+    return any(k in t for k in PLAN_KEYWORDS)
+QUERY_WORDS=['停车','积分','特惠','优惠','优惠券','折扣','营业','几点开门','几点关门','几点闭店','营业时间','闭店','电话','地址','在哪','哪里','哪层','怎么走','wifi','充电','寄存','会员','发票','兑换','充值','售后','服务台','卫生间','无障碍','婴儿','母婴','导航','导览','路线图','有哪','哪些店','搜索','查询','还剩','余额']
+def is_plain_query(text):
+    t=text or ''
+    return any(w in t for w in QUERY_WORDS)
+SCENE_NAMES={"date":"约会","banquet":"家宴","gift":"礼物","family_day":"带娃","business":"商务","casual":"休闲","leisure":"休闲"}
+
+def _seq_times(n, seed=""):
+    """按顺序生成每站的时间点（大模型没给具体时间时兜底）。"""
+    from datetime import datetime, timedelta
+    base=None
+    m=re.search(r"(\d{1,2})(?::|点)(\d{2})?", seed or "")
+    if m:
+        hh=int(m.group(1)); mm=int(m.group(2)) or 0
+        if ("下午" in seed or "晚" in seed) and hh<12: hh+=12
+        base=datetime(2000,1,1,hh,mm)
+    else:
+        base=datetime(2000,1,1,18,0)
+    return [(base+timedelta(minutes=idx*45)).strftime("%H:%M") for idx in range(n)]
 
 def create_plan_from_agent(user_id,mall_id,session_id,text,scene,plan_data,reply=""):
     """把在线大模型规划选中的店固化为可确认、可预约的方案记录（state=CONFIRM）。"""
-    if scene not in TEMPLATES: scene=detect_scene(text) or "date"
+    if scene not in TEMPLATES: scene = scene if scene in ("casual","leisure") else (plan_data.get("scene") or detect_scene(text) or "date")
     ids=[i for i in (plan_data.get("store_ids") or []) if isinstance(i,str)]
     stores=[]
     if ids:
@@ -86,12 +102,9 @@ def create_plan_from_agent(user_id,mall_id,session_id,text,scene,plan_data,reply
         return create_plan(user_id,mall_id,session_id,text,scene)
     slots=dict(DEFAULT_SLOTS.get(scene,{})); slots.update(plan_data.get("slots") or {})
     time_plan=plan_data.get("time_plan") or {}
-    alternatives=_optimized_alternatives(mall_id,scene,slots)
-    if alternatives:
-        selected=alternatives[0]; stores=selected["itinerary"]; route=_route_bundle(alternatives,selected["strategy"])
-    else:
-        for s in stores: s["time_label"]=time_plan.get(s["id"]) or slots.get("time","")
-        node_ids=[s["id"] for s in stores]; route=build_route(mall_id,node_ids)
+    it_times=_seq_times(len(stores), slots.get("time",""))
+    for idx,s in enumerate(stores): s["time_label"]=time_plan.get(s["id"]) or it_times[idx]
+    node_ids=[s["id"] for s in stores]; route=build_route(mall_id,node_ids)
     plan_id="plan_"+uuid.uuid4().hex[:12]; history=["IDLE","UNDERSTAND","COLLECT","PLAN","ROUTE","CONFIRM"]; state="CONFIRM"; now=now_iso()
     with connection() as db:
         db.execute("INSERT OR REPLACE INTO sessions VALUES(?,?,?,?,?,?,?,?,?)",(session_id,user_id,mall_id,scene,json.dumps(slots,ensure_ascii=False),plan_id,state,json.dumps({"state_history":history,"missing_slots":[],"source":"online_agent"},ensure_ascii=False),now))
@@ -107,96 +120,6 @@ SCENE_PICKS = {
   "business": [("biz", ["高端餐厅","商务空间","茶歇","轻食"])],
 }
 
-STRATEGY_LABELS={"fastest":"用时最短","shortest":"路程最近、回头路最少"}
-# 可解释的固定权重：用时方案以分钟为主；短路方案以地图距离为主并对回头路双倍惩罚。
-OPTIMIZATION_WEIGHTS={
-  "fastest":{"wait_minute":1.0,"walk_minute":1.0,"floor_transfer":2.0,"budget_overage":0.03},
-  # “路程最近”中排队仍会展示给用户，但不改变空间最优解，避免它退化成另一份“用时最短”。
-  "shortest":{"distance":1.0,"backtrack_distance":2.0,"floor_transfer":25.0,"wait_minute":0.0},
-}
-
-def _live_stores(mall_id):
-    with connection() as db: stores=[dict(row) for row in db.execute("SELECT * FROM stores WHERE mall_id=?",(mall_id,)).fetchall()]
-    status={item["store_id"]:item for item in live_store_status(mall_id=mall_id,store_ids=[s["id"] for s in stores])}
-    for item in stores:
-        live=status.get(item["id"])
-        if live: item.update({"open_status":live["open_status"],"queue_minutes":live["queue_minutes"],"seats_available":live["seats_available"]})
-    return stores
-
-def _category(stores,names):
-    return [s for s in stores if s["category"] in names and s["category"]!="服务台" and s["open_status"]!="closed"]
-
-def _candidate_groups(scene,stores,slots):
-    cuisine=slots.get("cuisine") or slots.get("meal_preference")
-    restaurants=_match_cuisine(stores,cuisine)
-    restaurants=[s for s in restaurants if s["open_status"]!="closed" and s["category"]!="服务台"] or _category(stores,["川菜","粤菜","日料","西餐","高端餐厅","亲子餐厅","轻食"])
-    if scene=="date":
-        per_person=float(slots.get("budget_per_person") or 0)
-        affordable=[s for s in restaurants if not per_person or float(s.get("avg_price") or 0)<=per_person]
-        if affordable: restaurants=affordable
-        groups=[restaurants,_category(stores,["奶茶","咖啡","烘焙","甜品","茶歇"])]
-        if slots.get("want_movie",True): groups.append(_category(stores,["影院"]))
-        return groups
-    if scene=="banquet": return [restaurants,_category(stores,["礼品"])]
-    if scene=="gift": return [_category(stores,["礼品","香氛","设计零售","玩具"])]
-    if scene=="family_day": return [_category(stores,["儿童乐园","玩具"]),_category(stores,["亲子餐厅"]),_category(stores,["甜品","奶茶","烘焙"])]
-    if scene=="business": return [_category(stores,["商务空间"]),_category(stores,["茶歇","咖啡","轻食"]),_category(stores,["高端餐厅","粤菜","川菜"])]
-    return []
-
-def _backtrack_distance(route):
-    seen=set(); repeated=0.0
-    for a,b in zip(route.get("nodes",[]),route.get("nodes",[])[1:]):
-        edge=tuple(sorted((a["node_id"],b["node_id"])))
-        distance=math.dist((a["x"],a["y"]),(b["x"],b["y"])) if a["floor"]==b["floor"] else 0
-        if edge in seen: repeated+=distance
-        seen.add(edge)
-    return round(repeated,1)
-
-def _plan_metrics(itinerary,route,slots,strategy):
-    waiting=sum(int(s.get("queue_minutes") or 0) for s in itinerary)
-    distance=float(route.get("estimated_distance") or 0); walking=round(distance/75,1)
-    transfers=sum(1 for segment in route.get("polyline_segments",[]) if segment.get("transfer_instruction"))
-    backtrack=_backtrack_distance(route)
-    budget=sum(float(s.get("avg_price") or 0) for s in itinerary)
-    target=float(slots.get("budget_per_person") or slots.get("budget") or slots.get("total_budget") or budget or 0)
-    budget_penalty=max(0,budget-target)
-    weights=OPTIMIZATION_WEIGHTS[strategy]
-    if strategy=="fastest": score=waiting*weights["wait_minute"]+walking*weights["walk_minute"]+transfers*weights["floor_transfer"]+budget_penalty*weights["budget_overage"]
-    else: score=distance*weights["distance"]+backtrack*weights["backtrack_distance"]+transfers*weights["floor_transfer"]+waiting*weights["wait_minute"]
-    return {"strategy":strategy,"label":STRATEGY_LABELS[strategy],"score":round(score,2),
-        "estimated_wait_minutes":waiting,"estimated_walk_minutes":walking,"estimated_total_minutes":round(waiting+walking+transfers*2,1),
-        "estimated_distance":round(distance,1),"backtrack_distance":backtrack,"transfer_count":transfers,"estimated_spend_per_person":round(budget,1),"weights":weights}
-
-def _optimized_option(mall_id,groups,slots,strategy):
-    valid=[group for group in groups if group]
-    if not valid: return None
-    candidates=[]
-    for combo in itertools.product(*valid):
-        if len({s["id"] for s in combo})!=len(combo): continue
-        itinerary=[dict(s) for s in combo]
-        route=build_route(mall_id,[s["id"] for s in itinerary],vertical_mode="elevator")
-        metrics=_plan_metrics(itinerary,route,slots,strategy)
-        candidates.append((metrics["score"],tuple(s["id"] for s in itinerary),itinerary,route,metrics))
-    if not candidates: return None
-    _,_,itinerary,route,metrics=min(candidates,key=lambda item:(item[0],item[1]))
-    for index,store in enumerate(itinerary,1):
-        store["time_label"]=f"第 {index} 站"; store["planned_wait_minutes"]=int(store.get("queue_minutes") or 0)
-    route["optimization"]=metrics
-    return {"strategy":strategy,"label":STRATEGY_LABELS[strategy],"itinerary":itinerary,"route":route,"metrics":metrics}
-
-def _optimized_alternatives(mall_id,scene,slots):
-    stores=_live_stores(mall_id); groups=_candidate_groups(scene,stores,slots)
-    options=[_optimized_option(mall_id,groups,slots,strategy) for strategy in ("fastest","shortest")]
-    return [option for option in options if option]
-
-def _route_bundle(alternatives,selected_strategy="fastest"):
-    selected=next((item for item in alternatives if item["strategy"]==selected_strategy),alternatives[0])
-    route=dict(selected["route"])
-    route["selected_strategy"]=selected["strategy"]
-    route["optimization"]=selected["metrics"]
-    route["alternatives"]=[{"strategy":item["strategy"],"label":item["label"],"itinerary":item["itinerary"],"route":item["route"],"metrics":item["metrics"]} for item in alternatives]
-    return route
-
 def _match_cuisine(stores, cuisine):
     if not cuisine: return []
     c = cuisine.strip()
@@ -205,14 +128,33 @@ def _match_cuisine(stores, cuisine):
     return hit
 
 def _build_itinerary(user_id, mall_id, scene, slots):
-    alternatives=_optimized_alternatives(mall_id,scene,slots)
-    if alternatives:
-        selected=alternatives[0]; itinerary=selected["itinerary"]; route=_route_bundle(alternatives,selected["strategy"])
-    else:
-        stores=_live_stores(mall_id); itinerary=[s for s in stores if s["category"]!="服务台"][:1]
-        route=build_route(mall_id,[s["id"] for s in itinerary])
+    with connection() as db: stores=[dict(r) for r in db.execute("SELECT * FROM stores WHERE mall_id=?", (mall_id,)).fetchall()]
+    chosen=[]; used=set()
+    cuisine = slots.get("cuisine") or slots.get("meal_preference")
+    # 1) 按槽位口味优先匹配餐厅（取一家，避免同菜系重复）
+    if cuisine:
+        for s in _match_cuisine(stores, cuisine):
+            if s["id"] not in used and s["category"] not in ("服务台",):
+                chosen.append(s); used.add(s["id"]); break   # 只取第一家
+    # 2) 按场景类型补齐其它业态
+    for kind, cats in SCENE_PICKS.get(scene, []):
+        cand=[s for s in stores if s["id"] not in used and s["category"] in cats and s["category"]!="服务台"]
+        if cand: chosen.append(cand[0]); used.add(cand[0]["id"])
+    # 3) 若还没凑齐场景模板数量，用模板店铺兜底
+    ids=[s["id"] for s in chosen]
+    for sid in TEMPLATES[scene]["stores"]:
+        if len(ids) >= len(TEMPLATES[scene]["stores"]): break
+        if sid not in ids:
+            row=[s for s in stores if s["id"]==sid]
+            if row: chosen.append(row[0]); ids.append(sid)
+    itinerary=chosen[:max(len(TEMPLATES[scene]["stores"]),1)]
+    # 若仍有空，用任意非服务台店填充
+    if not itinerary:
+        fallback=[s for s in stores if s["category"]!="服务台"]
+        itinerary=fallback[:len(TEMPLATES[scene]["stores"])]
+    node_ids=[s["id"] for s in itinerary]
     history=["IDLE","UNDERSTAND","COLLECT","PLAN"]
-    history.append("ROUTE"); history.append("CONFIRM")
+    history.append("ROUTE"); route=build_route(mall_id,node_ids); history.append("CONFIRM")
     return "plan_"+uuid.uuid4().hex[:12], itinerary, route, "CONFIRM", history
 
 def _claim(db,user_id,mall_id,coupon_id):
@@ -231,17 +173,11 @@ def confirm_plan(user_id,plan_id,decision):
         scene=row["scene"]; mall=row["mall_id"]; slots=json.loads(row["slots_json"]); results=[]; itinerary=json.loads(row["itinerary_json"])
         db.execute("UPDATE plans SET state='EXECUTE',updated_at=? WHERE id=?",(now_iso(),plan_id))
         for action in TEMPLATES[scene]["actions"]:
-            itinerary_ids=[store["id"] for store in itinerary]
-            marks=','.join('?' for _ in itinerary_ids)
-            if action=="claim_coupon":
-                coupon=db.execute(f"SELECT id FROM coupons WHERE mall_id=? AND store_id IN ({marks}) AND stock>0 ORDER BY id LIMIT 1",(mall,*itinerary_ids)).fetchone() if itinerary_ids else None
-                if coupon: results.append(_claim(db,user_id,mall,coupon["id"]))
-                else: results.append({"tool":"claim_coupon","status":"unavailable","reason":"方案店铺暂无可领优惠券"})
+            if action=="claim_coupon": results.append(_claim(db,user_id,mall,{"date":"c1","banquet":"c1","gift":"c2","family_day":"c3","business":"c4"}[scene]))
             elif action=="buy_ticket":
-                product_row=db.execute(f"SELECT * FROM ticket_products WHERE mall_id=? AND store_id IN ({marks}) AND stock>0 ORDER BY id LIMIT 1",(mall,*itinerary_ids)).fetchone() if itinerary_ids else None
+                product="t_movie" if scene=="date" else "t_child"; product_row=db.execute("SELECT * FROM ticket_products WHERE id=? AND mall_id=? AND stock>0",(product,mall)).fetchone()
                 if product_row:
-                    product=product_row["id"]; qty=slots.get("people",1); tid="ut_"+uuid.uuid4().hex[:10]; db.execute("INSERT INTO user_tickets VALUES(?,?,?,?,?,?)",(tid,product,user_id,mall,qty,now_iso())); db.execute("UPDATE ticket_products SET stock=stock-? WHERE id=?",(qty,product)); results.append({"tool":"buy_ticket","status":"success","ticket_id":tid,"store_id":product_row["store_id"],"quantity":qty})
-                else: results.append({"tool":"buy_ticket","status":"unavailable","reason":"当前方案不含可购票项目"})
+                    qty=slots.get("people",1); tid="ut_"+uuid.uuid4().hex[:10]; db.execute("INSERT INTO user_tickets VALUES(?,?,?,?,?,?)",(tid,product,user_id,mall,qty,now_iso())); db.execute("UPDATE ticket_products SET stock=stock-? WHERE id=?",(qty,product)); results.append({"tool":"buy_ticket","status":"success","ticket_id":tid,"quantity":qty})
             elif action in ("reserve_restaurant","reserve_business_space"):
                 wanted="商务空间" if action=="reserve_business_space" else None; store=next((s for s in itinerary if (wanted and s["category"]==wanted) or (not wanted and s["reservable"] and s["category"]!="商务空间")),None)
                 if store:
@@ -264,25 +200,10 @@ def revise_plan(user_id,plan_id,modifications):
         row=db.execute("SELECT * FROM plans WHERE id=? AND user_id=?",(plan_id,user_id)).fetchone()
         if not row: raise HTTPException(status_code=404,detail="plan not found")
         if row["state"]!="CONFIRM": raise HTTPException(status_code=409,detail="only a pending plan can be modified")
-        slots=json.loads(row["slots_json"]); slots.update({k:v for k,v in (modifications or {}).items() if k not in {"strategy","vertical_mode"}}); itinerary=json.loads(row["itinerary_json"]); old_route=json.loads(row["route_json"])
-        selected_strategy=(modifications or {}).get("strategy")
-        vertical_mode=(modifications or {}).get("vertical_mode")
-        alternatives=old_route.get("alternatives") or []
-        selected=next((item for item in alternatives if item.get("strategy")==selected_strategy),None)
-        if vertical_mode in {"elevator","escalator"}:
-            route=build_route(row["mall_id"],[item["id"] for item in itinerary],vertical_mode=vertical_mode)
-            strategy=old_route.get("selected_strategy","fastest"); metrics=_plan_metrics(itinerary,route,slots,strategy)
-            route["selected_strategy"]=strategy; route["optimization"]=metrics; route["alternatives"]=alternatives
-        elif selected:
-            itinerary=selected["itinerary"]
-            preferred_mode=old_route.get("vertical_mode","elevator")
-            route=build_route(row["mall_id"],[item["id"] for item in itinerary],vertical_mode=preferred_mode)
-            metrics=_plan_metrics(itinerary,route,slots,selected_strategy)
-            route["selected_strategy"]=selected_strategy; route["optimization"]=metrics; route["alternatives"]=alternatives
-        elif modifications.get("cheaper") and itinerary:
+        slots=json.loads(row["slots_json"]); slots.update(modifications or {}); itinerary=json.loads(row["itinerary_json"])
+        if modifications.get("cheaper") and itinerary:
             itinerary=sorted(itinerary,key=lambda item:item["avg_price"])
-            route=build_route(row["mall_id"],[item["id"] for item in itinerary])
-        else: route=build_route(row["mall_id"],[item["id"] for item in itinerary])
+        route=build_route(row["mall_id"],[item["id"] for item in itinerary])
         db.execute("UPDATE plans SET slots_json=?,state='CONFIRM',itinerary_json=?,route_json=?,updated_at=? WHERE id=?",(json.dumps(slots,ensure_ascii=False),json.dumps(itinerary,ensure_ascii=False),json.dumps(route,ensure_ascii=False),now_iso(),plan_id))
         db.execute("UPDATE sessions SET slots_json=?,plan_state='CONFIRM',updated_at=? WHERE id=?",(json.dumps(slots,ensure_ascii=False),now_iso(),row["session_id"]))
     result=get_plan(user_id,plan_id); result["state_history"]=["CONFIRM","PLAN","ROUTE","CONFIRM"]; return result
