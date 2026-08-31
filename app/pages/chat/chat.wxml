@@ -1,6 +1,6 @@
 <view class="chat-page">
   <!-- 消息列表 -->
-  <scroll-view class="chat-scroll" scroll-y id="chat-scroll" enhanced show-scrollbar="{{false}}">
+  <scroll-view class="chat-scroll" scroll-y id="chat-scroll" scroll-top="{{scrollTop}}" scroll-with-animation show-scrollbar="{{false}}">
     <view class="msg-list">
       <block wx:for="{{messages}}" wx:key="index">
         <!-- 用户消息 -->

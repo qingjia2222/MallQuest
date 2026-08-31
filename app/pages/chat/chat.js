@@ -13,7 +13,8 @@ Page({
     navVisible: false,
     navFloor: 1,
     navMapUrl: '',
-    navStep: 0
+    navStep: 0,
+    scrollTop: 0
   },
 
   onLoad() {
@@ -131,11 +132,7 @@ Page({
   goPlan() { wx.navigateTo({ url: '/pages/plan/plan' }); },
   onVoice(e) { const text = e.detail.text; this.setData({ input: text }); this.send(text); },
 
-  scrollBottom() {
-    wx.createSelectorQuery().select('#chat-scroll').node(res => {
-      if (res) res.scrollTo({ top: res.scrollHeight + 500, duration: 200 });
-    }).exec();
-  },
+  scrollBottom() { this.setData({ scrollTop: (this.data.messages.length + 1) * 10000 }); },
 
   onUnload() { if (this.navTimer) clearTimeout(this.navTimer); }
 });
