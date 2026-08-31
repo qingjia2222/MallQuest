@@ -1,6 +1,7 @@
 import hashlib
 import json
 import sqlite3
+import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -13,9 +14,15 @@ def hash_password(password: str, salt: str) -> str:
     return hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 120_000).hex()
 
 @contextmanager
-def connection():
+def connection(immediate: bool = False):
     path = Path(settings.mall_db_path); path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(path, timeout=10); conn.row_factory = sqlite3.Row; conn.execute("PRAGMA foreign_keys=ON")
+    conn = sqlite3.connect(path, timeout=15); conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys=ON")
+    conn.execute("PRAGMA busy_timeout=15000")
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA synchronous=NORMAL")
+    if immediate:
+        conn.execute("BEGIN IMMEDIATE")
     try:
         yield conn; conn.commit()
     except Exception:
@@ -40,7 +47,7 @@ CREATE TABLE IF NOT EXISTS ticket_products(id TEXT PRIMARY KEY, mall_id TEXT NOT
 CREATE TABLE IF NOT EXISTS user_tickets(id TEXT PRIMARY KEY, product_id TEXT NOT NULL, user_id TEXT NOT NULL, mall_id TEXT NOT NULL, quantity INTEGER NOT NULL, purchased_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS store_status(store_id TEXT PRIMARY KEY, mall_id TEXT NOT NULL, open_status TEXT NOT NULL, queue_minutes INTEGER NOT NULL, seats_available INTEGER NOT NULL, ticket_stock INTEGER NOT NULL, updated_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS sessions(id TEXT PRIMARY KEY, user_id TEXT NOT NULL, mall_id TEXT NOT NULL, intent TEXT, slots_json TEXT NOT NULL, plan_id TEXT, plan_state TEXT NOT NULL, context_json TEXT NOT NULL, updated_at TEXT NOT NULL);
-CREATE TABLE IF NOT EXISTS plans(id TEXT PRIMARY KEY, session_id TEXT NOT NULL, user_id TEXT NOT NULL, mall_id TEXT NOT NULL, scene TEXT NOT NULL, slots_json TEXT NOT NULL, state TEXT NOT NULL, itinerary_json TEXT NOT NULL, route_json TEXT NOT NULL, action_results_json TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS plans(id TEXT PRIMARY KEY, session_id TEXT NOT NULL, user_id TEXT NOT NULL, mall_id TEXT NOT NULL, scene TEXT NOT NULL, slots_json TEXT NOT NULL, state TEXT NOT NULL, itinerary_json TEXT NOT NULL, route_json TEXT NOT NULL, action_results_json TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, revision INTEGER NOT NULL DEFAULT 1);
 CREATE TABLE IF NOT EXISTS plan_snapshots(id TEXT PRIMARY KEY, plan_id TEXT NOT NULL, revision INTEGER NOT NULL, snapshot_json TEXT NOT NULL, created_at TEXT NOT NULL, UNIQUE(plan_id,revision));
 CREATE TABLE IF NOT EXISTS store_details(store_id TEXT PRIMARY KEY REFERENCES stores(id), details_json TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS store_profiles(store_id TEXT PRIMARY KEY REFERENCES stores(id), store_code TEXT NOT NULL UNIQUE, manager_name TEXT NOT NULL, employees_json TEXT NOT NULL, business_hours TEXT NOT NULL, service_tags TEXT NOT NULL, contact TEXT NOT NULL, updated_at TEXT NOT NULL);
@@ -61,6 +68,9 @@ CREATE TABLE IF NOT EXISTS store_map_bindings(
   map_depth REAL NOT NULL,
   source TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS app_meta(key TEXT PRIMARY KEY, value TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_plans_owner ON plans(user_id,mall_id,updated_at);
+CREATE INDEX IF NOT EXISTS idx_sessions_owner ON sessions(user_id,mall_id,updated_at);
 """
 
 def _ensure_columns(db) -> None:
@@ -70,6 +80,11 @@ def _ensure_columns(db) -> None:
         db.execute("ALTER TABLE reservations ADD COLUMN scheduled_at TEXT")
     if "duration_minutes" not in columns:
         db.execute("ALTER TABLE reservations ADD COLUMN duration_minutes INTEGER NOT NULL DEFAULT 60")
+    plan_columns={row["name"] for row in db.execute("PRAGMA table_info(plans)").fetchall()}
+    if "revision" not in plan_columns:
+        db.execute("ALTER TABLE plans ADD COLUMN revision INTEGER NOT NULL DEFAULT 1")
+    db.execute("INSERT OR IGNORE INTO app_meta VALUES('database_instance_id',?)",("db_"+uuid.uuid4().hex,))
+    db.execute("INSERT OR REPLACE INTO app_meta VALUES('schema_version','2')")
 
 def _party_a_assets():
     root=Path(__file__).resolve().parents[2]/"web"/"src"/"store"
@@ -225,6 +240,36 @@ def ensure_database() -> None:
         db.executescript(SCHEMA); _ensure_columns(db); exists=db.execute("SELECT 1 FROM malls LIMIT 1").fetchone()
         if exists: seed_party_a_catalog(db); seed_commercial(db)
     if not exists: reset_and_seed()
+
+def database_health() -> dict:
+    """Read-only readiness check used by startup, /health and the ops guard."""
+    required={"malls","stores","store_status","store_map_bindings","sessions","plans","plan_snapshots","app_meta"}
+    try:
+        with connection() as db:
+            integrity=db.execute("PRAGMA integrity_check").fetchone()[0]
+            foreign_key_errors=len(db.execute("PRAGMA foreign_key_check").fetchall())
+            tables={row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
+            missing=sorted(required-tables)
+            stores=db.execute("SELECT COUNT(*) FROM stores WHERE mall_id=?",(settings.default_mall_id,)).fetchone()[0] if "stores" in tables else 0
+            statuses=db.execute("SELECT COUNT(*) FROM store_status WHERE mall_id=?",(settings.default_mall_id,)).fetchone()[0] if "store_status" in tables else 0
+            bindings=db.execute("SELECT COUNT(*) FROM store_map_bindings WHERE mall_id=?",(settings.default_mall_id,)).fetchone()[0] if "store_map_bindings" in tables else 0
+            instance=db.execute("SELECT value FROM app_meta WHERE key='database_instance_id'").fetchone() if "app_meta" in tables else None
+        issues=[]
+        if integrity!="ok": issues.append(f"integrity_check={integrity}")
+        if foreign_key_errors: issues.append(f"foreign_key_errors={foreign_key_errors}")
+        if missing: issues.append("missing_tables="+",".join(missing))
+        if stores<=0: issues.append("default_mall_has_no_stores")
+        if statuses!=stores: issues.append(f"store_status_mismatch={statuses}/{stores}")
+        if bindings!=stores: issues.append(f"map_binding_mismatch={bindings}/{stores}")
+        return {"ok":not issues,"instance_id":instance[0] if instance else None,"integrity":integrity,"foreign_key_errors":foreign_key_errors,"stores":stores,"store_statuses":statuses,"map_bindings":bindings,"issues":issues}
+    except (sqlite3.Error,OSError) as exc:
+        return {"ok":False,"instance_id":None,"issues":[f"database_unavailable:{type(exc).__name__}:{exc}"]}
+
+def assert_database_ready() -> dict:
+    status=database_health()
+    if not status["ok"]:
+        raise RuntimeError("database readiness check failed: "+"; ".join(status["issues"]))
+    return status
 
 def rows_to_dicts(rows): return [dict(row) for row in rows]
 def load_json(value: str): return json.loads(value) if value else {}

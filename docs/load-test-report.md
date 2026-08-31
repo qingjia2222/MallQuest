@@ -3,9 +3,9 @@
 - requests: 120
 - success: 120
 - errors: 0
-- avg_ms: 57.4
-- p50_ms: 56.09
-- p95_ms: 103.52
-- throughput_rps: 264.87
+- avg_ms: 95.76
+- p50_ms: 92.46
+- p95_ms: 163.86
+- throughput_rps: 152.54
 
 模式：scripted；16 并发，混合 health/parking/chat 只读请求。

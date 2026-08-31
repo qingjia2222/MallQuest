@@ -95,7 +95,7 @@ Page({
     const mode=e.currentTarget.dataset.mode,nav=this.data.navigation;if(!nav||!mode)return;
     try{
       if(nav.plan_id){
-        const updated=decoratePlan(await request('/api/plan/confirm',{method:'POST',data:{plan_id:nav.plan_id,decision:'modify',modifications:{vertical_mode:mode}}}));
+        const updated=decoratePlan(await request('/api/plan/confirm',{method:'POST',data:{plan_id:nav.plan_id,decision:'modify',modifications:{vertical_mode:mode},expected_revision:nav.revision}}));
         const app=getApp();app.globalData.currentPlan=updated;app.setPlanState({current:updated});
         const messages=this.data.messages.map(m=>m.plan&&m.plan.plan_id===updated.plan_id?{...m,plan:updated}:m);this.setData({messages});await this.openPlanRoute();
       }else{
@@ -123,7 +123,7 @@ Page({
     this.setData({ executing: true, loading: true });
     try {
       const modifications=this.data.chosenMovie?{selected_movie:this.data.chosenMovie}:{};
-      const done = decoratePlan(await request('/api/plan/confirm', { method: 'POST', data: { plan_id: plan.plan_id, decision: 'confirm', modifications } }));
+      const done = decoratePlan(await request('/api/plan/confirm', { method: 'POST', data: { plan_id: plan.plan_id, decision: 'confirm', modifications, expected_revision: plan.revision } }));
       const app = getApp(); app.globalData.currentPlan = done; app.setPlanState({ current: done });
       const messages = this.data.messages.map(m => m.plan && m.plan.plan_id === done.plan_id ? { ...m, plan: done } : m);
       this.setData({ messages }); this.push('ai', '方案已确认并执行，预约、排号、领券或演示票务结果已更新。现在为你展示路线。');
@@ -136,7 +136,7 @@ Page({
     const strategy=e.detail.strategy, current=getApp().globalData.currentPlan;
     if(!current||!current.plan_id||!strategy)return;
     try{
-      const updated=decoratePlan(await request('/api/plan/confirm',{method:'POST',data:{plan_id:current.plan_id,decision:'modify',modifications:{strategy}}}));
+      const updated=decoratePlan(await request('/api/plan/confirm',{method:'POST',data:{plan_id:current.plan_id,decision:'modify',modifications:{strategy},expected_revision:current.revision}}));
       const app=getApp();app.globalData.currentPlan=updated;app.setPlanState({current:updated});
       const messages=this.data.messages.map(m=>m.plan&&m.plan.plan_id===updated.plan_id?{...m,plan:updated}:m);
       this.setData({messages,pendingPlan:updated});wx.showToast({title:strategy==='fastest'?'已选用时最短':'已选路程最近'});

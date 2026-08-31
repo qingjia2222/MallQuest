@@ -1,6 +1,11 @@
-import os, sys
+import atexit, os, sys, tempfile
 from pathlib import Path
 os.environ["WX_AUTH_MODE"]="mock"; os.environ["LLM_MODE"]="scripted"
+SMOKE_DB=Path(tempfile.gettempdir())/f"mallquest-smoke-{os.getpid()}.db"
+os.environ["MALL_DB_PATH"]=str(SMOKE_DB)
+def cleanup():
+    for suffix in ("","-wal","-shm"): Path(str(SMOKE_DB)+suffix).unlink(missing_ok=True)
+atexit.register(cleanup)
 SERVER=Path(__file__).resolve().parents[1]; ROOT=SERVER.parent; sys.path.insert(0,str(SERVER))
 from fastapi.testclient import TestClient
 from app.db import reset_and_seed

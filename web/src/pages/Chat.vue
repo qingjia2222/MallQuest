@@ -232,15 +232,15 @@ async function runExecute(doBooking) {
   const plan = pendingPlan.value;
   showConfirm.value = false; pendingPlan.value = null; confirmStep.value = 1;
   if (!plan) return;
-  if (doBooking && plan.plan_id) { await onConfirmPlan(plan.plan_id, chosenMovie.value ? { selected_movie: chosenMovie.value } : {}); }
+  if (doBooking && plan.plan_id) { await onConfirmPlan(plan.plan_id, chosenMovie.value ? { selected_movie: chosenMovie.value } : {}, plan.revision); }
   else { currentPlan.value = plan; setCurrentPlan(plan); router.push('/map'); }
 }
 // 确认方案并执行
-async function onConfirmPlan(planId, modifications = {}) {
+async function onConfirmPlan(planId, modifications = {}, expectedRevision = null) {
   if (!planId) return;
   loading.value = true;
   try {
-    const data = await api.confirmPlan(planId, 'confirm', modifications);
+    const data = await api.confirmPlan(planId, 'confirm', modifications, expectedRevision);
     setCurrentPlan(data);
     const last = [...messages.value].reverse().find(m => m.plan);
     if (last) last.plan = { ...last.plan, ...data, state: 'DONE' };

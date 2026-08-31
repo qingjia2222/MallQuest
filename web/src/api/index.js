@@ -54,7 +54,7 @@ export default {
     vertical_mode: (plan.route && plan.route.vertical_mode) || 'elevator'
   }),
   getRoute: (plan_id) => req('GET', '/api/plan/route', { plan_id }),
-  confirmPlan: (plan_id, decision, modifications = {}) => req('POST', '/api/plan/confirm', { plan_id, decision, modifications }),
+  confirmPlan: (plan_id, decision, modifications = {}, expected_revision = null) => req('POST', '/api/plan/confirm', { plan_id, decision, modifications, expected_revision }),
   liveStatus: (plan_id) => req('GET', '/api/plan/live-status', { plan_id }),
   parking: () => req('GET', '/api/parking', { session_id: getSession() }),
   stores: () => req('GET', '/api/stores', { session_id: getSession() }),

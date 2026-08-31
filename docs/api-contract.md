@@ -6,7 +6,7 @@ Base URL：`http://127.0.0.1:8000`。除音频/地图文件外，响应统一为
 
 | 方法 | 路径 | 核心输入 | data / 卡片 |
 |---|---|---|---|
-| GET | `/health` | - | status、LLM/TTS 模式 |
+| GET | `/health` | - | ready、LLM/TTS 模式、数据库完整性与店铺/状态/地图绑定计数；不就绪返回 503 |
 | POST | `/api/auth/phone-login` | phone,password | visitor token,user_id,phone_masked |
 | POST | `/api/auth/web-login` | username,password | token,user_id |
 | POST | `/api/auth/wx-login` | code | token,user_id,wx_auth_mode |
@@ -22,10 +22,11 @@ Base URL：`http://127.0.0.1:8000`。除音频/地图文件外，响应统一为
 | POST | `/api/manager/stores` | manager token,店铺资料 | 店铺与商户编码 |
 | POST | `/api/manager/maps` | manager token,source_name | 2.5D 初稿任务、人工校准标识 |
 | GET | `/api/tools/schema` | Bearer | 工具 JSON Schema |
-| POST | `/api/plan/date`、`/api/plan/goal` | session_id,text/scene/slots | PlanCard、route、state |
+| POST | `/api/plan/date`、`/api/plan/goal` | session_id,text/scene/slots | PlanCard、route、state、revision |
 | POST | `/api/plan/editable-copy` | session_id、source_plan_id、scene、slots、itinerary、vertical_mode | 将 DONE 或本地旧快照复制/恢复为新的 CONFIRM 草稿，不覆盖事务快照 |
 | GET | `/api/plan/route?plan_id=` | plan_id | route nodes/polyline_segments |
-| POST | `/api/plan/confirm` | plan_id,decision | DONE itinerary + action_results |
+| PATCH | `/api/plan/{plan_id}` | itinerary/strategy/vertical_mode、expected_revision | 新 revision；旧版本并发编辑返回 409 |
+| POST | `/api/plan/confirm` | plan_id,decision,expected_revision | DONE itinerary + action_results；重复确认幂等返回原结果 |
 | GET | `/api/plan/live-status?plan_id=` | plan_id | queue/open/seats/ticket_stock |
 | GET | `/api/parking?session_id=` | session_id | areas,total_free |
 | GET | `/api/member/points?session_id=` | session_id | points,level,expires_on |

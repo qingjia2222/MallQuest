@@ -10,8 +10,8 @@ from app.db import connection, rows_to_dicts
 
 router=APIRouter(prefix="/plan",tags=["plan"])
 class PlanBody(BaseModel): session_id:str; text:str=""; scene:str|None=None; slots:dict=Field(default_factory=dict)
-class ConfirmBody(BaseModel): plan_id:str; decision:str; modifications:dict=Field(default_factory=dict)
-class PlanPatchBody(BaseModel): itinerary:list[dict]|None=None; strategy:str|None=None; vertical_mode:str|None=None; selected_movie:str|None=None
+class ConfirmBody(BaseModel): plan_id:str; decision:str; modifications:dict=Field(default_factory=dict); expected_revision:int|None=None
+class PlanPatchBody(BaseModel): itinerary:list[dict]|None=None; strategy:str|None=None; vertical_mode:str|None=None; selected_movie:str|None=None; expected_revision:int|None=None
 class EditableCopyBody(BaseModel):
     session_id:str
     source_plan_id:str|None=None
@@ -31,12 +31,14 @@ def plan_goal(body:PlanBody,auth:AuthContext=Depends(require_auth)):
 def route(plan_id:str=Query(...),auth:AuthContext=Depends(require_auth)): return envelope(get_plan(auth.user_id,plan_id)["route"])
 @router.post("/confirm")
 def confirm(body:ConfirmBody,auth:AuthContext=Depends(require_auth)):
-    if body.decision in ("modify","换一版","修改"): return envelope(revise_plan(auth.user_id,body.plan_id,body.modifications))
-    if body.modifications: revise_plan(auth.user_id,body.plan_id,body.modifications)
-    return envelope(confirm_plan(auth.user_id,body.plan_id,body.decision))
+    if body.decision in ("modify","换一版","修改"): return envelope(revise_plan(auth.user_id,body.plan_id,body.modifications,body.expected_revision))
+    revision=body.expected_revision
+    if body.modifications: revision=revise_plan(auth.user_id,body.plan_id,body.modifications,revision)["revision"]
+    return envelope(confirm_plan(auth.user_id,body.plan_id,body.decision,revision))
 @router.patch("/{plan_id}")
 def patch_plan(plan_id:str,body:PlanPatchBody,auth:AuthContext=Depends(require_auth)):
-    return envelope(revise_plan(auth.user_id,plan_id,body.model_dump(exclude_none=True)))
+    changes=body.model_dump(exclude_none=True); expected_revision=changes.pop("expected_revision",None)
+    return envelope(revise_plan(auth.user_id,plan_id,changes,expected_revision))
 @router.post("/editable-copy")
 def editable_copy(body:EditableCopyBody,auth:AuthContext=Depends(require_auth)):
     session=session_for(auth.user_id,body.session_id)

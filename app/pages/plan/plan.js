@@ -62,13 +62,13 @@ Page({
   moveStop(e) { const index=Number(e.currentTarget.dataset.index),delta=Number(e.currentTarget.dataset.delta),next=index+delta,list=[...(this.data.plan.itinerary||[])]; if(next<0||next>=list.length)return; const tmp=list[index];list[index]=list[next];list[next]=tmp;this.setData({'plan.itinerary':list}); },
   async savePlan() {
     if (!this.data.plan || !this.data.plan.plan_id) return;
-    try { const plan=await request(`/api/plan/${this.data.plan.plan_id}`,{method:'PATCH',data:{itinerary:this.data.plan.itinerary.map(s=>({id:s.id,time_label:s.time_label||''}))}}); getApp().globalData.currentPlan=plan; getApp().setPlanState({current:plan}); this.present(plan,4); wx.showToast({title:'时间已同步'}); }
+    try { const plan=await request(`/api/plan/${this.data.plan.plan_id}`,{method:'PATCH',data:{itinerary:this.data.plan.itinerary.map(s=>({id:s.id,time_label:s.time_label||''})),expected_revision:this.data.plan.revision}}); getApp().globalData.currentPlan=plan; getApp().setPlanState({current:plan}); this.present(plan,4); wx.showToast({title:'时间已同步'}); }
     catch(e){wx.showToast({title:e.message,icon:'none'})}
   },
   async onConfirm() {
     if (!this.data.plan || this.data.plan.state !== 'CONFIRM') return;
     this.setData({ executing: true });
-    try { const plan = await request('/api/plan/confirm', { method: 'POST', data: { plan_id: this.data.plan.plan_id, decision: 'confirm' } }); getApp().globalData.currentPlan = plan; getApp().setPlanState({ current: plan }); this.present(plan, 5); wx.showToast({ title: '规划已执行' }); }
+    try { const plan = await request('/api/plan/confirm', { method: 'POST', data: { plan_id: this.data.plan.plan_id, decision: 'confirm', expected_revision: this.data.plan.revision } }); getApp().globalData.currentPlan = plan; getApp().setPlanState({ current: plan }); this.present(plan, 5); wx.showToast({ title: '规划已执行' }); }
     catch (e) { wx.showModal({ title: '执行失败', content: e.message, showCancel: false }); }
     finally { this.setData({ executing: false }); }
   },

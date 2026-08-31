@@ -2,7 +2,7 @@ import json
 
 from fastapi.testclient import TestClient
 
-from app.db import connection, reset_and_seed
+from app.db import connection, database_health, reset_and_seed
 from app.main import app
 
 
@@ -64,3 +64,31 @@ def test_done_or_stale_plan_can_be_copied_to_editable_draft_with_all_waypoints()
     stale={**payload,"source_plan_id":"plan_removed_by_demo_reset"}
     recovered=client.post("/api/plan/editable-copy",headers=headers,json=stale).json()["data"]
     assert recovered["state"]=="CONFIRM" and len(recovered["itinerary"])==len(done["itinerary"])
+
+
+def test_plan_revision_rejects_stale_edits_and_confirm_is_idempotent():
+    reset_and_seed(); client=TestClient(app); headers,session=login_scan(client)
+    made=client.post("/api/plan/goal",headers=headers,json={"session_id":session,"scene":"date","slots":{"time":"今晚7点","people":2,"want_movie":True}}).json()["data"]
+    assert made["revision"]==1
+    itinerary=[{"id":item["id"],"time_label":item.get("time_label") or "19:00"} for item in made["itinerary"]]
+    edited=client.patch(f"/api/plan/{made['plan_id']}",headers=headers,json={"itinerary":itinerary,"expected_revision":1})
+    assert edited.status_code==200 and edited.json()["data"]["revision"]==2
+    stale=client.patch(f"/api/plan/{made['plan_id']}",headers=headers,json={"itinerary":itinerary,"expected_revision":1})
+    assert stale.status_code==409
+    done=client.post("/api/plan/confirm",headers=headers,json={"plan_id":made["plan_id"],"decision":"confirm","expected_revision":2})
+    assert done.status_code==200 and done.json()["data"]["state"]=="DONE"
+    with connection() as db:
+        before=tuple(db.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0] for table in ("reservations","user_tickets","user_coupons"))
+    replay=client.post("/api/plan/confirm",headers=headers,json={"plan_id":made["plan_id"],"decision":"confirm","expected_revision":2})
+    assert replay.status_code==200 and replay.json()["data"]["state"]=="DONE"
+    with connection() as db:
+        after=tuple(db.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0] for table in ("reservations","user_tickets","user_coupons"))
+    assert after==before
+
+
+def test_database_readiness_covers_store_status_and_map_bindings():
+    reset_and_seed()
+    status=database_health()
+    assert status["ok"] is True
+    assert status["integrity"]=="ok"
+    assert status["stores"]==status["store_statuses"]==status["map_bindings"]

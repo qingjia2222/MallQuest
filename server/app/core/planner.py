@@ -73,14 +73,14 @@ def create_plan(user_id,mall_id,session_id,text,scene=None,slots=None,proposal=N
         with connection() as db:
             session_context.update({"state_history":history,"missing_slots":missing_original})
             db.execute("INSERT OR REPLACE INTO sessions VALUES(?,?,?,?,?,?,?,?,?)",(session_id,user_id,mall_id,scene,json.dumps(merged,ensure_ascii=False),plan_id,state,json.dumps(session_context,ensure_ascii=False),now))
-            db.execute("INSERT INTO plans VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",(plan_id,session_id,user_id,mall_id,scene,json.dumps(merged,ensure_ascii=False),state,json.dumps(itinerary,ensure_ascii=False),json.dumps(route,ensure_ascii=False),"[]",now,now))
-        return {"plan_id":plan_id,"session_id":session_id,"scene":scene,"slots":merged,"missing_slots":missing_original,"state":state,"state_history":history,"itinerary":itinerary,"route":route,"card":{"type":"plan","title":f"{scene} 方案","status":state}}
+            db.execute("INSERT INTO plans(id,session_id,user_id,mall_id,scene,slots_json,state,itinerary_json,route_json,action_results_json,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",(plan_id,session_id,user_id,mall_id,scene,json.dumps(merged,ensure_ascii=False),state,json.dumps(itinerary,ensure_ascii=False),json.dumps(route,ensure_ascii=False),"[]",now,now))
+        return {"plan_id":plan_id,"revision":1,"session_id":session_id,"scene":scene,"slots":merged,"missing_slots":missing_original,"state":state,"state_history":history,"itinerary":itinerary,"route":route,"card":{"type":"plan","title":f"{scene} 方案","status":state}}
     now=now_iso()
     with connection() as db:
         session_context.update({"state_history":history,"missing_slots":missing_original})
         db.execute("INSERT OR REPLACE INTO sessions VALUES(?,?,?,?,?,?,?,?,?)",(session_id,user_id,mall_id,scene,json.dumps(merged,ensure_ascii=False),plan_id,state,json.dumps(session_context,ensure_ascii=False),now))
-        db.execute("INSERT INTO plans VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",(plan_id,session_id,user_id,mall_id,scene,json.dumps(merged,ensure_ascii=False),state,json.dumps(itinerary,ensure_ascii=False),json.dumps(route,ensure_ascii=False),"[]",now,now))
-    return {"plan_id":plan_id,"session_id":session_id,"scene":scene,"slots":merged,"missing_slots":missing_original,"state":state,"state_history":history,"itinerary":itinerary,"route":route,"card":{"type":"plan","title":f"{scene} 方案","status":state}}
+        db.execute("INSERT INTO plans(id,session_id,user_id,mall_id,scene,slots_json,state,itinerary_json,route_json,action_results_json,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",(plan_id,session_id,user_id,mall_id,scene,json.dumps(merged,ensure_ascii=False),state,json.dumps(itinerary,ensure_ascii=False),json.dumps(route,ensure_ascii=False),"[]",now,now))
+    return {"plan_id":plan_id,"revision":1,"session_id":session_id,"scene":scene,"slots":merged,"missing_slots":missing_original,"state":state,"state_history":history,"itinerary":itinerary,"route":route,"card":{"type":"plan","title":f"{scene} 方案","status":state}}
 
 PLAN_KEYWORDS=['规划','方案','路线','行程','安排','休闲','娱乐','甜点','甜品','想吃','想喝','想买','逛逛','逛街','去逛','去玩','走走','玩玩','放松','休息','遛','怎么玩','散心','电影','影片','购物','买东西','买点','去哪','去哪里','吃什','喝什','带娃','带小孩','周末','一天','半日','有啥','推荐一下','陪','早餐','午餐','晚餐','夜宵','下午茶','西餐','中餐','日料','火锅','韩餐','补充','加上','还想','还要','再加','更新','修改','调整','顺便','顺道','晚上','下午','中午']
 def is_plan_request(text):
@@ -244,11 +244,16 @@ def _claim(db,user_id,mall_id,coupon_id):
     if existing: return {"tool":"claim_coupon","status":"already_claimed","coupon_id":coupon_id}
     cid="uc_"+uuid.uuid4().hex[:10]; db.execute("INSERT INTO user_coupons VALUES(?,?,?,?,?)",(cid,coupon_id,user_id,mall_id,now_iso())); db.execute("UPDATE coupons SET stock=stock-1 WHERE id=?",(coupon_id,)); return {"tool":"claim_coupon","status":"success","coupon_id":coupon_id,"user_coupon_id":cid}
 
-def confirm_plan(user_id,plan_id,decision):
-    with connection() as db:
+def confirm_plan(user_id,plan_id,decision,expected_revision=None):
+    with connection(immediate=True) as db:
         row=db.execute("SELECT * FROM plans WHERE id=? AND user_id=?",(plan_id,user_id)).fetchone()
         if not row: raise HTTPException(status_code=404,detail="plan not found")
         if decision not in ("confirm","确认","同意"): raise HTTPException(status_code=422,detail="only explicit confirm executes writes")
+        if row["state"]=="DONE":
+            metrics.increment("plan_confirm_idempotent_replay")
+            return get_plan(user_id,plan_id)
+        if expected_revision is not None and row["revision"]!=expected_revision:
+            raise HTTPException(status_code=409,detail="plan revision conflict; reload the latest plan before confirming")
         if row["state"]!="CONFIRM": raise HTTPException(status_code=409,detail="plan is not awaiting confirmation")
         scene=row["scene"]; mall=row["mall_id"]; slots=json.loads(row["slots_json"]); results=[]; itinerary=json.loads(row["itinerary_json"]); route=json.loads(row["route_json"])
         selected_movie=slots.get("selected_movie")
@@ -290,13 +295,15 @@ def confirm_plan(user_id,plan_id,decision):
             db.execute("""INSERT INTO reservations(id,user_id,mall_id,store_id,kind,reserved_for,people,notes,status,created_at,scheduled_at,duration_minutes)
               VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""",(rid,user_id,mall,sid,"queue",planned,slots.get("people",2),f"规划排队约{q}分钟","queued",now_iso(),_scheduled_iso(planned),60))
             results.append({"tool":"queue","status":"queued","store_id":sid,"queue_minutes":q,"reservation_id":rid})
-        db.execute("UPDATE plans SET state='DONE',action_results_json=?,updated_at=? WHERE id=?",(json.dumps(results,ensure_ascii=False),now_iso(),plan_id)); db.execute("UPDATE sessions SET plan_state='DONE',updated_at=? WHERE id=?",(now_iso(),row["session_id"]))
+        db.execute("UPDATE plans SET state='DONE',action_results_json=?,updated_at=?,revision=revision+1 WHERE id=?",(json.dumps(results,ensure_ascii=False),now_iso(),plan_id)); db.execute("UPDATE sessions SET plan_state='DONE',updated_at=? WHERE id=?",(now_iso(),row["session_id"]))
     metrics.increment(f"scenario_{scene}_success"); metrics.increment("tool_calls"); return get_plan(user_id,plan_id)
 
-def revise_plan(user_id,plan_id,modifications):
-    with connection() as db:
+def revise_plan(user_id,plan_id,modifications,expected_revision=None):
+    with connection(immediate=True) as db:
         row=db.execute("SELECT * FROM plans WHERE id=? AND user_id=?",(plan_id,user_id)).fetchone()
         if not row: raise HTTPException(status_code=404,detail="plan not found")
+        if expected_revision is not None and row["revision"]!=expected_revision:
+            raise HTTPException(status_code=409,detail="plan revision conflict; reload the latest plan before editing")
         if row["state"]!="CONFIRM": raise HTTPException(status_code=409,detail="only a pending plan can be modified")
         changes=modifications or {}; slots=json.loads(row["slots_json"]); slots.update({k:v for k,v in changes.items() if k not in {"strategy","vertical_mode","itinerary"}})
         itinerary=json.loads(row["itinerary_json"]); old_route=json.loads(row["route_json"]); alternatives=old_route.get("alternatives") or []
@@ -316,7 +323,7 @@ def revise_plan(user_id,plan_id,modifications):
         route=build_route(row["mall_id"],[item["id"] for item in itinerary],vertical_mode=vertical_mode)
         strategy=selected_strategy or old_route.get("selected_strategy","fastest"); metrics=_plan_metrics(itinerary,route,slots,strategy if strategy in OPTIMIZATION_WEIGHTS else "fastest")
         route.update({"selected_strategy":strategy,"optimization":metrics,"alternatives":alternatives})
-        db.execute("UPDATE plans SET slots_json=?,state='CONFIRM',itinerary_json=?,route_json=?,updated_at=? WHERE id=?",(json.dumps(slots,ensure_ascii=False),json.dumps(itinerary,ensure_ascii=False),json.dumps(route,ensure_ascii=False),now_iso(),plan_id))
+        db.execute("UPDATE plans SET slots_json=?,state='CONFIRM',itinerary_json=?,route_json=?,updated_at=?,revision=revision+1 WHERE id=?",(json.dumps(slots,ensure_ascii=False),json.dumps(itinerary,ensure_ascii=False),json.dumps(route,ensure_ascii=False),now_iso(),plan_id))
         db.execute("UPDATE sessions SET slots_json=?,plan_state='CONFIRM',updated_at=? WHERE id=?",(json.dumps(slots,ensure_ascii=False),now_iso(),row["session_id"]))
     result=get_plan(user_id,plan_id); result["state_history"]=["CONFIRM","PLAN","ROUTE","CONFIRM"]; return result
 
@@ -349,7 +356,7 @@ def copy_plan_for_edit(user_id,mall_id,session_id,source_plan_id=None,scene=None
         strategy=(json.loads(source["route_json"]).get("selected_strategy") if source else None) or "fastest"
         route.update({"selected_strategy":strategy,"optimization":_plan_metrics(copied,route,source_slots,strategy if strategy in OPTIMIZATION_WEIGHTS else "fastest"),"alternatives":[]})
         plan_id="plan_"+uuid.uuid4().hex[:12]; now=now_iso()
-        db.execute("INSERT INTO plans VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",(plan_id,session_id,user_id,mall_id,source_scene,json.dumps(source_slots,ensure_ascii=False),"CONFIRM",json.dumps(copied,ensure_ascii=False),json.dumps(route,ensure_ascii=False),"[]",now,now))
+        db.execute("INSERT INTO plans(id,session_id,user_id,mall_id,scene,slots_json,state,itinerary_json,route_json,action_results_json,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",(plan_id,session_id,user_id,mall_id,source_scene,json.dumps(source_slots,ensure_ascii=False),"CONFIRM",json.dumps(copied,ensure_ascii=False),json.dumps(route,ensure_ascii=False),"[]",now,now))
         db.execute("UPDATE sessions SET slots_json=?,plan_state='CONFIRM',updated_at=? WHERE id=?",(json.dumps(source_slots,ensure_ascii=False),now,session_id))
     result=get_plan(user_id,plan_id); result["copied_from_plan_id"]=source_plan_id; result["state_history"]=["PLAN","ROUTE","CONFIRM"]; return result
 
@@ -359,4 +366,4 @@ def get_plan(user_id,plan_id):
         snapshot_row=db.execute("SELECT snapshot_json FROM plan_snapshots WHERE plan_id=? ORDER BY revision DESC LIMIT 1",(plan_id,)).fetchone()
     if not row: raise HTTPException(status_code=404,detail="plan not found")
     state=row["state"]; state_history=STATES[:STATES.index(state)+1]
-    return {"plan_id":row["id"],"session_id":row["session_id"],"mall_id":row["mall_id"],"scene":row["scene"],"slots":json.loads(row["slots_json"]),"state":state,"state_history":state_history,"itinerary":json.loads(row["itinerary_json"]),"route":json.loads(row["route_json"]),"action_results":json.loads(row["action_results_json"]),"confirmation_snapshot":json.loads(snapshot_row["snapshot_json"]) if snapshot_row else None,"card":{"type":"itinerary" if state=="DONE" else "plan","status":state}}
+    return {"plan_id":row["id"],"revision":row["revision"],"session_id":row["session_id"],"mall_id":row["mall_id"],"scene":row["scene"],"slots":json.loads(row["slots_json"]),"state":state,"state_history":state_history,"itinerary":json.loads(row["itinerary_json"]),"route":json.loads(row["route_json"]),"action_results":json.loads(row["action_results_json"]),"confirmation_snapshot":json.loads(snapshot_row["snapshot_json"]) if snapshot_row else None,"card":{"type":"itinerary" if state=="DONE" else "plan","status":state}}

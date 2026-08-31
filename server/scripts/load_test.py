@@ -1,6 +1,11 @@
-import concurrent.futures, os, statistics, sys, time
+import atexit, concurrent.futures, os, statistics, sys, tempfile, time
 from pathlib import Path
 os.environ["WX_AUTH_MODE"]="mock"; os.environ["LLM_MODE"]="scripted"
+LOAD_DB=Path(tempfile.gettempdir())/f"mallquest-load-{os.getpid()}.db"
+os.environ["MALL_DB_PATH"]=str(LOAD_DB)
+def cleanup():
+    for suffix in ("","-wal","-shm"): Path(str(LOAD_DB)+suffix).unlink(missing_ok=True)
+atexit.register(cleanup)
 SERVER=Path(__file__).resolve().parents[1]; ROOT=SERVER.parent; sys.path.insert(0,str(SERVER))
 from fastapi.testclient import TestClient
 from app.db import reset_and_seed

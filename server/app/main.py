@@ -6,13 +6,16 @@ from fastapi.responses import JSONResponse
 from app.config import settings
 from app.core.envelope import envelope
 from app.core.metrics import metrics
-from app.db import ensure_database
+from app.db import assert_database_ready, database_health, ensure_database
 
 logging.basicConfig(level=logging.INFO,format="%(asctime)s %(levelname)s %(message)s")
 log=logging.getLogger("mall-assistant")
 @asynccontextmanager
 async def lifespan(_app):
-    ensure_database(); yield
+    ensure_database()
+    readiness=assert_database_ready()
+    log.info("startup_ready database_instance=%s stores=%s bindings=%s",readiness["instance_id"],readiness["stores"],readiness["map_bindings"])
+    yield
 
 app=FastAPI(title="星河里 AI 私域服务助手",version="1.0.0",lifespan=lifespan)
 app.add_middleware(CORSMiddleware,allow_origins=["*"],allow_credentials=False,allow_methods=["*"],allow_headers=["*"])
@@ -32,7 +35,11 @@ async def http_error(request:Request,exc:HTTPException):
 
 @app.get("/health")
 @app.get("/api/health")
-def health(): return envelope({"status":"up","mall":"星河里","llm_mode":settings.llm_mode,"tts_mode":settings.tts_mode})
+def health():
+    database=database_health()
+    data={"status":"up" if database["ok"] else "degraded","ready":database["ok"],"mall":"星河里","llm_mode":settings.llm_mode,"tts_mode":settings.tts_mode,"database":database}
+    if not database["ok"]: raise HTTPException(status_code=503,detail={"reason":"database_not_ready","database":database})
+    return envelope(data)
 
 from app.api import auth, business, chat, commercial, debug, plan, scan, tts
 for router in (auth.router,scan.router,chat.router,plan.router,business.router,commercial.router,tts.router,debug.router): app.include_router(router,prefix="/api")

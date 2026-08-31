@@ -55,8 +55,11 @@ function Stop-DemoListener([int]$Port, [string[]]$AllowedProcessNames) {
 Stop-DemoListener 8000 @('python','pythonw')
 Stop-DemoListener 5173 @('node')
 
-# ---- 2) Init demo data ----
-& $Python server/scripts/init_demo.py
+# ---- 2) Back up and validate demo data before opening any listener ----
+& $Python server/scripts/ops_guard.py
+if ($LASTEXITCODE -ne 0) {
+  throw 'Startup guard failed. The backend was not started; run server/scripts/ops_guard.py for details.'
+}
 $LanAddress = '192.168.40.24'
 $LanConfig = Join-Path $PSScriptRoot 'configure_mini_lan.ps1'
 if (Test-Path -LiteralPath $LanConfig) {

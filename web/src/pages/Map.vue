@@ -182,7 +182,7 @@ async function finishEdit() {
   editSaving.value = true; editError.value = ''; editNotice.value = '';
   try {
     const itinerary = planStore.current.itinerary.map((s) => ({ id: s.id, time_label: s.time_label || '' }));
-    setCurrentPlan(await api.updatePlan(planStore.current.plan_id, { itinerary }));
+    setCurrentPlan(await api.updatePlan(planStore.current.plan_id, { itinerary, expected_revision: planStore.current.revision }));
     editMode.value = false; await loadLive();
     editNotice.value = '方案已保存，路线已按新顺序重新生成。';
     goPlan();
@@ -240,7 +240,7 @@ async function switchPlanVertical(mode) {
   if (isDone.value) { editNotice.value = `当前仅预览${mode === 'escalator' ? '扶梯' : '直梯'}路线，已确认事务保持不变。`; await nextTick(); replayPreview(); return; }
   if (planStore.current.route && planStore.current.route.vertical_mode === mode) { replayPreview(); return; }
   try {
-    setCurrentPlan(await api.updatePlan(planStore.current.plan_id, { vertical_mode: mode }));
+    setCurrentPlan(await api.updatePlan(planStore.current.plan_id, { vertical_mode: mode, expected_revision: planStore.current.revision }));
     previewVerticalMode.value = '';
     editNotice.value = `已切换为${mode === 'escalator' ? '扶梯' : '直梯'}路线。`;
     await nextTick(); replayPreview();

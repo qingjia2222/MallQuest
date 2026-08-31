@@ -42,7 +42,7 @@ async function generate() {
 async function onConfirm() {
   if (!plan.value) return;
   try {
-    plan.value = await api.confirmPlan(plan.value.plan_id, 'confirm');
+    plan.value = await api.confirmPlan(plan.value.plan_id, 'confirm', {}, plan.value.revision);
     if (navigator.vibrate) navigator.vibrate(30);
     step.value = 5;
   } catch (e) { resultText.value = '确认失败：' + (e.message || ''); }

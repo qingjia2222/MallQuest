@@ -30,6 +30,9 @@ FastAPI 统一服务，包含游客手机号登录、保留的微信登录适配
 & 'D:\miniconda\Miniconda3\envs\OpenCV\python.exe' -m pytest server/tests -q
 & 'D:\miniconda\Miniconda3\envs\OpenCV\python.exe' server/scripts/smoke_demo.py
 & 'D:\miniconda\Miniconda3\envs\OpenCV\python.exe' server/scripts/load_test.py
+& 'D:\miniconda\Miniconda3\envs\OpenCV\python.exe' server/scripts/release_check.py
 ```
+
+日常启动会先备份并检查真实演示数据库；pytest、冒烟和压测均使用独立临时数据库，不会再清空当前 Plan 或交易数据。完整的启动门禁、Plan 并发保护、健康检查和故障恢复流程见 `docs/operations-guard.md`。
 
 Swagger：`http://127.0.0.1:8000/docs`。微信开发者工具默认可访问 localhost；真机需 LAN/HTTPS 地址并配置合法域名。课程 Demo 未连接真实支付、票务、停车硬件或室内定位。
