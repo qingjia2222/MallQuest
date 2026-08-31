@@ -22,7 +22,7 @@ function stop(i) { emit('stoptap', i); }
           <div class="ic-head">
             <span class="ic-time">{{ s.time }}</span>
             <span class="ic-name">{{ s.name }}</span>
-            <span v-if="s.waiting" class="ic-wait" :class="{ busy: s.waiting > 10 }">{{ s.waiting }} 桌</span>
+            <span v-if="s.waiting" class="ic-wait" :class="{ busy: s.waiting > 10 }">{{ s.waiting }} 分钟</span>
           </div>
           <div class="ic-meta">{{ s.floor }} 层 · {{ s.category }}</div>
         </div>

@@ -1,12 +1,14 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from app.core.auth import AuthContext, require_auth
 from app.core.envelope import envelope
 from app.core.llm import LLMAdapter
-from app.core.orchestrator import try_online
-from app.core.planner import detect_scene, create_plan
+from app.core.orchestrator import try_online, try_online_planning
+from app.core.planner import detect_scene, create_plan, create_plan_from_agent
 from app.core.tools import run_tool
 from app.db import connection
+log=logging.getLogger("mall-assistant.chat")
 
 router=APIRouter(tags=["chat"])
 class ChatBody(BaseModel): session_id:str; message:str
@@ -14,10 +16,21 @@ class ChatBody(BaseModel): session_id:str; message:str
 def chat(body:ChatBody,auth:AuthContext=Depends(require_auth)):
     with connection() as db: session=db.execute("SELECT * FROM sessions WHERE id=? AND user_id=?",(body.session_id,auth.user_id)).fetchone()
     if not session: raise HTTPException(status_code=404,detail="session not found")
-    scene=detect_scene(body.message)
+    text=body.message
+    context={"user_id":auth.user_id,"mall_id":session["mall_id"],"session_id":body.session_id}
+    scene=detect_scene(text)
     if scene:
-        plan=create_plan(auth.user_id,session["mall_id"],body.session_id,body.message,scene); return envelope({"reply":"我已理解目标并生成方案，请确认后再执行预约、领券或购票。","intent":"plan","plan":plan,"cards":[plan["card"]],"degraded":True,"degraded_reason":"scripted fallback"})
-    context={"user_id":auth.user_id,"mall_id":session["mall_id"],"session_id":body.session_id}; text=body.message
+        agent=try_online_planning(text,context,scene)
+        if agent and agent.get("plan_json"):
+            try:
+                plan=create_plan_from_agent(auth.user_id,session["mall_id"],body.session_id,text,scene,agent["plan_json"],agent.get("reply",""))
+                if plan and plan.get("itinerary"):
+                    return envelope({"reply":agent.get("reply") or "已为你智能规划出方案，请确认后再执行预约或排号。","intent":"plan","plan":plan,"cards":[plan["card"]],"tool_calls":agent.get("tool_calls",[]),"degraded":False,"mode":"online","source":"online_agent"})
+            except HTTPException:
+                pass
+            except Exception as exc:
+                log.exception("plan_from_agent_failed error_type=%s",type(exc).__name__)
+        plan=create_plan(auth.user_id,session["mall_id"],body.session_id,text,scene); return envelope({"reply":"我已理解目标并生成方案，请确认后再执行预约、领券或购票。","intent":"plan","plan":plan,"cards":[plan["card"]],"degraded":True,"degraded_reason":"scripted fallback"})
     online=try_online(text,context)
     if online: return envelope({**online,"intent":"online_tool_loop","cards":[]})
     if "停车" in text: tool="query_parking_status"; args={}; reply="已查询 QD square 停车状态。"; card="parking"

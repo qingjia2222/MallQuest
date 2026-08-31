@@ -11,6 +11,13 @@ TEMPLATES={
  "gift":{"required":["recipient","budget","preferences","occasion"],"stores":["s13","s14","s06"],"actions":["claim_coupon"]},
  "family_day":{"required":["child_age","duration","budget","interests","meal_preference"],"stores":["s10","s12","s11"],"actions":["buy_ticket","reserve_restaurant","claim_coupon"]},
  "business":{"required":["time","people","total_budget","level","quiet","meal_preference"],"stores":["s16","s05","s17"],"actions":["reserve_business_space","reserve_restaurant","claim_coupon"]}}
+# 场景默认槽位：用户只说出「目标」(如「帮我规划约会」)但没给明细时，用默认值直接生成方案，避免空方案
+DEFAULT_SLOTS={
+ "date":{"time":"今晚7点","people":2,"budget_per_person":200,"cuisine":"川菜","want_movie":True},
+ "banquet":{"time":"周末6点","people":6,"total_budget":1000,"cuisine":"川菜","private_room":True},
+ "gift":{"recipient":"朋友","budget":300,"preferences":"设计感小物","occasion":"礼物"},
+ "family_day":{"child_age":6,"duration":4,"budget":500,"interests":"游乐","meal_preference":"亲子餐"},
+ "business":{"time":"明天下午3点","people":4,"total_budget":1500,"level":"高端","quiet":True,"meal_preference":"中餐"}}
 
 def detect_scene(text):
     for scene,words in [("business",["商务","客户"]),("family_day",["带娃","孩子","亲子"]),("gift",["礼物","生日"]),("banquet",["家宴","包间"]),("date",["约会","电影"])]:
@@ -34,20 +41,99 @@ def extract_slots(scene,text):
 def create_plan(user_id,mall_id,session_id,text,scene=None,slots=None):
     scene=scene or detect_scene(text)
     if scene not in TEMPLATES: raise HTTPException(status_code=422,detail="无法识别规划场景")
-    merged=extract_slots(scene,text); merged.update(slots or {}); missing=[s for s in TEMPLATES[scene]["required"] if s not in merged]
-    plan_id="plan_"+uuid.uuid4().hex[:12]; history=["IDLE","UNDERSTAND"]
-    if missing: state="COLLECT"; itinerary=[]; route={}; history.append("COLLECT")
+    merged=extract_slots(scene,text); merged.update(slots or {})
+    missing_original=[s for s in TEMPLATES[scene]["required"] if s not in merged]
+    missing=missing_original
+    # 缺槽位 → 用场景默认槽位补全，使「只说目标」也能直接生成方案
+    if missing:
+        merged.update({k:v for k,v in DEFAULT_SLOTS[scene].items() if k not in merged})
+        missing=[s for s in TEMPLATES[scene]["required"] if s not in merged]
+        if missing: state="COLLECT"; itinerary=[]; route={}; history=["IDLE","UNDERSTAND","COLLECT"]; plan_id="plan_"+uuid.uuid4().hex[:12]; now=now_iso()
+        else: plan_id,itinerary,route,state,history=_build_itinerary(user_id,mall_id,scene,merged)
     else:
-        history.extend(["COLLECT","PLAN"]); ids=TEMPLATES[scene]["stores"]; marks=','.join('?' for _ in ids)
-        with connection() as db: stores=[dict(r) for r in db.execute(f"SELECT * FROM stores WHERE mall_id=? AND id IN ({marks})",(mall_id,*ids)).fetchall()]
-        by_id={s["id"]:s for s in stores}; itinerary=[by_id[i] for i in ids if i in by_id]
-        if len(itinerary)!=len(ids): raise HTTPException(status_code=400,detail="scene is not available in current mall")
-        history.append("ROUTE"); route=build_route(mall_id,ids); history.append("CONFIRM"); state="CONFIRM"
+        plan_id,itinerary,route,state,history=_build_itinerary(user_id,mall_id,scene,merged)
+    if state=="COLLECT":
+        now=now_iso()
+        with connection() as db:
+            db.execute("INSERT OR REPLACE INTO sessions VALUES(?,?,?,?,?,?,?,?,?)",(session_id,user_id,mall_id,scene,json.dumps(merged,ensure_ascii=False),plan_id,state,json.dumps({"state_history":history,"missing_slots":missing_original},ensure_ascii=False),now))
+            db.execute("INSERT INTO plans VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",(plan_id,session_id,user_id,mall_id,scene,json.dumps(merged,ensure_ascii=False),state,json.dumps(itinerary,ensure_ascii=False),json.dumps(route,ensure_ascii=False),"[]",now,now))
+        return {"plan_id":plan_id,"session_id":session_id,"scene":scene,"slots":merged,"missing_slots":missing_original,"state":state,"state_history":history,"itinerary":itinerary,"route":route,"card":{"type":"plan","title":f"{scene} 方案","status":state}}
     now=now_iso()
     with connection() as db:
-        db.execute("INSERT OR REPLACE INTO sessions VALUES(?,?,?,?,?,?,?,?,?)",(session_id,user_id,mall_id,scene,json.dumps(merged,ensure_ascii=False),plan_id,state,json.dumps({"state_history":history,"missing_slots":missing},ensure_ascii=False),now))
+        db.execute("INSERT OR REPLACE INTO sessions VALUES(?,?,?,?,?,?,?,?,?)",(session_id,user_id,mall_id,scene,json.dumps(merged,ensure_ascii=False),plan_id,state,json.dumps({"state_history":history,"missing_slots":missing_original},ensure_ascii=False),now))
         db.execute("INSERT INTO plans VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",(plan_id,session_id,user_id,mall_id,scene,json.dumps(merged,ensure_ascii=False),state,json.dumps(itinerary,ensure_ascii=False),json.dumps(route,ensure_ascii=False),"[]",now,now))
-    return {"plan_id":plan_id,"session_id":session_id,"scene":scene,"slots":merged,"missing_slots":missing,"state":state,"state_history":history,"itinerary":itinerary,"route":route,"card":{"type":"plan","title":f"{scene} 方案","status":state}}
+    return {"plan_id":plan_id,"session_id":session_id,"scene":scene,"slots":merged,"missing_slots":missing_original,"state":state,"state_history":history,"itinerary":itinerary,"route":route,"card":{"type":"plan","title":f"{scene} 方案","status":state}}
+
+SCENE_NAMES={"date":"约会","banquet":"家宴","gift":"礼物","family_day":"带娃","business":"商务"}
+
+def create_plan_from_agent(user_id,mall_id,session_id,text,scene,plan_data,reply=""):
+    """把在线大模型规划选中的店固化为可确认、可预约的方案记录（state=CONFIRM）。"""
+    if scene not in TEMPLATES: scene=detect_scene(text) or "date"
+    ids=[i for i in (plan_data.get("store_ids") or []) if isinstance(i,str)]
+    stores=[]
+    if ids:
+        ph=",".join("?" for _ in ids)
+        with connection() as db:
+            rows=db.execute(f"SELECT * FROM stores WHERE mall_id=? AND id IN ({ph})",(mall_id,*ids)).fetchall()
+        by={r["id"]:dict(r) for r in rows}; stores=[by[i] for i in ids if i in by]
+    if not stores:
+        # 大模型没给出有效店 → 回退到规则方案，避免空方案
+        return create_plan(user_id,mall_id,session_id,text,scene)
+    slots=dict(DEFAULT_SLOTS.get(scene,{})); slots.update(plan_data.get("slots") or {})
+    time_plan=plan_data.get("time_plan") or {}
+    for s in stores: s["time_label"]=time_plan.get(s["id"]) or slots.get("time","")
+    node_ids=[s["id"] for s in stores]; route=build_route(mall_id,node_ids)
+    plan_id="plan_"+uuid.uuid4().hex[:12]; history=["IDLE","UNDERSTAND","COLLECT","PLAN","ROUTE","CONFIRM"]; state="CONFIRM"; now=now_iso()
+    with connection() as db:
+        db.execute("INSERT OR REPLACE INTO sessions VALUES(?,?,?,?,?,?,?,?,?)",(session_id,user_id,mall_id,scene,json.dumps(slots,ensure_ascii=False),plan_id,state,json.dumps({"state_history":history,"missing_slots":[],"source":"online_agent"},ensure_ascii=False),now))
+        db.execute("INSERT INTO plans VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",(plan_id,session_id,user_id,mall_id,scene,json.dumps(slots,ensure_ascii=False),state,json.dumps(stores,ensure_ascii=False),json.dumps(route,ensure_ascii=False),"[]",now,now))
+    return {"plan_id":plan_id,"session_id":session_id,"scene":scene,"slots":slots,"missing_slots":[],"state":state,"state_history":history,"itinerary":stores,"route":route,"source":"online_agent","card":{"type":"plan","title":f"{SCENE_NAMES.get(scene,scene)} 方案（智能 Agent）","status":state}}
+
+# 场景规则：scenes 按槽位动态挑店（category / tags / avg_price 匹配），体现用户偏好
+SCENE_PICKS = {
+  "date":     [("drink", ["奶茶","咖啡","烘焙","甜品","茶歇"]), ("movie", ["影院"])],
+  "banquet":  [("restaurant", ["川菜","粤菜","高端餐厅"]), ("gift", ["礼品"])],
+  "gift":     [("gift", ["礼品","香氛","设计零售","玩具"])],
+  "family_day": [("kid", ["儿童乐园","亲子餐厅","玩具"]), ("restaurant", ["亲子餐厅"]), ("drink", ["甜品","奶茶","烘焙"])],
+  "business": [("biz", ["高端餐厅","商务空间","茶歇","轻食"])],
+}
+
+def _match_cuisine(stores, cuisine):
+    if not cuisine: return []
+    c = cuisine.strip()
+    # 直接按 category 含口味 或 tags 含
+    hit = [s for s in stores if c in s["category"] or c in s["tags"]]
+    return hit
+
+def _build_itinerary(user_id, mall_id, scene, slots):
+    with connection() as db: stores=[dict(r) for r in db.execute("SELECT * FROM stores WHERE mall_id=?", (mall_id,)).fetchall()]
+    chosen=[]; used=set()
+    cuisine = slots.get("cuisine") or slots.get("meal_preference")
+    # 1) 按槽位口味优先匹配餐厅（取一家，避免同菜系重复）
+    if cuisine:
+        for s in _match_cuisine(stores, cuisine):
+            if s["id"] not in used and s["category"] not in ("服务台",):
+                chosen.append(s); used.add(s["id"]); break   # 只取第一家
+    # 2) 按场景类型补齐其它业态
+    for kind, cats in SCENE_PICKS.get(scene, []):
+        cand=[s for s in stores if s["id"] not in used and s["category"] in cats and s["category"]!="服务台"]
+        if cand: chosen.append(cand[0]); used.add(cand[0]["id"])
+    # 3) 若还没凑齐场景模板数量，用模板店铺兜底
+    ids=[s["id"] for s in chosen]
+    for sid in TEMPLATES[scene]["stores"]:
+        if len(ids) >= len(TEMPLATES[scene]["stores"]): break
+        if sid not in ids:
+            row=[s for s in stores if s["id"]==sid]
+            if row: chosen.append(row[0]); ids.append(sid)
+    itinerary=chosen[:max(len(TEMPLATES[scene]["stores"]),1)]
+    # 若仍有空，用任意非服务台店填充
+    if not itinerary:
+        fallback=[s for s in stores if s["category"]!="服务台"]
+        itinerary=fallback[:len(TEMPLATES[scene]["stores"])]
+    node_ids=[s["id"] for s in itinerary]
+    history=["IDLE","UNDERSTAND","COLLECT","PLAN"]
+    history.append("ROUTE"); route=build_route(mall_id,node_ids); history.append("CONFIRM")
+    return "plan_"+uuid.uuid4().hex[:12], itinerary, route, "CONFIRM", history
 
 def _claim(db,user_id,mall_id,coupon_id):
     row=db.execute("SELECT * FROM coupons WHERE id=? AND mall_id=? AND stock>0",(coupon_id,mall_id)).fetchone()
@@ -74,6 +160,16 @@ def confirm_plan(user_id,plan_id,decision):
                 wanted="商务空间" if action=="reserve_business_space" else None; store=next((s for s in itinerary if (wanted and s["category"]==wanted) or (not wanted and s["reservable"] and s["category"]!="商务空间")),None)
                 if store:
                     rid="res_"+uuid.uuid4().hex[:10]; db.execute("INSERT INTO reservations VALUES(?,?,?,?,?,?,?,?,?,?)",(rid,user_id,mall,store["id"],"business" if wanted else "restaurant",slots.get("time","演示时段"),slots.get("people",2),"由确认后的规划创建","confirmed",now_iso())); results.append({"tool":action,"status":"success","reservation_id":rid,"store_id":store["id"]})
+        # 为方案中可预约/需排队的店批量建档，供「到号提醒」使用
+        queued_ids={r["store_id"] for r in results if r.get("store_id")}
+        for store in itinerary:
+            sid=store.get("id")
+            if not sid or sid in queued_ids: continue
+            if not store.get("reservable"): continue
+            q=int(store.get("queue_minutes") or 0)
+            rid="res_"+uuid.uuid4().hex[:10]
+            db.execute("INSERT INTO reservations VALUES(?,?,?,?,?,?,?,?,?,?)",(rid,user_id,mall,sid,"queue",slots.get("time","演示时段"),slots.get("people",2),f"规划排队约{q}分钟","queued",now_iso()))
+            results.append({"tool":"queue","status":"queued","store_id":sid,"queue_minutes":q,"reservation_id":rid})
         db.execute("UPDATE plans SET state='DONE',action_results_json=?,updated_at=? WHERE id=?",(json.dumps(results,ensure_ascii=False),now_iso(),plan_id)); db.execute("UPDATE sessions SET plan_state='DONE',updated_at=? WHERE id=?",(now_iso(),row["session_id"]))
     metrics.increment(f"scenario_{scene}_success"); metrics.increment("tool_calls"); return get_plan(user_id,plan_id)
 

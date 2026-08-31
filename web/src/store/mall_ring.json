@@ -1,0 +1,380 @@
+{
+ "stores": [
+  {
+   "name": "面包新语",
+   "floor": 1,
+   "side": 0,
+   "sid": 0,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "思百食Spiceee",
+   "floor": 1,
+   "side": 0,
+   "sid": 1,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "卫生间",
+   "floor": 1,
+   "side": 0,
+   "sid": 2,
+   "per": 5,
+   "cat": "零售",
+   "nav": false,
+   "fac": "true"
+  },
+  {
+   "name": "途尚咖啡",
+   "floor": 1,
+   "side": 0,
+   "sid": 3,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "天辣小馆",
+   "floor": 1,
+   "side": 0,
+   "sid": 4,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "吟松日本料理",
+   "floor": 1,
+   "side": 1,
+   "sid": 0,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "世界茶饮",
+   "floor": 1,
+   "side": 1,
+   "sid": 1,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "丸龟制面",
+   "floor": 1,
+   "side": 1,
+   "sid": 2,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "拼桌茶餐厅",
+   "floor": 1,
+   "side": 1,
+   "sid": 3,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "爪财猫寿司",
+   "floor": 1,
+   "side": 1,
+   "sid": 4,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "手工茶坊",
+   "floor": 1,
+   "side": 2,
+   "sid": 0,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "吉布鲁牛排海鲜自助餐厅",
+   "floor": 1,
+   "side": 2,
+   "sid": 1,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "米桃餐厅",
+   "floor": 1,
+   "side": 2,
+   "sid": 2,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "渝利火锅",
+   "floor": 1,
+   "side": 2,
+   "sid": 3,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "麻省理功深海烤鱼",
+   "floor": 1,
+   "side": 2,
+   "sid": 4,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "见面",
+   "floor": 1,
+   "side": 3,
+   "sid": 0,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "沃德面包",
+   "floor": 1,
+   "side": 3,
+   "sid": 1,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "北疆饭店",
+   "floor": 1,
+   "side": 3,
+   "sid": 2,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "小杨生煎",
+   "floor": 1,
+   "side": 3,
+   "sid": 3,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "藤尾食堂",
+   "floor": 1,
+   "side": 3,
+   "sid": 4,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "鮨谷",
+   "floor": 2,
+   "side": 0,
+   "sid": 0,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "格瑞特运动馆",
+   "floor": 2,
+   "side": 0,
+   "sid": 1,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "卫生间",
+   "floor": 2,
+   "side": 0,
+   "sid": 2,
+   "per": 5,
+   "cat": "零售",
+   "nav": false,
+   "fac": "true"
+  },
+  {
+   "name": "酷锐视觉",
+   "floor": 2,
+   "side": 0,
+   "sid": 3,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "星巴克",
+   "floor": 2,
+   "side": 0,
+   "sid": 4,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "不二烫捞",
+   "floor": 2,
+   "side": 1,
+   "sid": 0,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "小米之家",
+   "floor": 2,
+   "side": 1,
+   "sid": 1,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "八点醒",
+   "floor": 2,
+   "side": 1,
+   "sid": 2,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "消防兼安保",
+   "floor": 2,
+   "side": 1,
+   "sid": 3,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "福气糖",
+   "floor": 2,
+   "side": 1,
+   "sid": 4,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "撒露",
+   "floor": 2,
+   "side": 2,
+   "sid": 0,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "开心丽果",
+   "floor": 2,
+   "side": 2,
+   "sid": 1,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "翠华",
+   "floor": 2,
+   "side": 2,
+   "sid": 2,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "立方铁",
+   "floor": 2,
+   "side": 2,
+   "sid": 3,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "欧凯萨",
+   "floor": 2,
+   "side": 2,
+   "sid": 4,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "大众书局",
+   "floor": 2,
+   "side": 3,
+   "sid": 0,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "阅江轩",
+   "floor": 2,
+   "side": 3,
+   "sid": 1,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "鱼螺满筐",
+   "floor": 2,
+   "side": 3,
+   "sid": 2,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "金伯利",
+   "floor": 2,
+   "side": 3,
+   "sid": 3,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  },
+  {
+   "name": "满记甜品",
+   "floor": 2,
+   "side": 3,
+   "sid": 4,
+   "per": 5,
+   "cat": "零售",
+   "nav": false
+  }
+ ],
+ "corners": {
+  "F1": [
+   "天御皇茶",
+   "蜀签成都串串香",
+   "鸿匠铁板烧日本料理",
+   "味千面食料理"
+  ],
+  "F2": [
+   "川食公馆",
+   "秦香阁餐厅",
+   "米芝莲",
+   "有线电视"
+  ]
+ }
+}
