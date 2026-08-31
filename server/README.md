@@ -1,6 +1,6 @@
 # QD square 后端
 
-FastAPI 统一服务，包含双登录、Token、SQLite 私有数据源、工具注册表、千问兼容 LLM、scripted fallback、RAG、八态 Planner、五场景事务、Dijkstra 两层路线、Windows TTS、指标和测试。
+FastAPI 统一服务，包含游客微信登录、商户店铺编码登录、管理者账号登录、Token 权限隔离、SQLite 私有数据源、工具注册表、千问兼容 LLM、scripted fallback、RAG、八态 Planner、五场景事务、Dijkstra 两层路线与路线动画数据、Windows TTS、经营指标和测试。
 
 ## 环境与初始化
 
@@ -14,7 +14,7 @@ FastAPI 统一服务，包含双登录、Token、SQLite 私有数据源、工具
 
 复制 `.env.example` 为 `.env`。千问 Key 只写 `.env`；切换 `LLM_MODE=online` 后运行 `verify_online_llm.py`。微信凭证位于微信公众平台“小程序 → 开发管理 → 开发设置”，填入后把 `WX_AUTH_MODE` 改为 `online`。
 
-演示账号：`demo / demo123`；微信 mock code：`mock-demo`。地图位于 `server/data/maps/mall_demo`，明确为 Demo。TTS 当前为 Windows SAPI WAV。
+演示账号：游客 Web 联调 `demo / demo123`，商户编码 `QD-S01-DEMO`，管理者 `manager / manager123`；微信 mock code：`mock-demo`。地图位于 `server/data/maps/mall_demo`，明确为 Demo。经营分析为确定性 Mock。TTS 当前为 Windows SAPI WAV。
 
 ## 验证
 

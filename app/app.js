@@ -11,8 +11,9 @@ App({
     userId: '',
     sessionId: '',
     demoMode: false,        // false = 接真实后端；true = 纯 mock（无后端演示）
-    wxOnline: false,        // 微信真机 code2session 需配置 WX_APP_ID；本地用 mock 码
-    planState: null
+    wxOnline: true,         // 已配置真实小程序 AppID；自动测试仍强制 mock
+    planState: null,
+    currentPlan: null
   },
 
   onLaunch() {

@@ -7,9 +7,9 @@ const deals = ref([]);
 const loading = ref(true);
 // 后端 /api/deals 返回特惠；优惠券展示模拟列表（真实领券走 /api/coupons/claim）
 const coupons = ref([
-  { id: 'cp_1', title: '餐饮满 100 减 30', scope: '全场餐饮', expire: '今日 24 点', color: '#7C3AED' },
-  { id: 'cp_2', title: '停车 3 小时免费', scope: '商场停车场', expire: '本月内', color: '#06B6D4' },
-  { id: 'cp_3', title: '奶茶第二杯半价', scope: '指定饮品', expire: '本周内', color: '#F59E0B' }
+  { id: 'c1', title: '蜀香小院满 200 减 30', scope: '蜀香小院', expire: '今日 24 点', color: '#7C3AED' },
+  { id: 'c2', title: '礼物研究所满 300 减 50', scope: '礼物研究所', expire: '本月内', color: '#06B6D4' },
+  { id: 'c6', title: '奶茶第二杯半价', scope: '茉语奶茶', expire: '本周内', color: '#F59E0B' }
 ]);
 
 async function load() {
@@ -21,6 +21,7 @@ async function load() {
 async function claim(coupon) {
   try {
     await api.claimCoupon(coupon.id);
+    coupon.claimed = true;
     if (navigator.vibrate) navigator.vibrate(30);
     alert('领取成功');
   } catch (e) { alert('领取失败：' + (e.message || '')); }

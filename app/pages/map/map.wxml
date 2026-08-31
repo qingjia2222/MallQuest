@@ -2,7 +2,7 @@
   <view class="map-title-bar">
     <view>
       <view class="mt-name">室内导览地图</view>
-      <view class="mt-sub">虚线为你的规划路线</view>
+      <view class="mt-sub">店铺状态由商户端实时同步</view>
     </view>
     <view class="mt-btn" bindtap="goPlan">帮我规划</view>
   </view>
@@ -12,12 +12,12 @@
 
   <!-- 停车位概览 -->
   <view class="parking-card card">
-    <parking-gauge free="{{95}}" total="{{540}}" />
+    <parking-gauge free="{{parking.total_free}}" total="{{parking.total}}" />
     <view class="parking-info">
       <view class="p-title">🚗 实时停车位</view>
       <view class="p-areas">
-        <view wx:for="{{[{a:'B1-A',f:34},{a:'B1-B',f:8},{a:'B2-C',f:51},{a:'B2-D',f:2}]}}" wx:key="a" class="p-area">
-          <text>{{item.a}}</text><text class="p-free">{{item.f}} 空</text>
+        <view wx:for="{{parking.areas}}" wx:key="id" class="p-area">
+          <text>{{item.area}}</text><text class="p-free">{{item.free}} 空</text>
         </view>
       </view>
     </view>
@@ -30,12 +30,13 @@
         <view class="d-emoji">🏬</view>
         <view class="d-main">
           <text class="d-name">{{focusStore.name}}</text>
-          <text class="d-meta">{{focusStore.category}} · {{focusStore.floor}}F · 评分{{focusStore.rating}}</text>
+          <text class="d-meta">{{focusStore.category}} · {{focusStore.floor}}F · {{focusStore.business_hours}}</text>
         </view>
         <view class="d-close" bindtap="closeDetail">×</view>
       </view>
       <text class="d-desc">{{focusStore.desc}}</text>
-      <view class="d-wait">当前前方 {{focusStore.waiting}} 桌 · 约 {{focusStore.waiting * 2}} 分钟</view>
+      <view class="d-live"><text>营业：{{focusStore.open_status}}</text><text>预计排队：{{focusStore.waiting}} 分钟</text><text>可用座位：{{focusStore.seats_available}}</text></view>
+      <view wx:if="{{focusStore.deal_title}}" class="d-deal">当前优惠：{{focusStore.deal_title}} · ¥{{focusStore.deal_price}}</view>
       <view class="d-actions">
         <view class="ic-btn ghost" bindtap="closeDetail">再看看</view>
         <view class="ic-btn primary" bindtap="reserve">去预约</view>

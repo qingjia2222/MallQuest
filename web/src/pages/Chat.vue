@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import api, { BASE } from '../api';
 import RichCard from '../components/RichCard.vue';
@@ -10,7 +10,12 @@ const messages = ref([]);
 const input = ref('发个「停车场还有空位吗？」试试智能对话');
 const loading = ref(false);
 const currentPlan = ref(null);
-const quickActions = ['停车场还有空位吗？', '积分多久过期？', '今天有什么特惠？', '有什么好吃的推荐？', '帮我规划约会'];
+const navigation = ref(null); const navVisible = ref(false); const navStep = ref(0); let navTimer;
+const currentNode = computed(() => navigation.value?.nodes?.[navStep.value] || null);
+const navFloor = computed(() => currentNode.value?.floor || 1);
+const floorNodes = computed(() => (navigation.value?.nodes || []).filter(n => n.floor === navFloor.value));
+const progressNodes = computed(() => (navigation.value?.nodes || []).slice(0, navStep.value + 1).filter(n => n.floor === navFloor.value));
+const points = nodes => nodes.map(n => `${n.x},${n.y}`).join(' ');
 
 onMounted(() => {
   const name = localStorage.getItem('mall_name') || 'QD square';
@@ -46,6 +51,7 @@ async function send(txt) {
     const msg = messages.value[messages.value.length - 1];
     msg.cards = toCards(data.cards);
     if (data.plan) { currentPlan.value = data.plan; setCurrentPlan(data.plan); msg.plan = data.plan; }
+    if (data.navigation) { navigation.value = data.navigation; replayNavigation(); }
     scroll();
   } catch (e) {
     push('ai', '抱歉，请求后端失败：' + (e.message || ''));
@@ -59,6 +65,8 @@ function onCardTap(card) {
   else if (card.type === 'coupon' || card.type === 'deals') router.push('/coupon');
   else if (card.type === 'store' || card.type === 'list') router.push('/map');
 }
+function replayNavigation(){clearInterval(navTimer);navVisible.value=true;navStep.value=0;navTimer=setInterval(()=>{if(navStep.value >= navigation.value.nodes.length-1)clearInterval(navTimer);else navStep.value++},520)}
+function closeNavigation(){clearInterval(navTimer);navVisible.value=false} onUnmounted(()=>clearInterval(navTimer));
 </script>
 
 <template>
@@ -77,17 +85,12 @@ function onCardTap(card) {
       </div>
     </div>
 
-    <div class="quick-bar">
-      <div class="quick-inner">
-        <span v-for="q in quickActions" :key="q" class="chip" @click="send(q)">{{ q }}</span>
-      </div>
-    </div>
-
     <div class="composer">
       <input class="ci" v-model="input" @keyup.enter="send()" placeholder="问我任何商场问题…" />
       <div class="mic" @click="send('帮我规划约会')">🎤</div>
       <button class="send-btn" :disabled="loading" @click="send()">{{ loading ? '…' : '发送' }}</button>
     </div>
+    <div v-if="navVisible" class="nav-mask"><div class="nav-modal"><div class="nav-head"><div><small>3D ROUTE · 自动导览</small><h2>前往 {{navigation.destination_store.name}}</h2></div><button @click="closeNavigation">×</button></div><div class="nav-stage" :style="{backgroundImage:`url(${api.mapFloorUrl(navFloor)})`}"><svg viewBox="0 0 1000 760"><polyline :points="points(floorNodes)" class="route-all"/><polyline :points="points(progressNodes)" class="route-progress"/><circle v-if="currentNode" :cx="currentNode.x" :cy="currentNode.y" r="18" class="dot"/></svg><span class="floor">{{navFloor}}F</span><span class="you">红点 = 您当前所在位置</span></div><p>约 {{navigation.estimated_distance}} · 可重播、可关闭</p><div class="nav-actions"><button @click="replayNavigation">↻ 重播路线</button><button class="done" @click="closeNavigation">关闭导览</button></div></div></div>
   </div>
 </template>
 
@@ -110,4 +113,5 @@ function onCardTap(card) {
 .ci:focus { outline: none; }
 .mic { font-size: 22px; cursor: pointer; }
 .send-btn { background: linear-gradient(135deg, var(--primary), var(--cyan)); color: #fff; border: none; border-radius: 24px; padding: 10px 22px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.nav-mask{position:fixed;z-index:100;inset:0;background:#090b19cc;display:flex;align-items:center;justify-content:center;padding:24px}.nav-modal{width:min(720px,94vw);background:#fff;border-radius:24px;padding:24px}.nav-head{display:flex;justify-content:space-between}.nav-head small{color:#7c3aed;letter-spacing:3px}.nav-head h2{margin:7px 0}.nav-head button{border:0;background:none;font-size:32px}.nav-stage{position:relative;height:430px;background-size:100% 100%;border-radius:18px;overflow:hidden;transform:perspective(900px) rotateX(5deg);box-shadow:0 25px 45px #4c1d9533}.nav-stage svg{width:100%;height:100%}.route-all{fill:none;stroke:#7c3aed55;stroke-width:12;stroke-linecap:round;stroke-linejoin:round}.route-progress{fill:none;stroke:#ef4444;stroke-width:15;stroke-linecap:round;stroke-linejoin:round}.dot{fill:#ef4444;stroke:#fff;stroke-width:10}.floor,.you{position:absolute;background:#111827dd;color:#fff;border-radius:18px;padding:6px 10px;font-size:12px}.floor{right:12px;top:12px}.you{left:12px;bottom:12px}.nav-modal>p{text-align:center;color:#6b7280}.nav-actions{display:flex;gap:12px}.nav-actions button{flex:1;border:0;border-radius:24px;padding:12px;color:#6d28d9;background:#f5f3ff}.nav-actions .done{color:#fff;background:#7c3aed}
 </style>

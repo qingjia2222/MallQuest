@@ -12,6 +12,7 @@ const parking = reactive({ free: 0, total: 0, areas: [] });
 const focus = reactive({ show: false, detail: null });
 const routeMeta = ref('');
 const loading = ref(true);
+const stores = ref([]);
 
 // 从共享 store 取当前方案
 const plan = computed(() => planStore.current);
@@ -31,10 +32,11 @@ function loadFloor(f) {
 async function load() {
   loading.value = true;
   try {
-    const p = await api.parking();
+    const [p, scene] = await Promise.all([api.parking(), api.mapScene()]);
     parking.free = p.total_free || 0;
     parking.total = (p.areas || []).reduce((a, x) => a + (x.total || 0), 0);
     parking.areas = p.areas || [];
+    stores.value = scene.stores || [];
   } catch (e) {}
   // 同步共享方案的路线元信息
   if (plan.value && plan.value.route && plan.value.route.estimated_distance) {
@@ -48,6 +50,7 @@ onMounted(() => { loadFloor(1); load(); });
 function goPlan() { router.push('/plan'); }
 function goReserve() { router.push('/reserve'); }
 function closeDetail() { focus.show = false; }
+async function openStore(store) { try { focus.detail = await api.publicStore(store.id); focus.show = true; } catch(e) {} }
 
 function formatArea(a) { return `${a.area} ${a.free}/${a.total}`; }
 </script>
@@ -68,8 +71,11 @@ function formatArea(a) { return `${a.area} ${a.free}/${a.total}`; }
       <svg v-if="pts" viewBox="0 0 1000 760" class="route-svg">
         <polyline :points="pts" class="route-line" />
       </svg>
+      <button v-for="s in stores.filter(x=>x.floor===floor)" :key="s.id" class="store-dot" :style="{left:(s.pos_x/10)+'%',top:(s.pos_y/7.6)+'%'}" @click="openStore(s)" :title="s.name"><i></i><span>{{s.name}}</span></button>
       <p class="route-meta">{{ routeMeta || '扫描二维码或规划后，这里显示 Dijkstra 路线' }}</p>
     </div>
+
+    <div v-if="focus.show && focus.detail" class="detail-mask" @click="closeDetail"><div class="detail" @click.stop><button class="close" @click="closeDetail">×</button><h2>{{focus.detail.name}}</h2><p>{{focus.detail.floor}}F · {{focus.detail.category}} · {{focus.detail.business_hours}}</p><div class="live"><span>营业 {{focus.detail.open_status}}</span><span>排队 {{focus.detail.queue_minutes}} 分钟</span><span>座位 {{focus.detail.seats_available}}</span></div><strong v-if="focus.detail.deal_title">当前优惠：{{focus.detail.deal_title}} · ¥{{focus.detail.deal_price}}</strong></div></div>
 
     <!-- 停车位 -->
     <div class="card parking-card">
@@ -99,6 +105,7 @@ function formatArea(a) { return `${a.area} ${a.free}/${a.total}`; }
 .floor-img { width: 100%; display: block; }
 .route-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .route-line { fill: none; stroke: #EF4444; stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+.store-dot{position:absolute;z-index:4;transform:translate(-50%,-50%);border:0;background:none;color:#312e81;font-size:10px;font-weight:700}.store-dot i{display:block;margin:auto;width:15px;height:15px;border-radius:50%;background:#7c3aed;border:3px solid #fff;box-shadow:0 3px 8px #4c1d9577}.detail-mask{position:fixed;z-index:20;inset:0;background:#11182766;display:flex;align-items:flex-end;justify-content:center}.detail{position:relative;width:min(720px,100%);padding:26px;background:#fff;border-radius:24px 24px 0 0}.close{position:absolute;right:18px;top:14px;border:0;background:none;font-size:28px}.detail p{color:#6b7280}.live{display:flex;gap:12px;margin:16px 0}.live span{background:#f5f3ff;color:#6d28d9;padding:7px 11px;border-radius:16px}.detail strong{color:#c2410c}
 .route-meta { text-align: center; font-size: 12px; color: #9CA3AF; padding: 9px; }
 .parking-card { display: flex; align-items: center; gap: 20px; }
 .parking-info { flex: 1; }

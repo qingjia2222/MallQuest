@@ -34,5 +34,5 @@ async def http_error(request:Request,exc:HTTPException):
 @app.get("/api/health")
 def health(): return envelope({"status":"up","mall":"QD square","llm_mode":settings.llm_mode,"tts_mode":settings.tts_mode})
 
-from app.api import auth, business, chat, debug, plan, scan, tts
-for router in (auth.router,scan.router,chat.router,plan.router,business.router,tts.router,debug.router): app.include_router(router,prefix="/api")
+from app.api import auth, business, chat, commercial, debug, plan, scan, tts
+for router in (auth.router,scan.router,chat.router,plan.router,business.router,commercial.router,tts.router,debug.router): app.include_router(router,prefix="/api")

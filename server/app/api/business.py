@@ -39,7 +39,7 @@ def reserve(body:ReservationBody,auth:AuthContext=Depends(require_auth)):
     return envelope({"reservation_id":rid,"status":"confirmed"})
 @router.get("/reservations")
 def reservations(auth:AuthContext=Depends(require_auth)):
-    with connection() as db: rows=db.execute("SELECT * FROM reservations WHERE user_id=? ORDER BY created_at DESC",(auth.user_id,)).fetchall()
+    with connection() as db: rows=db.execute("SELECT r.*,s.name AS store_name FROM reservations r LEFT JOIN stores s ON s.id=r.store_id AND s.mall_id=r.mall_id WHERE r.user_id=? ORDER BY r.created_at DESC",(auth.user_id,)).fetchall()
     return envelope(rows_to_dicts(rows))
 @router.delete("/reservations/{reservation_id}")
 def cancel(reservation_id:str,auth:AuthContext=Depends(require_auth)):

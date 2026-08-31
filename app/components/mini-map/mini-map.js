@@ -12,7 +12,7 @@ Component({
     floor: { type: Number, value: 1 }
   },
   data: {
-    floorCount: 4,
+    floorCount: 2,
     segs: []
   },
   observers: {

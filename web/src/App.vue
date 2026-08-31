@@ -9,7 +9,7 @@ const tabs = [
   { path: '/profile', label: '我的', icon: '👤' }
 ];
 
-const showTabs = () => !route.meta.tab;
+const showTabs = () => Boolean(route.meta.tab) && (localStorage.getItem('mall_role') || 'visitor') === 'visitor';
 </script>
 
 <template>

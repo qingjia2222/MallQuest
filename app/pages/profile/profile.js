@@ -1,23 +1,21 @@
-// pages/profile/profile.js - 会员个人中心
+// pages/profile/profile.js - 精修会员中心 + 真实私域数据
 const mock = require('../../utils/mock');
+const { request } = require('../../utils/request');
 
 Page({
-  data: {
-    user: mock.user,
-    pointsRules: mock.pointsRules,
-    myCoupons: 2,
-    myReservations: 1
+  data: { user: { nickname: '会员', level: '会员', points: 0, nextLevelPoints: 1000, expires_on: '--' }, pointsRules: mock.pointsRules, myCoupons: 0, myReservations: 0 },
+  async onShow() {
+    try {
+      const app = getApp(); await app.ensureSession();
+      const [member, reservations] = await Promise.all([
+        request(`/api/member/points?session_id=${app.globalData.sessionId}`),
+        request('/api/reservations')
+      ]);
+      this.setData({ user: { nickname: '微信会员', level: member.level, points: member.points, nextLevelPoints: Math.max(1000, member.points + 500), expires_on: member.expires_on }, myReservations: reservations.length });
+    } catch (e) { wx.showToast({ title: e.message, icon: 'none' }); }
   },
-
-  onLoad() {
-    this.setData({ user: getApp().globalData.user || mock.user });
-  },
-
-  onPointsRule(e) {
-    const text = e.currentTarget.dataset.text;
-    wx.showToast({ title: text, icon: 'none' });
-  },
-
+  onPointsRule(e) { wx.showToast({ title: e.currentTarget.dataset.text, icon: 'none' }); },
+  logout() { wx.removeStorageSync('mallAuth'); Object.assign(getApp().globalData, { token: '', userId: '', sessionId: '', currentPlan: null, planState: null }); wx.reLaunch({ url: '/pages/portal/portal' }); },
   goCoupon() { wx.navigateTo({ url: '/pages/coupon/coupon' }); },
   goReserve() { wx.navigateTo({ url: '/pages/reserve/reserve' }); },
   goPlan() { wx.navigateTo({ url: '/pages/plan/plan' }); },

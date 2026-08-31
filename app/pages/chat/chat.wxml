@@ -26,15 +26,6 @@
     </view>
   </scroll-view>
 
-  <!-- 快捷指令条 -->
-  <view class="quick-bar" wx:if="{{!planning}}">
-    <scroll-view scroll-x class="quick-scroll">
-      <view class="quick-inner">
-        <view wx:for="{{quickActions}}" wx:key="index" class="chip" bindtap="send" data-text="{{item}}">{{item}}</view>
-      </view>
-    </scroll-view>
-  </view>
-
   <!-- 输入栏 -->
   <view class="composer">
     <view class="composer-input">
@@ -44,4 +35,13 @@
     <view class="send-btn" bindtap="send" data-text="{{input}}">发送</view>
   </view>
   <view class="safe-bottom"></view>
+
+  <view wx:if="{{navVisible}}" class="nav-mask">
+    <view class="nav-modal">
+      <view class="nav-head"><view><view class="nav-kicker">3D ROUTE · 自动导览</view><view class="nav-title">前往 {{navigation.destination_store.name}}</view></view><view class="nav-close" bindtap="closeNavigation">×</view></view>
+      <view class="nav-stage"><image src="{{navMapUrl}}" mode="widthFix"/><canvas canvas-id="navCanvas" class="nav-canvas"/><view class="floor-badge">{{navFloor}}F</view><view class="you-badge">红点 = 您当前所在位置</view></view>
+      <view class="nav-meta"><text>约 {{navigation.estimated_distance}}</text><text wx:if="{{navigation.transfer_instructions.length}}"> · 换乘 {{navigation.transfer_instructions.length}} 次</text></view>
+      <view class="nav-actions"><button class="nav-replay" bindtap="replayNavigation">↻ 重播路线</button><button class="nav-done" bindtap="closeNavigation">关闭导览</button></view>
+    </view>
+  </view>
 </view>

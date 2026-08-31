@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from app.core.auth import AuthContext, require_auth
 from app.core.envelope import envelope
 from app.core.llm import LLMAdapter
+from app.core.navigation import is_navigation_intent, resolve_navigation
 from app.core.orchestrator import try_online
 from app.core.planner import detect_scene, create_plan
 from app.core.tools import run_tool
@@ -14,6 +15,11 @@ class ChatBody(BaseModel): session_id:str; message:str
 def chat(body:ChatBody,auth:AuthContext=Depends(require_auth)):
     with connection() as db: session=db.execute("SELECT * FROM sessions WHERE id=? AND user_id=?",(body.session_id,auth.user_id)).fetchone()
     if not session: raise HTTPException(status_code=404,detail="session not found")
+    if is_navigation_intent(body.message):
+        navigation=resolve_navigation(session["mall_id"],body.message)
+        destination=navigation["destination_store"]
+        reply=f"已为你找到前往{destination['name']}的路线，导航动画已打开。当前预计排队 {destination['queue_minutes']} 分钟。"
+        return envelope({"reply":reply,"intent":"navigation","navigation":navigation,"cards":[navigation],"degraded":False})
     scene=detect_scene(body.message)
     if scene:
         plan=create_plan(auth.user_id,session["mall_id"],body.session_id,body.message,scene); return envelope({"reply":"我已理解目标并生成方案，请确认后再执行预约、领券或购票。","intent":"plan","plan":plan,"cards":[plan["card"]],"degraded":True,"degraded_reason":"scripted fallback"})

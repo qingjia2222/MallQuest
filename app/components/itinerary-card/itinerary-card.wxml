@@ -32,7 +32,7 @@
   </view>
 
   <!-- 操作 -->
-  <view class="ic-btns">
+  <view class="ic-btns" wx:if="{{itinerary.tag !== '已执行'}}">
     <view class="ic-btn ghost" bindtap="onChange">换一版</view>
     <view class="ic-btn primary" bindtap="onConfirm">就按这个</view>
   </view>

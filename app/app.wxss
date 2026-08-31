@@ -87,6 +87,11 @@ view, text, button, input, textarea { box-sizing: border-box; }
 
 /* 主容器留白 */
 .page-pad { padding: 24rpx 32rpx 120rpx; }
+.page { min-height: 100vh; padding: 24rpx 28rpx 100rpx; background: var(--bg); }
+.title { font-size: 40rpx; font-weight: 800; color: var(--text); }
+.muted { color: var(--muted); font-size: 25rpx; }
+.button { margin-top: 22rpx; background: linear-gradient(135deg, var(--primary), var(--cyan)); color: #fff; border-radius: 40rpx; font-weight: 650; }
+.button::after { border: none; }
 
 /* 底部安全区 */
 .safe-bottom { height: env(safe-area-inset-bottom); }

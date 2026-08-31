@@ -1,13 +1,14 @@
 // src/api/index.js - 接队友后端(QD square, 8000)的统一 API 层（用原生 fetch，无需额外依赖）
 export const BASE = 'http://127.0.0.1:8000';
-export let TOKEN = '';
-export function setToken(t) { TOKEN = t; }
-export let SESSION_ID = '';
-export function setSession(id) { SESSION_ID = id; }
+export let TOKEN = localStorage.getItem('mall_token') || '';
+export function setToken(t) { TOKEN = t; if (t) localStorage.setItem('mall_token', t); else localStorage.removeItem('mall_token'); }
+export let SESSION_ID = localStorage.getItem('mall_session') || '';
+export function setSession(id) { SESSION_ID = id; if (id) localStorage.setItem('mall_session', id); else localStorage.removeItem('mall_session'); }
 
-async function req(method, path, data) {
+async function req(method, path, data, tokenOverride) {
   const headers = { 'Content-Type': 'application/json' };
-  if (TOKEN) headers.Authorization = `Bearer ${TOKEN}`;
+  const activeToken = tokenOverride === undefined ? TOKEN : tokenOverride;
+  if (activeToken) headers.Authorization = `Bearer ${activeToken}`;
   const params = method === 'GET' && data ? '?' + new URLSearchParams(data).toString() : '';
   const resp = await fetch(BASE + path + params, {
     method,
@@ -34,7 +35,17 @@ export default {
   deals: () => req('GET', '/api/deals', { session_id: SESSION_ID }),
   ticketsProducts: () => req('GET', '/api/tickets/products', { session_id: SESSION_ID }),
   reservations: () => req('GET', '/api/reservations'),
+  cancelReservation: (id) => req('DELETE', `/api/reservations/${id}`),
   claimCoupon: (coupon_id, confirmed = true) => req('POST', '/api/coupons/claim', { session_id: SESSION_ID, coupon_id, confirmed }),
   reserve: (payload) => req('POST', '/api/reservations', { session_id: SESSION_ID, confirmed: true, ...payload }),
+  merchantLogin: (store_code) => req('POST', '/api/merchant/auth/store-code', { store_code }, ''),
+  merchantStore: () => req('GET', '/api/merchant/store'),
+  merchantStatus: (payload) => req('PATCH', '/api/merchant/store/status', payload),
+  merchantDeal: (payload) => req('PUT', '/api/merchant/store/deals', payload),
+  managerAnalytics: (granularity = 'month') => req('GET', '/api/manager/analytics', { mall_id: 'mall_demo', granularity }),
+  managerStore: (payload) => req('POST', '/api/manager/stores', { mall_id: 'mall_demo', ...payload }),
+  managerMap: (source_name) => req('POST', '/api/manager/maps', { mall_id: 'mall_demo', source_name }),
+  mapScene: () => req('GET', '/api/maps/mall_demo/scene'),
+  publicStore: (store_id) => req('GET', `/api/stores/${store_id}/public-status`, { mall_id: 'mall_demo' }),
   mapFloorUrl: (floor) => `${BASE}/api/maps/mall_demo/floor_${floor}.svg`
 };

@@ -1,7 +1,7 @@
 <view class="mm">
   <!-- 楼层切换 -->
   <view class="mm-floors">
-    <view wx:for="{{[1,2,3,4]}}" wx:key="*this"
+    <view wx:for="{{[1,2]}}" wx:key="*this"
           class="mm-floor {{floor === item ? 'active' : ''}}"
           data-f="{{item}}" bindtap="setFloor">{{item}}F</view>
   </view>

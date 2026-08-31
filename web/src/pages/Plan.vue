@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router';
 import api from '../api';
 import PlanFlow from '../components/PlanFlow.vue';
 import ItineraryCard from '../components/ItineraryCard.vue';
+import { setCurrentPlan } from '../store/plan';
 
 const router = useRouter();
 
@@ -38,7 +39,7 @@ async function generate() {
       resultText.value = '还需补充：' + JSON.stringify(p.missing_slots);
       step.value = 3;
     } else {
-      plan.value = p; resultText.value = ''; step.value = 4;
+      plan.value = p; setCurrentPlan(p); resultText.value = ''; step.value = 4;
     }
   } catch (e) {
     resultText.value = '生成失败：' + (e.message || '');
@@ -48,7 +49,7 @@ async function generate() {
 async function onConfirm() {
   if (!plan.value) return;
   try {
-    plan.value = await api.confirmPlan(plan.value.plan_id, 'confirm');
+    plan.value = await api.confirmPlan(plan.value.plan_id, 'confirm'); setCurrentPlan(plan.value);
     if (navigator.vibrate) navigator.vibrate(30);
     step.value = 5;
   } catch (e) { resultText.value = '确认失败：' + (e.message || ''); }
@@ -66,7 +67,7 @@ function toStops(it) {
     name: s.name || s.title || '',
     floor: s.floor ?? s.floor_label ?? '',
     category: s.category || '',
-    waiting: s.waiting_time ?? null,
+    waiting: s.queue_minutes ?? s.waiting_time ?? null,
     desc: s.desc || ''
   }));
 }

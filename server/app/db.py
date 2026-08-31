@@ -40,6 +40,11 @@ CREATE TABLE IF NOT EXISTS user_tickets(id TEXT PRIMARY KEY, product_id TEXT NOT
 CREATE TABLE IF NOT EXISTS store_status(store_id TEXT PRIMARY KEY, mall_id TEXT NOT NULL, open_status TEXT NOT NULL, queue_minutes INTEGER NOT NULL, seats_available INTEGER NOT NULL, ticket_stock INTEGER NOT NULL, updated_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS sessions(id TEXT PRIMARY KEY, user_id TEXT NOT NULL, mall_id TEXT NOT NULL, intent TEXT, slots_json TEXT NOT NULL, plan_id TEXT, plan_state TEXT NOT NULL, context_json TEXT NOT NULL, updated_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS plans(id TEXT PRIMARY KEY, session_id TEXT NOT NULL, user_id TEXT NOT NULL, mall_id TEXT NOT NULL, scene TEXT NOT NULL, slots_json TEXT NOT NULL, state TEXT NOT NULL, itinerary_json TEXT NOT NULL, route_json TEXT NOT NULL, action_results_json TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS store_profiles(store_id TEXT PRIMARY KEY REFERENCES stores(id), store_code TEXT NOT NULL UNIQUE, manager_name TEXT NOT NULL, employees_json TEXT NOT NULL, business_hours TEXT NOT NULL, service_tags TEXT NOT NULL, contact TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS merchant_store_access(user_id TEXT NOT NULL REFERENCES users(id), mall_id TEXT NOT NULL, store_id TEXT NOT NULL REFERENCES stores(id), PRIMARY KEY(user_id,store_id));
+CREATE TABLE IF NOT EXISTS manager_access(user_id TEXT NOT NULL REFERENCES users(id), mall_id TEXT NOT NULL, PRIMARY KEY(user_id,mall_id));
+CREATE TABLE IF NOT EXISTS analytics_snapshots(id TEXT PRIMARY KEY, mall_id TEXT NOT NULL, grain TEXT NOT NULL, label TEXT NOT NULL, footfall INTEGER NOT NULL, revenue REAL NOT NULL, conversion_rate REAL NOT NULL, updated_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS map_jobs(id TEXT PRIMARY KEY, mall_id TEXT NOT NULL, source_name TEXT NOT NULL, map_mode TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL);
 """
 
 MAIN_STORES = [
@@ -54,6 +59,25 @@ MAIN_STORES = [
  ("s17","臻味轩","高端餐厅",2,790,610,480,5,1,22,"商务,高端,安静"),("s18","QD服务台","服务台",1,160,610,0,0,0,0,"服务"),
  ("s19","花间礼盒","礼品",1,340,610,320,0,0,0,"家宴,礼物"),("s20","南风烘焙","烘焙",1,520,610,55,2,0,16,"甜品,亲子"),
  ("s21","轻食工坊","轻食",2,520,610,72,7,1,18,"商务"),("s22","海味坊","粤菜",2,340,610,230,11,1,30,"家宴,包间")]
+
+def seed_commercial(db) -> None:
+    now=now_iso()
+    db.execute("INSERT OR IGNORE INTO users VALUES(?,?,?)",("manager_demo","QD square 管理员",now))
+    db.execute("INSERT OR IGNORE INTO users VALUES(?,?,?)",("merchant_s01","蜀香小院商户",now))
+    salt="mall-manager-salt"; db.execute("INSERT OR IGNORE INTO web_credentials VALUES(?,?,?,?)",("manager","manager_demo",salt,hash_password("manager123",salt)))
+    db.execute("INSERT OR IGNORE INTO manager_access VALUES(?,?)",("manager_demo","mall_demo"))
+    db.execute("INSERT OR IGNORE INTO merchant_store_access VALUES(?,?,?)",("merchant_s01","mall_demo","s01"))
+    stores=db.execute("SELECT id,name,tags FROM stores WHERE mall_id='mall_demo'").fetchall()
+    for index,store in enumerate(stores,1):
+        code=f"QD-{store['id'].upper()}-DEMO"
+        manager="陈店长" if store["id"]=="s01" else f"{store['name'][:1]}店长"
+        db.execute("INSERT OR IGNORE INTO store_profiles VALUES(?,?,?,?,?,?,?,?)",(store["id"],code,manager,json.dumps(["值班员工A","值班员工B"],ensure_ascii=False),"10:00-22:00",store["tags"] or "到店服务","400-800-%04d"%index,now))
+    metrics=[
+        ("a_day_1","day","08-25",18620,1286000,0.184),("a_day_2","day","08-26",19480,1362000,0.191),("a_day_3","day","08-27",20310,1428000,0.196),("a_day_4","day","08-28",21890,1586000,0.204),("a_day_5","day","08-29",24760,1812000,0.218),("a_day_6","day","08-30",28640,2159000,0.231),("a_day_7","day","08-31",26380,1984000,0.226),
+        ("a_month_6","month","3月",488000,35600000,0.186),("a_month_5","month","4月",512000,37100000,0.192),("a_month_4","month","5月",536000,38900000,0.198),("a_month_3","month","6月",561000,40800000,0.205),("a_month_2","month","7月",594000,43900000,0.214),("a_month_1","month","8月",628000,47200000,0.223),
+        ("a_year_3","year","2024",6120000,438000000,0.191),("a_year_2","year","2025",6840000,502000000,0.207),("a_year_1","year","2026",7310000,548000000,0.221)]
+    db.executemany("INSERT OR IGNORE INTO analytics_snapshots VALUES(?,?,?,?,?,?,?,?)",[(i,"mall_demo",grain,label,footfall,revenue,rate,now) for i,grain,label,footfall,revenue,rate in metrics])
+    db.execute("INSERT OR IGNORE INTO map_jobs VALUES(?,?,?,?,?,?)",("map_demo_seed","mall_demo","QD-square-demo.svg","demo_2_5d","published",now))
 
 def reset_and_seed() -> None:
     path=Path(settings.mall_db_path)
@@ -80,10 +104,12 @@ def reset_and_seed() -> None:
         db.executemany("INSERT INTO ticket_products VALUES(?,?,?,?,?,?)",[(i,"mall_demo",s,t,p,stock) for i,s,t,p,stock in products])
         rows=db.execute("SELECT id,mall_id,open_status,queue_minutes,seats_available FROM stores").fetchall()
         db.executemany("INSERT INTO store_status VALUES(?,?,?,?,?,?,?)",[(r["id"],r["mall_id"],r["open_status"],r["queue_minutes"],r["seats_available"],120 if r["id"]=="s09" else 80 if r["id"]=="s10" else 0,now_iso()) for r in rows])
+        seed_commercial(db)
 
 def ensure_database() -> None:
     with connection() as db:
         db.executescript(SCHEMA); exists=db.execute("SELECT 1 FROM malls LIMIT 1").fetchone()
+        if exists: seed_commercial(db)
     if not exists: reset_and_seed()
 
 def rows_to_dicts(rows): return [dict(row) for row in rows]

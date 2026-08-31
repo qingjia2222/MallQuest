@@ -10,6 +10,8 @@ import Map from './pages/Map.vue';
 import Coupon from './pages/Coupon.vue';
 import Profile from './pages/Profile.vue';
 import Reserve from './pages/Reserve.vue';
+import Merchant from './pages/Merchant.vue';
+import Manager from './pages/Manager.vue';
 
 const routes = [
   { path: '/', redirect: '/login' },
@@ -20,6 +22,8 @@ const routes = [
   { path: '/coupon', component: Coupon, meta: { auth: true } },
   { path: '/profile', component: Profile, meta: { auth: true, tab: true } },
   { path: '/reserve', component: Reserve, meta: { auth: true } }
+  ,{ path: '/merchant', component: Merchant, meta: { auth: true, role: 'merchant' } }
+  ,{ path: '/manager', component: Manager, meta: { auth: true, role: 'manager' } }
 ];
 
 const router = createRouter({ history: createWebHashHistory(), routes });
@@ -28,7 +32,9 @@ const router = createRouter({ history: createWebHashHistory(), routes });
 router.beforeEach((to) => {
   const authed = !!localStorage.getItem('mall_token');
   if (to.meta.auth && !authed) return '/login';
-  if (to.path === '/login' && authed) return '/chat';
+  const role = localStorage.getItem('mall_role') || 'visitor';
+  if (to.meta.role && to.meta.role !== role) return '/login';
+  if (to.meta.auth && !to.meta.role && role !== 'visitor') return '/login';
   return true;
 });
 

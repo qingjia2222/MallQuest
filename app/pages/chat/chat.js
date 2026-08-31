@@ -7,8 +7,12 @@ Page({
   data: {
     messages: [],
     input: '',
-    quickActions: ['停车场还有空位吗？', '积分多久过期？', '今天有什么特惠？', '有什么好吃的推荐？', '帮我规划约会'],
-    loading: false
+    loading: false,
+    navigation: null,
+    navVisible: false,
+    navFloor: 1,
+    navMapUrl: '',
+    navStep: 0
   },
 
   onLoad() {
@@ -21,7 +25,7 @@ Page({
   onQuick(e) { this.send(e.currentTarget.dataset.text); },
 
   async send(text) {
-    const content = (text || this.data.input).trim();
+    const content = (typeof text === 'string' ? text : this.data.input).trim();
     if (!content || this.data.loading) return;
     this.setData({ input: '', loading: true });
     this.push('user', content);
@@ -34,13 +38,15 @@ Page({
         data: { session_id: app.globalData.sessionId, message: content }
       });
       const idx = this.data.messages.length;
-      const card = (data.cards && data.cards[0]) || null;
+      const navigation = data.navigation || null;
+      const card = navigation ? null : (data.cards && data.cards[0]) || null;
       const plan = data.plan || null;
       this.setData({
         [`messages[${idx}]`]: { role: 'ai', text: data.reply || '好的，已为你处理。', card, plan, time: formatTime(Date.now()) }
       });
       // 保存方案供地图/预约页使用
-      if (plan) { app.setPlanState({ current: plan }); }
+      if (plan) { app.setPlanState({ current: plan }); app.globalData.currentPlan = plan; }
+      if (navigation) this.setData({ navigation, navVisible: true, navStep: 0 }, () => this.replayNavigation());
       this.scrollBottom();
     } catch (e) {
       this.push('ai', '抱歉，请求后端失败：' + (e.message || ''));
@@ -66,6 +72,53 @@ Page({
 
   onPlanTap() { wx.navigateTo({ url: '/pages/plan/plan' }); },
 
+  closeNavigation() {
+    if (this.navTimer) clearTimeout(this.navTimer);
+    this.setData({ navVisible: false });
+  },
+
+  replayNavigation() {
+    if (this.navTimer) clearTimeout(this.navTimer);
+    const navigation = this.data.navigation;
+    if (!navigation || !navigation.nodes || !navigation.nodes.length) return;
+    this.setData({ navVisible: true, navStep: 0 }, () => this.playNavigationStep(0));
+  },
+
+  playNavigationStep(step) {
+    const nodes = this.data.navigation.nodes;
+    if (step >= nodes.length) return;
+    const floor = nodes[step].floor;
+    this.setData({
+      navStep: step,
+      navFloor: floor,
+      navMapUrl: `http://127.0.0.1:8000/api/maps/mall_demo/floor_${floor}.svg`
+    }, () => this.drawNavigation());
+    if (step < nodes.length - 1) this.navTimer = setTimeout(() => this.playNavigationStep(step + 1), 520);
+  },
+
+  drawNavigation() {
+    const navigation = this.data.navigation;
+    const floorNodes = navigation.nodes.filter(node => node.floor === this.data.navFloor);
+    const currentNode = navigation.nodes[this.data.navStep];
+    const ctx = wx.createCanvasContext('navCanvas', this);
+    const width = wx.getSystemInfoSync().windowWidth - 56, height = width * .76;
+    const drawLine = (points, color, lineWidth) => {
+      if (!points.length) return;
+      ctx.setLineCap('round'); ctx.setStrokeStyle(color); ctx.setLineWidth(lineWidth);
+      ctx.moveTo(points[0].x * width / 1000, points[0].y * height / 760);
+      points.slice(1).forEach(node => ctx.lineTo(node.x * width / 1000, node.y * height / 760));
+      ctx.stroke();
+    };
+    drawLine(floorNodes, 'rgba(124,58,237,.30)', 5);
+    drawLine(navigation.nodes.slice(0, this.data.navStep + 1).filter(node => node.floor === this.data.navFloor), '#EF4444', 8);
+    if (currentNode && currentNode.floor === this.data.navFloor) {
+      const x = currentNode.x * width / 1000, y = currentNode.y * height / 760;
+      ctx.setFillStyle('#fff'); ctx.beginPath(); ctx.arc(x, y, 13, 0, Math.PI * 2); ctx.fill();
+      ctx.setFillStyle('#EF4444'); ctx.beginPath(); ctx.arc(x, y, 9, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.draw();
+  },
+
   goPlan() { wx.navigateTo({ url: '/pages/plan/plan' }); },
   onVoice(e) { const text = e.detail.text; this.setData({ input: text }); this.send(text); },
 
@@ -73,5 +126,7 @@ Page({
     wx.createSelectorQuery().select('#chat-scroll').node(res => {
       if (res) res.scrollTo({ top: res.scrollHeight + 500, duration: 200 });
     }).exec();
-  }
+  },
+
+  onUnload() { if (this.navTimer) clearTimeout(this.navTimer); }
 });

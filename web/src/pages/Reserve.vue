@@ -31,7 +31,7 @@ function submit() {
     })
     .catch(e => { err.value = '预约失败：' + (e.message || ''); });
 }
-function cancel() { confirmed.value = false; }
+async function cancel() { if(resultId.value) await api.cancelReservation(resultId.value); confirmed.value = false; resultId.value=''; await loadReservations(); }
 
 async function loadReservations() {
   try { const rs = await api.reservations(); reservationList.value = Array.isArray(rs) ? rs : []; }

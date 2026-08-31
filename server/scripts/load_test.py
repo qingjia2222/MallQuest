@@ -1,5 +1,6 @@
-import concurrent.futures, statistics, sys, time
+import concurrent.futures, os, statistics, sys, time
 from pathlib import Path
+os.environ["WX_AUTH_MODE"]="mock"; os.environ["LLM_MODE"]="scripted"
 SERVER=Path(__file__).resolve().parents[1]; ROOT=SERVER.parent; sys.path.insert(0,str(SERVER))
 from fastapi.testclient import TestClient
 from app.db import reset_and_seed

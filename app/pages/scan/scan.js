@@ -1,5 +1,5 @@
 // pages/scan/scan.js - 扫码入口页
-const mock = require('../../utils/mock');
+const { login, scan } = require('../../utils/auth');
 
 Page({
   data: {
@@ -7,26 +7,16 @@ Page({
     connected: false
   },
 
-  onLoad() {
-    // demo：模拟扫码解析 mall_id 成功
-    setTimeout(() => {
-      // 把商场信息写入全局
-      const app = getApp();
-      app.globalData.mall = mock.mall;
+  async onLoad() {
+    try {
+      await login();
+      const data = await scan();
+      getApp().globalData.mall = { id: data.mall_id || 'mall_demo', name: data.mall_name || 'QD square' };
       this.setData({ connected: true });
-      setTimeout(() => this.enterHome(), 1500);
-    }, 1200);
-  },
-
-  // 支持真机扫码入口（接后端后调用 /api/scan）
-  onScan() {
-    wx.scanCode({
-      success: (res) => {
-        // res.result 含 mall_id，解析后进入
-        this.enterHome();
-      },
-      fail: () => this.enterHome()
-    });
+      setTimeout(() => this.enterHome(), 1000);
+    } catch (e) {
+      wx.showModal({ title: '连接失败', content: e.message || '请确认后端已启动', showCancel: false });
+    }
   },
 
   onParticleDone() {},

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import api from '../api';
+import api, { setToken, setSession } from '../api';
 
 const router = useRouter();
 const member = ref({ points: 0, level: '普卡', expires_on: '' });
@@ -19,6 +19,7 @@ function goCoupon() { router.push('/coupon'); }
 function goReserve() { router.push('/reserve'); }
 function goPlan() { router.push('/plan'); }
 function goChat(q) { localStorage.setItem('prefill', q || '停车还有空位吗'); router.push('/chat'); }
+function logout(){setToken('');setSession('');localStorage.removeItem('mall_role');router.replace('/login')}
 onMounted(load);
 </script>
 
@@ -40,13 +41,7 @@ onMounted(load);
       <div class="pa"><div class="pa-num">0</div><div class="pa-label">待评价</div></div>
     </div>
 
-    <div class="section-title">💡 试试对我说</div>
-    <div class="chip-wrap">
-      <span class="chip active" @click="goPlan">帮我规划约会</span>
-      <span class="chip" @click="goChat('停车还有空位吗')">停车还有空位吗</span>
-      <span class="chip" @click="goChat('积分多久过期？')">积分多久过期？</span>
-      <span class="chip" @click="goChat('今天有什么特惠？')">今日特惠</span>
-    </div>
+    <button class="logout" @click="logout">退出游客 / 会员端</button>
   </div>
 </template>
 
@@ -65,4 +60,5 @@ onMounted(load);
 .pa-num { font-size: 24px; font-weight: 800; }
 .pa-label { font-size: 12px; color: #9CA3AF; margin-top: 4px; }
 .chip-wrap { margin-top: 6px; }
+.logout{width:100%;margin-top:24px;padding:12px;border:1px solid var(--border);border-radius:22px;background:#fff;color:var(--muted)}
 </style>

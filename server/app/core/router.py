@@ -45,6 +45,12 @@ def shortest_path(mall_id,start,end):
             if nxt not in seen: heapq.heappush(q,(dist+w,nxt,path))
     raise HTTPException(status_code=422,detail="no route between nodes")
 
+def route_between_nodes(mall_id,start_node,end_node):
+    path,total,nodes=shortest_path(mall_id,start_node,end_node)
+    points=[{"sequence":i+1,"node_id":nid,"floor":nodes[nid]["floor"],"x":nodes[nid]["x"],"y":nodes[nid]["y"],"type":nodes[nid]["type"],"label":nodes[nid]["label"]} for i,nid in enumerate(path)]
+    segments=[{"floor":a["floor"],"from":[a["x"],a["y"]],"to":[b["x"],b["y"]],"transfer_instruction":f"乘电梯前往 {b['floor']}F" if a["floor"]!=b["floor"] else None} for a,b in zip(points,points[1:])]
+    return {"strategy":"shortest","nodes":points,"polyline_segments":segments,"estimated_distance":round(total,1),"is_demo_map":True}
+
 def build_route(mall_id,store_ids):
     if not store_ids: return {"nodes":[],"polyline_segments":[],"estimated_distance":0,"is_demo_map":True}
     marks=','.join('?' for _ in store_ids)

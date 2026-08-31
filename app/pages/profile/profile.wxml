@@ -15,7 +15,7 @@
       <text class="pf-points-num">{{user.points}}</text>
     </view>
     <view class="pf-bar"><view class="pf-bar-inner" style="width:{{user.points / user.nextLevelPoints * 100}}%"></view></view>
-    <text class="pf-next">再攒 {{user.nextLevelPoints - user.points}} 分升级 {{user.level}}</text>
+    <text class="pf-next">积分有效期至 {{user.expires_on}}</text>
   </view>
 
   <!-- 我的资产 -->
@@ -33,10 +33,5 @@
     </view>
   </view>
 
-  <view class="section-title">💡 试试对我说</view>
-  <view class="chip-wrap">
-    <view class="chip active" bindtap="goPlan">帮我规划约会</view>
-    <view class="chip" bindtap="goChat">停车还有空位吗</view>
-    <view class="chip" bindtap="goCoupon">今日特惠</view>
-  </view>
+  <button class="pf-exit" bindtap="logout">退出游客 / 会员端</button>
 </view>

@@ -2,7 +2,7 @@
 // 【接后端提醒】当前 demoMode=true 时，页面直接读 utils/mock 数据；
 // 关闭演示模式后，把这些调用切到真实接口即可，见下方 <to-fetch> 注释。
 
-const BASE_URL = 'http://127.0.0.1:8000/api'; // 队友后端(QD square)地址
+const BASE_URL = 'http://127.0.0.1:8000'; // 队友后端(QD square)地址
 
 /**
  * 发起请求并解包 {code, message, data}。
@@ -12,21 +12,21 @@ const BASE_URL = 'http://127.0.0.1:8000/api'; // 队友后端(QD square)地址
  * @param {object} options { method, data, header }
  * @returns {Promise<any>} 解包后的 data
  */
-function request(path, { method = 'GET', data = {}, header = {} } = {}) {
+function request(path, { method = 'GET', data = {}, header = {}, token } = {}) {
   return new Promise((resolve, reject) => {
-    const token = getApp().globalData.token;
+    const activeToken = token === undefined ? getApp().globalData.token : token;
     wx.request({
       url: BASE_URL + path,
       method,
       data,
       header: {
         'content-type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(activeToken ? { Authorization: `Bearer ${activeToken}` } : {}),
         ...header
       },
       success(res) {
         const body = res.data;
-        if (body && body.code === 0) {
+        if (res.statusCode >= 200 && res.statusCode < 300 && body && body.code === 0) {
           resolve(body.data);
         } else {
           reject(Object.assign(new Error(body && body.message || '请求失败'), { code: body && body.code }));

@@ -1,6 +1,9 @@
 {
   "pages": [
+    "pages/portal/portal",
     "pages/scan/scan",
+    "pages/merchant/merchant",
+    "pages/manager/manager",
     "pages/chat/chat",
     "pages/plan/plan",
     "pages/map/map",

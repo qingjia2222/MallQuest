@@ -68,3 +68,16 @@
   color: #fff; border-radius: 40rpx; padding: 16rpx 34rpx; font-size: 28rpx; font-weight: 600;
 }
 .send-btn:active { transform: scale(0.96); }
+.nav-mask { position: fixed; z-index: 999; left: 0; right: 0; top: 0; bottom: 0; background: rgba(10,12,25,.80); display: flex; align-items: center; padding: 28rpx; }
+.nav-modal { width: 100%; background: #fff; border-radius: 34rpx; overflow: hidden; box-shadow: 0 30rpx 90rpx rgba(0,0,0,.38); }
+.nav-head { display: flex; justify-content: space-between; align-items: center; padding: 30rpx 32rpx 20rpx; }
+.nav-kicker { font-size: 20rpx; letter-spacing: 3rpx; color: var(--primary); font-weight: 700; }
+.nav-title { font-size: 38rpx; font-weight: 800; margin-top: 8rpx; }
+.nav-close { font-size: 54rpx; color: #6B7280; padding: 0 10rpx; }
+.nav-stage { position: relative; margin: 0 28rpx; height: 500rpx; overflow: hidden; background: linear-gradient(145deg,#EEF2FF,#DDD6FE); border-radius: 24rpx; transform: perspective(950rpx) rotateX(7deg); transform-origin: center bottom; box-shadow: 0 28rpx 40rpx rgba(76,29,149,.20); }
+.nav-stage image, .nav-canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+.floor-badge, .you-badge { position: absolute; z-index: 2; background: rgba(17,24,39,.85); color: #fff; border-radius: 99rpx; padding: 8rpx 16rpx; font-size: 22rpx; }
+.floor-badge { right: 16rpx; top: 16rpx; font-weight: 800; }.you-badge { left: 16rpx; bottom: 16rpx; }
+.nav-meta { text-align: center; color: #6B7280; padding: 25rpx 20rpx 10rpx; }
+.nav-actions { display: flex; gap: 16rpx; padding: 12rpx 28rpx 30rpx; }.nav-actions button { flex: 1; font-size: 27rpx; }
+.nav-replay { background: #F5F3FF; color: #6D28D9; }.nav-done { background: #7C3AED; color: #fff; }
