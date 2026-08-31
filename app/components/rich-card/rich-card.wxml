@@ -43,6 +43,49 @@
   </view>
 </view>
 
+<!-- 排队店铺列表 -->
+<view wx:elif="{{kind === 'queue'}}" class="rc rc-list" bindtap="onTap">
+  <view class="list-title">当前排队店铺</view>
+  <view wx:if="{{!card.data.length}}" class="list-empty">当前没有需要排队的店铺</view>
+  <view wx:for="{{card.data}}" wx:key="id" class="list-row">
+    <view class="list-rank">{{index + 1}}</view>
+    <view class="list-main"><text class="rc-name">{{item.name}}</text><text class="rc-sub">{{item.floor}}F · {{item.category}} · 可用座位 {{item.seats_available}}</text></view>
+    <view class="queue-min">{{item.queue_minutes}} 分钟</view>
+  </view>
+</view>
+
+<!-- 店铺搜索列表 -->
+<view wx:elif="{{kind === 'stores'}}" class="rc rc-list" bindtap="onTap">
+  <view class="list-title">店铺搜索结果</view>
+  <view wx:if="{{!card.data.length}}" class="list-empty">没有找到匹配店铺，试试输入店名或类别</view>
+  <view wx:for="{{card.data}}" wx:key="id" class="list-row">
+    <view class="list-symbol">店</view>
+    <view class="list-main"><text class="rc-name">{{item.name}}</text><text class="rc-sub">{{item.floor}}F · {{item.category}}</text></view>
+  </view>
+</view>
+
+<!-- 今日特惠列表 -->
+<view wx:elif="{{kind === 'deals'}}" class="rc rc-list">
+  <view class="list-title">今日特惠</view>
+  <view wx:for="{{card.data}}" wx:key="id" class="list-row">
+    <view class="list-symbol deal-symbol">惠</view>
+    <view class="list-main"><text class="rc-name">{{item.title}}</text><text class="rc-sub">剩余 {{item.stock}} 份</text></view>
+    <view class="deal-price">¥{{item.price}}</view>
+  </view>
+</view>
+
+<!-- 会员信息 -->
+<view wx:elif="{{kind === 'member'}}" class="rc member-card">
+  <view><text class="rc-sub">当前积分</text><view class="member-points">{{card.data.points}}</view></view>
+  <view class="member-meta"><text>{{card.data.level}}</text><text>有效期至 {{card.data.expires_on}}</text></view>
+</view>
+
+<!-- 知识库回答 -->
+<view wx:elif="{{kind === 'rag'}}" class="rc rc-rag">
+  <view class="list-title">积分规则</view>
+  <text class="rag-answer">{{card.data.answer}}</text>
+</view>
+
 <!-- 通用文字卡 -->
 <view wx:else class="rc rc-generic" bindtap="onTap">
   <text class="rc-name">{{card.title}}</text>

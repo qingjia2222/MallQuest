@@ -69,7 +69,7 @@ Page({
     if (!card) return;
     if (card.type === 'parking') wx.switchTab({ url: '/pages/map/map' });
     else if (card.type === 'coupon') wx.navigateTo({ url: '/pages/coupon/coupon' });
-    else if (card.type === 'store' || card.type === 'list') wx.switchTab({ url: '/pages/map/map' });
+    else if (['store', 'list', 'stores', 'queue'].includes(card.type)) wx.switchTab({ url: '/pages/map/map' });
   },
 
   onPlanTap() { wx.navigateTo({ url: '/pages/plan/plan' }); },

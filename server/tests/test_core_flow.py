@@ -32,6 +32,15 @@ def test_visitor_phone_login_and_ai_service_qr_binding():
 def test_ai_plain_text_removes_markdown_stars():
     assert plain_text("**木棉亲子餐厅** 等候约 **10 分钟**")=="木棉亲子餐厅 等候约 10 分钟"
 
+def test_queue_question_returns_ranked_nonempty_card():
+    reset_and_seed(); c=TestClient(app); h,s=login_scan(c)
+    response=c.post("/api/chat",headers=h,json={"session_id":s,"message":"有哪些店需要排队？"})
+    data=response.json()["data"]
+    assert data["intent"]=="query_queue_status" and data["cards"][0]["type"]=="queue"
+    rows=data["cards"][0]["data"]
+    assert rows and all(row["queue_minutes"]>0 for row in rows)
+    assert [row["queue_minutes"] for row in rows]==sorted((row["queue_minutes"] for row in rows),reverse=True)
+
 def test_chinese_people_slot_reaches_confirmation():
     reset_and_seed(); c=TestClient(app); h,s=login_scan(c)
     response=c.post("/api/chat",headers=h,json={"session_id":s,"message":"今晚7点两个人约会，人均250，想吃川菜，还想看电影。"})

@@ -23,9 +23,9 @@
     "selectedColor": "#7C3AED",
     "backgroundColor": "#FFFFFF",
     "list": [
-      { "pagePath": "pages/chat/chat", "text": "对话" },
-      { "pagePath": "pages/map/map", "text": "地图" },
-      { "pagePath": "pages/profile/profile", "text": "我的" }
+      { "pagePath": "pages/chat/chat", "text": "对话", "iconPath": "assets/tabs/chat.png", "selectedIconPath": "assets/tabs/chat-active.png" },
+      { "pagePath": "pages/map/map", "text": "地图", "iconPath": "assets/tabs/map.png", "selectedIconPath": "assets/tabs/map-active.png" },
+      { "pagePath": "pages/profile/profile", "text": "我的", "iconPath": "assets/tabs/profile.png", "selectedIconPath": "assets/tabs/profile-active.png" }
     ]
   },
   "style": "v2",

@@ -54,3 +54,21 @@
 }
 
 .rc-generic { display: flex; flex-direction: column; }
+
+/* structured lists */
+.rc-list { padding: 12rpx 24rpx; }
+.list-title { font-size: 28rpx; font-weight: 700; color: #1F2937; padding: 10rpx 0 14rpx; }
+.list-row { display: flex; align-items: center; gap: 16rpx; padding: 18rpx 0; border-top: 1rpx solid #EEF0F5; }
+.list-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.list-rank,.list-symbol { width: 48rpx; height: 48rpx; border-radius: 16rpx; display: flex; align-items: center; justify-content: center; color: #7C3AED; background: #F1EAFE; font-size: 23rpx; font-weight: 700; }
+.list-symbol { color: #0891B2; background: #ECFEFF; }
+.deal-symbol { color: #D97706; background: #FFFBEB; }
+.queue-min { color: #D97706; background: #FFFBEB; border-radius: 24rpx; padding: 8rpx 14rpx; font-size: 23rpx; font-weight: 700; }
+.deal-price { color: #7C3AED; font-size: 28rpx; font-weight: 800; }
+.list-empty { padding: 18rpx 0 24rpx; color: #6B7280; font-size: 25rpx; }
+.member-card { display: flex; align-items: center; justify-content: space-between; }
+.member-points { color: #7C3AED; font-size: 56rpx; font-weight: 800; margin-top: 4rpx; }
+.member-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 10rpx; color: #6B7280; font-size: 24rpx; }
+.member-meta text:first-child { color: #7C3AED; background: #F1EAFE; padding: 8rpx 18rpx; border-radius: 24rpx; font-weight: 700; }
+.rc-rag { display: flex; flex-direction: column; }
+.rag-answer { color: #374151; font-size: 26rpx; line-height: 1.7; }

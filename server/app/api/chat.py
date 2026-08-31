@@ -31,6 +31,7 @@ def chat(body:ChatBody,auth:AuthContext=Depends(require_auth)):
     if "停车" in text: tool="query_parking_status"; args={}; reply="已查询 QD square 停车状态。"; card="parking"
     elif "积分" in text and any(w in text for w in ["过期","生日","兑换","规则"]): tool="query_points_rules"; args={"query":text}; reply="以下回答只依据积分规则知识库。"; card="rag"
     elif "积分" in text: tool="query_member_points"; args={}; reply="已查询你的会员积分。"; card="member"
+    elif "排队" in text or "等位" in text: tool="query_queue_status"; args={}; reply="以下店铺当前需要排队，已按等候时间从长到短排列。"; card="queue"
     elif "优惠" in text or "特惠" in text: tool="get_today_deals"; args={}; reply="这是今天仍有库存的特惠。"; card="deals"
     else: tool="search_stores"; args={"keyword":text}; reply="已在当前商场私有店铺库中搜索。"; card="stores"
     result=run_tool(tool,context,args); mode=LLMAdapter().chat([])

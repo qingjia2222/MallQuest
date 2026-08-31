@@ -57,6 +57,25 @@ function storeDesc(s) { return s.desc || s.description || ''; }
     <div class="cp-r"><div class="cp-exp">{{ d.expire || '' }}</div><button class="cp-btn">领取</button></div>
   </div>
 
+  <div v-else-if="card.type === 'queue'" class="rc rc-stack" @click="tap">
+    <div class="rc-name">当前排队店铺</div>
+    <div v-if="!d.length" class="rc-sub">当前没有需要排队的店铺</div>
+    <div v-for="(s,i) in d" :key="s.id" class="list-row"><span class="rank">{{i+1}}</span><span class="grow"><b>{{s.name}}</b><small>{{s.floor}}F · {{s.category}}</small></span><strong class="wait">{{s.queue_minutes}} 分钟</strong></div>
+  </div>
+
+  <div v-else-if="card.type === 'stores'" class="rc rc-stack" @click="tap">
+    <div class="rc-name">店铺搜索结果</div>
+    <div v-if="!d.length" class="rc-sub">没有找到匹配店铺，试试输入店名或类别</div>
+    <div v-for="s in d" :key="s.id" class="list-row"><span class="rank cyan">店</span><span class="grow"><b>{{s.name}}</b><small>{{s.floor}}F · {{s.category}}</small></span></div>
+  </div>
+
+  <div v-else-if="card.type === 'deals'" class="rc rc-stack">
+    <div class="rc-name">今日特惠</div>
+    <div v-for="x in d" :key="x.id" class="list-row"><span class="rank amber">惠</span><span class="grow"><b>{{x.title}}</b><small>剩余 {{x.stock}} 份</small></span><strong class="price">¥{{x.price}}</strong></div>
+  </div>
+
+  <div v-else-if="card.type === 'member'" class="rc member"><div><div class="rc-sub">当前积分</div><strong class="points">{{d.points}}</strong></div><div class="member-meta"><b>{{d.level}}</b><span>有效期至 {{d.expires_on}}</span></div></div>
+
   <!-- 通用 -->
   <div v-else class="rc rc-gen" @click="tap">
     <div class="rc-name">{{ card.title }}</div>
@@ -91,4 +110,11 @@ function storeDesc(s) { return s.desc || s.description || ''; }
 .cp-r { display: flex; flex-direction: column; align-items: flex-end; }
 .cp-exp { font-size: 12px; color: var(--warning); margin-bottom: 8px; }
 .cp-btn { background: linear-gradient(135deg, var(--primary), var(--cyan)); color: #fff; border: none; border-radius: 20px; padding: 6px 18px; cursor: pointer; }
+.rc-stack { display: block; }
+.list-row { display: flex; align-items: center; gap: 10px; border-top: 1px solid #eef0f5; padding: 12px 0; }
+.rank { width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center; background: #f1eafe; color: #7c3aed; font-size: 12px; font-weight: 700; }
+.rank.cyan { background: #ecfeff; color: #0891b2; }.rank.amber { background:#fffbeb;color:#d97706; }
+.grow { flex: 1; display: flex; flex-direction: column; }.grow small { color: var(--muted); margin-top: 2px; }
+.wait { color:#d97706;background:#fffbeb;padding:5px 9px;border-radius:15px;font-size:12px; }.price { color:#7c3aed; }
+.member { justify-content: space-between; }.points { font-size:32px;color:#7c3aed; }.member-meta { display:flex;flex-direction:column;align-items:flex-end;gap:6px;color:var(--muted);font-size:12px; }.member-meta b { color:#7c3aed;background:#f1eafe;padding:5px 10px;border-radius:14px; }
 </style>
