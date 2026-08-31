@@ -72,6 +72,14 @@ Page({
 
   onPlanTap() { wx.navigateTo({ url: '/pages/plan/plan' }); },
 
+  async speak(e) {
+    try {
+      const text = e.currentTarget.dataset.text || '欢迎来到 QD square';
+      const data = await request('/api/tts', { method: 'POST', data: { text } });
+      const audio = wx.createInnerAudioContext(); audio.src = 'http://127.0.0.1:8000' + data.audio_url; audio.play();
+    } catch (err) { wx.showToast({ title: err.message || '播报失败', icon: 'none' }); }
+  },
+
   closeNavigation() {
     if (this.navTimer) clearTimeout(this.navTimer);
     this.setData({ navVisible: false });

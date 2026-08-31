@@ -12,6 +12,7 @@
           <view class="ai-avatar">AI</view>
           <view class="ai-body">
             <view class="bubble ai-bubble">{{item.text}}<text wx:if="{{!item.done && !item.card}}" class="caret"></text></view>
+            <view class="speak" bindtap="speak" data-text="{{item.text}}">🔊 播报</view>
             <!-- 富卡片 -->
             <rich-card wx:if="{{item.card}}" card="{{item.card}}" bind:cardtap="onCardTap" />
             <!-- 方案提示 -->

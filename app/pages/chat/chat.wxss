@@ -43,6 +43,7 @@
 
 .quick-chips { display: flex; flex-wrap: wrap; margin-top: 14rpx; }
 .plan-hint { display: inline-block; margin-top: 12rpx; color: var(--primary); font-weight: 600; font-size: 24rpx; background: #ede9fe; padding: 8rpx 20rpx; border-radius: 28rpx; }
+.speak { display: inline-block; margin: 8rpx 0 0 8rpx; color: var(--primary); font-size: 22rpx; }
 .quick-bar {
   padding: 12rpx 0;
   background: rgba(255,255,255,0.7);
