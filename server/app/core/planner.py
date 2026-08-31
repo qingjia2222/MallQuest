@@ -320,6 +320,39 @@ def revise_plan(user_id,plan_id,modifications):
         db.execute("UPDATE sessions SET slots_json=?,plan_state='CONFIRM',updated_at=? WHERE id=?",(json.dumps(slots,ensure_ascii=False),now_iso(),row["session_id"]))
     result=get_plan(user_id,plan_id); result["state_history"]=["CONFIRM","PLAN","ROUTE","CONFIRM"]; return result
 
+def copy_plan_for_edit(user_id,mall_id,session_id,source_plan_id=None,scene=None,slots=None,itinerary=None,vertical_mode="elevator"):
+    """把已执行方案或客户端保存的旧快照复制成新的 CONFIRM 草稿。
+
+    已确认方案的事务快照保持不可变；编辑永远发生在新 plan_id 上。若演示数据库曾重建，
+    客户端可提交原 itinerary，服务端仍会按当前 mall 校验 store_id 并重建真实路线。
+    """
+    with connection() as db:
+        session=db.execute("SELECT * FROM sessions WHERE id=? AND user_id=? AND mall_id=?",(session_id,user_id,mall_id)).fetchone()
+        if not session: raise HTTPException(status_code=404,detail="session not found")
+        source=db.execute("SELECT * FROM plans WHERE id=? AND user_id=? AND mall_id=?",(source_plan_id,user_id,mall_id)).fetchone() if source_plan_id else None
+        source_slots=json.loads(source["slots_json"]) if source else dict(slots or {})
+        source_scene=source["scene"] if source else (scene or "date")
+        requested=json.loads(source["itinerary_json"]) if source else list(itinerary or [])
+        ids=[item.get("id") for item in requested if isinstance(item,dict) and item.get("id")]
+        if not ids: raise HTTPException(status_code=422,detail="editable copy requires at least one store")
+        marks=",".join("?" for _ in ids)
+        rows=db.execute(f"SELECT * FROM stores WHERE mall_id=? AND id IN ({marks})",(mall_id,*ids)).fetchall()
+        by={row["id"]:dict(row) for row in rows}
+        if len(by)!=len(set(ids)): raise HTTPException(status_code=422,detail="editable copy contains an invalid store")
+        copied=[]; generated=_seq_times(len(requested),source_slots.get("time",""))
+        for index,item in enumerate(requested):
+            store=by[item["id"]]
+            store["time_label"]=item.get("time_label") or generated[index]
+            copied.append(store)
+        mode=vertical_mode or (json.loads(source["route_json"]).get("vertical_mode") if source else None) or "elevator"
+        route=build_route(mall_id,ids,vertical_mode=mode)
+        strategy=(json.loads(source["route_json"]).get("selected_strategy") if source else None) or "fastest"
+        route.update({"selected_strategy":strategy,"optimization":_plan_metrics(copied,route,source_slots,strategy if strategy in OPTIMIZATION_WEIGHTS else "fastest"),"alternatives":[]})
+        plan_id="plan_"+uuid.uuid4().hex[:12]; now=now_iso()
+        db.execute("INSERT INTO plans VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",(plan_id,session_id,user_id,mall_id,source_scene,json.dumps(source_slots,ensure_ascii=False),"CONFIRM",json.dumps(copied,ensure_ascii=False),json.dumps(route,ensure_ascii=False),"[]",now,now))
+        db.execute("UPDATE sessions SET slots_json=?,plan_state='CONFIRM',updated_at=? WHERE id=?",(json.dumps(source_slots,ensure_ascii=False),now,session_id))
+    result=get_plan(user_id,plan_id); result["copied_from_plan_id"]=source_plan_id; result["state_history"]=["PLAN","ROUTE","CONFIRM"]; return result
+
 def get_plan(user_id,plan_id):
     with connection() as db:
         row=db.execute("SELECT * FROM plans WHERE id=? AND user_id=?",(plan_id,user_id)).fetchone()

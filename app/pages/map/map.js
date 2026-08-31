@@ -2,7 +2,7 @@
 const { request } = require('../../utils/request');
 
 Page({
-  data: { stores: [], route: [], routeNodes: [], activeId: '', focusStore: null, showDetail: false },
+  data: { stores: [], route: [], routeNodes: [], waypoints: [], activeId: '', focusStore: null, showDetail: false },
   onLoad(query) { this.focusName = query.focus || ''; },
   async onShow() {
     try {
@@ -12,8 +12,9 @@ Page({
       const current = app.globalData.currentPlan || (app.globalData.planState && app.globalData.planState.current);
       const route = current && current.itinerary ? current.itinerary.map(s => s.store_id || s.id).filter(Boolean) : [];
       const routeNodes = current && ((current.navigation && current.navigation.nodes) || (current.route && current.route.nodes)) || [];
+      const waypoints = current && current.route && current.route.waypoints || [];
       const focusStore = this.focusName ? stores.find(s => s.name.indexOf(this.focusName) >= 0 || this.focusName.indexOf(s.name) >= 0) : null;
-      this.setData({ stores, route, routeNodes, activeId: focusStore ? focusStore.id : '', focusStore, showDetail: Boolean(focusStore) });
+      this.setData({ stores, route, routeNodes, waypoints, activeId: focusStore ? focusStore.id : '', focusStore, showDetail: Boolean(focusStore) });
     } catch (e) { wx.showModal({ title: '地图加载失败', content: e.message || '请确认后端已启动', showCancel: false }); }
   },
   async onStoreTap(e) {

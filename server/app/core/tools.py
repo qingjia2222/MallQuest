@@ -35,9 +35,10 @@ def live_store_status(*,mall_id,store_ids,**_):
     with connection() as db: rows=db.execute(f"SELECT * FROM store_status WHERE mall_id=? AND store_id IN ({','.join('?' for _ in store_ids)})",(mall_id,*store_ids)).fetchall()
     out=rows_to_dicts(rows)
     for r in out:
-        elapsed=int(_minutes_since(r.get("updated_at","")))
         q=int(r.get("queue_minutes") or 0)
-        r["queue_minutes"]=max(0,q-elapsed)
+        # SQLite 中的值是商户最后一次上报的实时快照；不要按服务运行时长擅自递减，
+        # 否则 Web、地图详情和商户端会显示互相矛盾的排队分钟数。
+        r["queue_minutes"]=max(0,q)
         r["wait_seconds"]=r["queue_minutes"]*60
     return out
 TOOLS={name:{"name":name,"description":desc,"parameters":params,"kind":"read","callback":cb} for name,desc,params,cb in [

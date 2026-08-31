@@ -48,3 +48,19 @@ def test_plan_edit_rebuilds_route_and_movie_enters_confirmation_snapshot():
     done=client.post("/api/plan/confirm",headers=headers,json={"plan_id":made["plan_id"],"decision":"confirm","modifications":modifications}).json()["data"]
     assert done["confirmation_snapshot"] and done["confirmation_snapshot"]["itinerary"]
     if cinema: assert done["confirmation_snapshot"]["selected_movie"]=="星际穿越(重映)"
+
+
+def test_done_or_stale_plan_can_be_copied_to_editable_draft_with_all_waypoints():
+    reset_and_seed(); client=TestClient(app); headers,session=login_scan(client)
+    made=client.post("/api/plan/goal",headers=headers,json={"session_id":session,"scene":"date","slots":{"time":"今晚7点","people":2,"want_movie":True}}).json()["data"]
+    done=client.post("/api/plan/confirm",headers=headers,json={"plan_id":made["plan_id"],"decision":"confirm"}).json()["data"]
+    payload={"session_id":session,"source_plan_id":done["plan_id"],"scene":done["scene"],"slots":done["slots"],"itinerary":done["itinerary"],"vertical_mode":"elevator"}
+    copied=client.post("/api/plan/editable-copy",headers=headers,json=payload).json()["data"]
+    assert copied["plan_id"]!=done["plan_id"] and copied["state"]=="CONFIRM"
+    assert [item["id"] for item in copied["itinerary"]]==[item["id"] for item in done["itinerary"]]
+    with connection() as db:
+        route_nodes={row["route_node"] for row in db.execute("SELECT route_node FROM stores WHERE id IN (%s)" % ",".join("?" for _ in copied["itinerary"]),tuple(item["id"] for item in copied["itinerary"])).fetchall()}
+    assert route_nodes.issubset({node["node_id"] for node in copied["route"]["nodes"]})
+    stale={**payload,"source_plan_id":"plan_removed_by_demo_reset"}
+    recovered=client.post("/api/plan/editable-copy",headers=headers,json=stale).json()["data"]
+    assert recovered["state"]=="CONFIRM" and len(recovered["itinerary"])==len(done["itinerary"])

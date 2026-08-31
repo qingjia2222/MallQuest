@@ -23,6 +23,7 @@ Base URL：`http://127.0.0.1:8000`。除音频/地图文件外，响应统一为
 | POST | `/api/manager/maps` | manager token,source_name | 2.5D 初稿任务、人工校准标识 |
 | GET | `/api/tools/schema` | Bearer | 工具 JSON Schema |
 | POST | `/api/plan/date`、`/api/plan/goal` | session_id,text/scene/slots | PlanCard、route、state |
+| POST | `/api/plan/editable-copy` | session_id、source_plan_id、scene、slots、itinerary、vertical_mode | 将 DONE 或本地旧快照复制/恢复为新的 CONFIRM 草稿，不覆盖事务快照 |
 | GET | `/api/plan/route?plan_id=` | plan_id | route nodes/polyline_segments |
 | POST | `/api/plan/confirm` | plan_id,decision | DONE itinerary + action_results |
 | GET | `/api/plan/live-status?plan_id=` | plan_id | queue/open/seats/ticket_stock |

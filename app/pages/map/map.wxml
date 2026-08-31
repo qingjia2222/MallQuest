@@ -10,6 +10,7 @@
 
   <mini-map stores="{{stores}}" route="{{route}}" routeNodes="{{routeNodes}}" activeId="{{activeId}}"
             bind:storetap="onStoreTap" />
+  <view wx:if="{{waypoints.length}}" class="route-waypoints"><view wx:for="{{waypoints}}" wx:key="store_id" class="route-waypoint"><text>{{index + 1}}</text>{{item.name}} · {{item.floor}}F</view></view>
 
   <!-- 店铺详情弹层 -->
   <view wx:if="{{showDetail && focusStore}}" class="detail-mask" bindtap="closeDetail">

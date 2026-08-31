@@ -18,6 +18,8 @@ const editSaving = ref(false);
 const editNotice = ref('');
 const editError = ref('');
 const live = ref([]);              // 方案中各店实时状态 + 预定情况
+const liveError = ref('');
+const previewVerticalMode = ref('');
 let liveTimer = null;
 
 const hasPlan = computed(() => !!(planStore.current && planStore.current.itinerary && planStore.current.itinerary.length));
@@ -39,7 +41,7 @@ const route3d = computed(() => {
     else { px = ((s.pos_x || 500) - 500) / 1000 * 30; pz = ((s.pos_y || 500) - 500) / 1000 * 30; }
     stops.push({ floor, x: px, z: pz, name: s.name, seq: i + 2 });
   });
-  return { stops, vertical_mode: (plan.route && plan.route.vertical_mode) || 'elevator' };
+  return { stops, vertical_mode: previewVerticalMode.value || (plan.route && plan.route.vertical_mode) || 'elevator' };
 });
 // 导航到单店：起点（同层出入口/电梯）→ 目标店铺，绿色路线
 const navRoute = computed(() => {
@@ -68,13 +70,15 @@ const isCrossFloorRoute = computed(() => route3d.value && new Set(route3d.value.
 async function load() {
   try {
     availableStores.value = await api.stores() || [];
-  } catch (e) {}
+  } catch (e) { editError.value = '店铺数据加载失败：' + (e.message || ''); }
 }
 
 async function loadLive() {
   const plan = planStore.current;
   if (!plan || !plan.plan_id) { live.value = []; return; }
-  try { const d = await api.liveStatus(plan.plan_id); live.value = (d && d.status) || []; } catch (e) {}
+  liveError.value = '';
+  try { const d = await api.liveStatus(plan.plan_id); live.value = (d && d.status) || []; }
+  catch (e) { live.value = []; liveError.value = '实时状态加载失败：' + (e.message || ''); }
 }
 function startLive() {
   stopLive();
@@ -83,9 +87,32 @@ function startLive() {
 }
 function stopLive() { if (liveTimer) { clearInterval(liveTimer); liveTimer = null; } }
 
-onMounted(() => {
-  load();
-  if (hasPlan.value) startLive();
+async function makeEditableCopy(notice) {
+  await api.ensureSession();
+  let copied;
+  try { copied = await api.editablePlanCopy(planStore.current || {}); }
+  catch (e) {
+    if (!/session not found|not found/i.test(e.message || '')) throw e;
+    await api.ensureSession(true);
+    copied = await api.editablePlanCopy(planStore.current || {});
+  }
+  setCurrentPlan(copied);
+  previewVerticalMode.value = '';
+  if (notice) editNotice.value = notice;
+  return copied;
+}
+async function refreshPlan() {
+  const plan = planStore.current;
+  if (!plan || !plan.plan_id) return;
+  try { setCurrentPlan(await api.getPlan(plan.plan_id)); }
+  catch (e) {
+    if (!/plan not found|not found/i.test(e.message || '')) throw e;
+    await makeEditableCopy();
+  }
+}
+onMounted(async () => {
+  try { await api.ensureSession(); await refreshPlan(); await load(); if (hasPlan.value) startLive(); }
+  catch (e) { editError.value = '方案恢复失败：' + (e.message || ''); }
 });
 onBeforeUnmount(stopLive);
 watch(() => planStore.current, (v) => { if (v && v.itinerary && v.itinerary.length) startLive(); else { live.value = []; stopLive(); } });
@@ -141,11 +168,13 @@ function defaultClock(index) {
   const total = hour * 60 + minute + index * 45;
   return `${String(Math.floor(total / 60) % 24).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
 }
-function startEdit() {
+async function startEdit() {
   editNotice.value = ''; editError.value = '';
-  if (isDone.value) { editError.value = '该方案已确认并执行，事务快照不能覆盖；请点“换一版”生成可编辑的新方案。'; return; }
-  planStore.current.itinerary.forEach((stop, index) => { stop.time_label = normalizeClock(stop.time_label) || defaultClock(index); });
-  editMode.value = true;
+  try {
+    if (isDone.value) await makeEditableCopy('原确认事务保持不变，已复制为新的可编辑方案。');
+    planStore.current.itinerary.forEach((stop, index) => { stop.time_label = normalizeClock(stop.time_label) || defaultClock(index); });
+    editMode.value = true;
+  } catch (e) { editError.value = '创建可编辑方案失败：' + (e.message || ''); }
 }
 async function finishEdit() {
   if (!planStore.current || !planStore.current.plan_id) { editMode.value = false; return; }
@@ -205,9 +234,14 @@ function replayPreview() {
   if (previewFloorsRef.value && previewFloorsRef.value.replayRoute) previewFloorsRef.value.replayRoute();
 }
 async function switchPlanVertical(mode) {
-  if (!planStore.current || !planStore.current.plan_id || (planStore.current.route && planStore.current.route.vertical_mode === mode)) { replayPreview(); return; }
+  if (!planStore.current || !planStore.current.plan_id) { replayPreview(); return; }
+  // 路线预览偏好不修改已确认事务快照；进入编辑并保存时才写回新草稿。
+  previewVerticalMode.value = mode;
+  if (isDone.value) { editNotice.value = `当前仅预览${mode === 'escalator' ? '扶梯' : '直梯'}路线，已确认事务保持不变。`; await nextTick(); replayPreview(); return; }
+  if (planStore.current.route && planStore.current.route.vertical_mode === mode) { replayPreview(); return; }
   try {
     setCurrentPlan(await api.updatePlan(planStore.current.plan_id, { vertical_mode: mode }));
+    previewVerticalMode.value = '';
     editNotice.value = `已切换为${mode === 'escalator' ? '扶梯' : '直梯'}路线。`;
     await nextTick(); replayPreview();
   } catch (e) { editError.value = '换层路线切换失败：' + (e.message || ''); }
@@ -297,6 +331,7 @@ function actionLabel(a) {
             <span class="pps-tag" :class="{ off: s.open_status !== 'open' }">{{ s.open_status === 'open' ? '营业' : '未营业' }}</span>
           </div>
           <div class="pps-booking">
+            <span v-if="s.planned_time" class="pps-line ok">计划到店 {{ s.planned_time }}</span>
             <template v-if="s.reservation_status">
               <span class="pps-line" :class="{ ok: s.can_dine_on_time }">
                 {{ s.reservation_status === 'queued' ? '已排号' : '已预约' }}
@@ -313,7 +348,8 @@ function actionLabel(a) {
           </div>
           <div v-if="storeReco(s.display_name)" class="pps-reco">🍽️ {{ (planStore.current.slots && planStore.current.slots.people) || 2 }}人推荐：{{ storeReco(s.display_name) }}</div>
         </div>
-        <div v-if="!live.length" class="pp-empty">正在加载店铺实时状态…</div>
+        <div v-if="liveError" class="edit-error">{{ liveError }}</div>
+        <div v-else-if="!live.length" class="pp-empty">正在加载店铺实时状态…</div>
       </div>
     </div>
 
@@ -328,6 +364,7 @@ function actionLabel(a) {
           <button @click="routePreviewOpen = false">×</button>
         </div>
         <Floors3D ref="previewFloorsRef" :route="route3d" />
+        <div class="route-waypoints"><span v-for="(stop, index) in route3d.stops.slice(1)" :key="stop.name + index"><b>{{ index + 1 }}</b>{{ stop.name }} · {{ stop.floor }}F</span></div>
         <div class="route-preview-actions">
           <template v-if="isCrossFloorRoute"><button class="pp-btn" :class="route3d.vertical_mode === 'elevator' ? 'primary' : 'ghost'" @click="switchPlanVertical('elevator')">直梯路线</button><button class="pp-btn" :class="route3d.vertical_mode === 'escalator' ? 'primary' : 'ghost'" @click="switchPlanVertical('escalator')">扶梯路线</button></template>
           <button class="pp-btn ghost" @click="replayPreview">重播</button>
@@ -440,6 +477,9 @@ function actionLabel(a) {
 .route-preview-head b { font-size: 18px; }
 .route-preview-head span { color: #64748b; font-size: 12px; }
 .route-preview-head button { border: 0; background: #e2e8f0; width: 34px; height: 34px; border-radius: 50%; font-size: 21px; cursor: pointer; }
+.route-waypoints { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.route-waypoints span { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 18px; background: #ede9fe; color: #4c1d95; font-size: 12px; }
+.route-waypoints b { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: #7c3aed; color: #fff; }
 .route-preview-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; }
 .parking-card { display: flex; align-items: center; gap: 20px; }
 .parking-info { flex: 1; }

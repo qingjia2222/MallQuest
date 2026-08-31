@@ -2,9 +2,17 @@
 const { request } = require('../../utils/request');
 Page({
   data: { step: 1, goalText: '我今天约会', form: {}, questions: [], qIndex: 0, currentQ: {}, options: [], itinerary: {}, generating: false, executing: false, plan: null },
-  onLoad() {
+  async onLoad() {
     const existing = getApp().globalData.currentPlan || (getApp().globalData.planState && getApp().globalData.planState.current);
-    if (existing) { this.present(existing, existing.state === 'DONE' ? 5 : 4); return; }
+    if (existing) {
+      try {
+        const fresh=await request(`/api/plan/${existing.plan_id}`); getApp().globalData.currentPlan=fresh; getApp().setPlanState({current:fresh}); this.present(fresh,fresh.state==='DONE'?5:4);
+      } catch(e) {
+        if(/plan not found|not found/i.test(e.message||'')) { const restored=await this.copyForEdit(existing); this.present(restored,4); wx.showToast({title:'方案已恢复',icon:'none'}); }
+        else { this.present(existing,existing.state==='DONE'?5:4); wx.showToast({title:e.message||'方案校验失败',icon:'none'}); }
+      }
+      return;
+    }
     const goalText = wx.getStorageSync('planGoal') || '我今天约会'; this.setData({ goalText }); this.startUnderstand();
   },
   startUnderstand() {
@@ -38,6 +46,18 @@ Page({
     this.setData({ plan, step, itinerary: { tag: plan.state === 'DONE' ? '已执行' : '等待确认', stops, actions } });
   },
   onChangePlan() { this.generatePlan(this.data.form); },
+  async copyForEdit(plan) {
+    const app=getApp(); await app.ensureSession();
+    const payload=()=>({session_id:app.globalData.sessionId,source_plan_id:plan.plan_id||null,scene:plan.scene||'date',slots:plan.slots||{},itinerary:plan.itinerary||[],vertical_mode:plan.route&&plan.route.vertical_mode||'elevator'});
+    let copied;
+    try { copied=await request('/api/plan/editable-copy',{method:'POST',data:payload()}); }
+    catch(e) { if(!/session not found|not found/i.test(e.message||''))throw e; app.globalData.sessionId='';await app.ensureSession();copied=await request('/api/plan/editable-copy',{method:'POST',data:payload()}); }
+    app.globalData.currentPlan=copied;app.setPlanState({current:copied});return copied;
+  },
+  async editExecutedPlan() {
+    try { const copied=await this.copyForEdit(this.data.plan); this.present(copied,4); wx.showToast({title:'已复制为可编辑方案'}); }
+    catch(e){wx.showModal({title:'恢复编辑失败',content:e.message||'',showCancel:false});}
+  },
   editStopTime(e) { this.setData({ [`plan.itinerary[${e.currentTarget.dataset.index}].time_label`]: e.detail.value }); },
   moveStop(e) { const index=Number(e.currentTarget.dataset.index),delta=Number(e.currentTarget.dataset.delta),next=index+delta,list=[...(this.data.plan.itinerary||[])]; if(next<0||next>=list.length)return; const tmp=list[index];list[index]=list[next];list[next]=tmp;this.setData({'plan.itinerary':list}); },
   async savePlan() {

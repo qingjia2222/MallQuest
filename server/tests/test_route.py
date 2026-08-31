@@ -7,12 +7,14 @@ from app.db import reset_and_seed
 def setup_module(): reset_and_seed(); write_demo_maps()
 def test_same_and_cross_floor_routes_are_continuous():
     same=build_route("mall_demo",["s01","s07"]); cross=build_route("mall_demo",["s01","s09"])
-    assert same["nodes"][0]["node_id"]=="f1_s01" and same["nodes"][-1]["node_id"]=="f1_s07"; assert {n["floor"] for n in cross["nodes"]}=={1,2}; assert len(cross["polyline_segments"])==len(cross["nodes"])-1
-    assert [n["node_id"] for n in cross["nodes"] if n["type"]=="elevator"]==["f1_c7","f2_c7"]
+    assert same["nodes"][0]["node_id"]=="f1_entrance" and same["nodes"][-1]["node_id"]=="f1_s07"; assert {n["floor"] for n in cross["nodes"]}=={1,2}; assert len(cross["polyline_segments"])==len(cross["nodes"])-1
+    assert [item["node_id"] for item in same["waypoints"]]==["f1_s01","f1_s07"]
+    elevators=[n["node_id"] for n in cross["nodes"] if n["type"]=="elevator"]
+    assert elevators[-2:]==["f1_c7","f2_c7"]
     assert any(segment["transfer_instruction"]=="乘直梯前往 2F" for segment in cross["polyline_segments"])
     assert cross["vertical_mode"]=="elevator"
     assert cross["path_policy"]=="corridor_only"
-    assert all(node["type"] in {"corridor","elevator","store_entrance"} for node in cross["nodes"])
+    assert all(node["type"] in {"corridor","elevator","store_entrance","entrance"} for node in cross["nodes"])
     # 同层线段必须水平或垂直，入口节点也位于走廊线上；禁止斜穿店铺或公共实体。
     assert all(a["floor"]!=b["floor"] or a["x"]==b["x"] or a["y"]==b["y"] for a,b in zip(cross["nodes"],cross["nodes"][1:]))
     assert all(node["x"] in {120,320,520,720,880} or node["y"] in {320,520} for node in cross["nodes"])
@@ -30,7 +32,7 @@ def test_every_demo_route_edge_stays_on_corridors():
             if a["type"]=="elevator": assert (a["x"],a["y"])==(b["x"],b["y"])
             continue
         assert a["x"]==b["x"] or a["y"]==b["y"]
-        assert all(node["type"] in {"corridor","elevator","escalator","store_entrance"} for node in (a,b))
+        assert all(node["type"] in {"corridor","elevator","escalator","store_entrance","entrance"} for node in (a,b))
 
 def test_cross_floor_route_can_switch_to_escalator():
     route=build_route("mall_demo",["s01","s09"],vertical_mode="escalator")

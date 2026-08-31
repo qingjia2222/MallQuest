@@ -48,6 +48,11 @@ export default {
   createPlan: (scene, slots = {}) => req('POST', '/api/plan/goal', { session_id: getSession(), scene, slots }),
   getPlan: (plan_id) => req('GET', `/api/plan/${plan_id}`),
   updatePlan: (plan_id, changes) => req('PATCH', `/api/plan/${plan_id}`, changes),
+  editablePlanCopy: (plan = {}) => req('POST', '/api/plan/editable-copy', {
+    session_id: getSession(), source_plan_id: plan.plan_id || null, scene: plan.scene || 'date',
+    slots: plan.slots || {}, itinerary: plan.itinerary || [],
+    vertical_mode: (plan.route && plan.route.vertical_mode) || 'elevator'
+  }),
   getRoute: (plan_id) => req('GET', '/api/plan/route', { plan_id }),
   confirmPlan: (plan_id, decision, modifications = {}) => req('POST', '/api/plan/confirm', { plan_id, decision, modifications }),
   liveStatus: (plan_id) => req('GET', '/api/plan/live-status', { plan_id }),
@@ -73,9 +78,9 @@ export default {
   mapScene: (mall_id = 'mall_demo') => req('GET', `/api/maps/${mall_id}/scene`),
   mapFloorUrl: (floor) => `${BASE}/api/maps/mall_demo/floor_${floor}.svg`,
   // 确保存在有效会话：缺 session 就重新扫码建一个（登录后调用）
-  async ensureSession() {
+  async ensureSession(force = false) {
     if (!getToken()) throw new Error('未登录，请先登录');
-    if (!getSession()) {
+    if (force || !getSession()) {
       const scan = await req('POST', '/api/scan', { mall_id: 'mall_demo' });
       setSession(scan.session_id);
     }

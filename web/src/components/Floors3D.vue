@@ -365,6 +365,23 @@ function segMesh(a, b, color, width) {
   mesh.userData = { floor };
   return mesh;
 }
+function waypointTexture(index) {
+  const canvas = document.createElement('canvas'); canvas.width = 96; canvas.height = 96;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#7C3AED'; ctx.beginPath(); ctx.arc(48,48,38,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 7; ctx.stroke();
+  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 44px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(index),48,51);
+  return new THREE.CanvasTexture(canvas);
+}
+function addWaypoint(point, index) {
+  const floor = floorNumber(point.floor); const group = new THREE.Group();
+  const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.72,0.72,0.32,24),new THREE.MeshBasicMaterial({color:0x7C3AED}));
+  pin.position.y = 0; group.add(pin);
+  const badge = new THREE.Sprite(new THREE.SpriteMaterial({map:waypointTexture(index),depthTest:false,transparent:true}));
+  badge.scale.set(2.5,2.5,1); badge.position.y = 2; group.add(badge);
+  group.position.set(point.x,FLOOR_Y['F'+floor]+1.35,point.z); group.userData={floor};
+  scene.add(group); routeLines.push(group);
+}
 // 方案路线：每段相邻店铺也用走环路径连接，避免穿过中心核心块/边带店铺（导航时只显示导航线）
 function drawRoute(route) {
   clearRoute();
@@ -380,10 +397,11 @@ function drawRoute(route) {
     }
     animation.push(...path);
   };
-  for (let i = 0; i < route.stops.length - 1; i++) {
-    const rawA = route.stops[i], rawB = route.stops[i + 1];
-    const a = routePoint(rawA);
-    const b = routePoint(rawB);
+  const resolvedStops = route.stops.map(routePoint);
+  resolvedStops.slice(1).forEach((point,index) => addWaypoint(point,index+1));
+  for (let i = 0; i < resolvedStops.length - 1; i++) {
+    const a = resolvedStops[i];
+    const b = resolvedStops[i + 1];
     const color = PAL[i % PAL.length];
     if (a.floor === b.floor) {
       addPath(corridorPath(a, b, a.floor), color);

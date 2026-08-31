@@ -783,6 +783,14 @@
       "store_id": "map_57bb213731"
     },
     {
+      "id": "f1_entrance",
+      "floor": 1,
+      "x": 520,
+      "y": 680,
+      "type": "entrance",
+      "label": "主入口（当前位置）"
+    },
+    {
       "id": "f1_escalator",
       "floor": 1,
       "x": 720,
@@ -1619,6 +1627,11 @@
       "f2_map_57bb213731",
       "f2_c4",
       110.0
+    ],
+    [
+      "f1_entrance",
+      "f1_c7",
+      160
     ],
     [
       "f1_c7",

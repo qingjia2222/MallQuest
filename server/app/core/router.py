@@ -34,6 +34,8 @@ def write_demo_maps():
             edges.append([nid,f"f{floor}_c{a}",math.dist((px,py),corridor[a])])
             edges.append([nid,f"f{floor}_c{b}",math.dist((px,py),corridor[b])])
     # 直梯与扶梯是两套独立换层边。扶梯上下口错位，3D 红点会沿斜坡移动；直梯保持垂直。
+    nodes["f1_entrance"]={"id":"f1_entrance","floor":1,"x":520,"y":680,"type":"entrance","label":"主入口（当前位置）"}
+    edges.append(["f1_entrance","f1_c7",160])
     edges.append(["f1_c7","f2_c7",35]); nodes["f1_c7"].update(type="elevator",label="直梯 1F"); nodes["f2_c7"].update(type="elevator",label="直梯 2F")
     nodes["f1_escalator"]={"id":"f1_escalator","floor":1,"x":720,"y":320,"type":"escalator","label":"扶梯 1F"}
     nodes["f2_escalator"]={"id":"f2_escalator","floor":2,"x":520,"y":320,"type":"escalator","label":"扶梯 2F"}
@@ -79,16 +81,18 @@ def route_between_nodes(mall_id,start_node,end_node,vertical_mode="elevator"):
 def build_route(mall_id,store_ids,vertical_mode="elevator"):
     if not store_ids: return {"nodes":[],"polyline_segments":[],"estimated_distance":0,"is_demo_map":True}
     marks=','.join('?' for _ in store_ids)
-    with connection() as db: rows=db.execute(f"SELECT id,route_node FROM stores WHERE mall_id=? AND id IN ({marks})",(mall_id,*store_ids)).fetchall()
-    mapping={r["id"]:r["route_node"] for r in rows}
+    with connection() as db: rows=db.execute(f"SELECT id,name,floor,route_node FROM stores WHERE mall_id=? AND id IN ({marks})",(mall_id,*store_ids)).fetchall()
+    mapping={r["id"]:r["route_node"] for r in rows}; details={r["id"]:dict(r) for r in rows}
     if len(mapping)!=len(store_ids): raise HTTPException(status_code=400,detail="plan contains store outside current mall")
     graph_nodes,_=_graph(mall_id)
-    if mall_id=="mall_demo" and any(node not in graph_nodes for node in mapping.values()):
+    if mall_id=="mall_demo" and ("f1_entrance" not in graph_nodes or any(node not in graph_nodes for node in mapping.values())):
         write_demo_maps()
+    route_targets=(["f1_entrance"] if mall_id=="mall_demo" else [])+[mapping[store_id] for store_id in store_ids]
     all_nodes=[]; total=0; nodes={}
-    for idx in range(len(store_ids)-1):
-        path,dist,nodes=shortest_path(mall_id,mapping[store_ids[idx]],mapping[store_ids[idx+1]],vertical_mode); total+=dist; all_nodes.extend(path if idx==0 else path[1:])
-    if len(store_ids)==1: nodes,_=_graph(mall_id); all_nodes=[mapping[store_ids[0]]]
+    for idx in range(len(route_targets)-1):
+        path,dist,nodes=shortest_path(mall_id,route_targets[idx],route_targets[idx+1],vertical_mode); total+=dist; all_nodes.extend(path if idx==0 else path[1:])
+    if len(route_targets)==1: nodes,_=_graph(mall_id); all_nodes=[route_targets[0]]
     points=[{"sequence":i+1,"node_id":nid,"floor":nodes[nid]["floor"],"x":nodes[nid]["x"],"y":nodes[nid]["y"],"type":nodes[nid]["type"],"label":nodes[nid]["label"]} for i,nid in enumerate(all_nodes)]
     segments=[{"floor":a["floor"],"from":[a["x"],a["y"]],"to":[b["x"],b["y"]],"transfer_instruction":_transfer_instruction(a,b)} for a,b in zip(points,points[1:])]
-    return {"strategy":"shortest","vertical_mode":vertical_mode,"path_policy":"corridor_only","nodes":points,"polyline_segments":segments,"estimated_distance":round(total,1),"is_demo_map":True}
+    waypoints=[{"sequence":index+1,"store_id":store_id,"name":details[store_id]["name"],"floor":details[store_id]["floor"],"node_id":mapping[store_id]} for index,store_id in enumerate(store_ids)]
+    return {"strategy":"shortest","vertical_mode":vertical_mode,"path_policy":"corridor_only","start_node":"f1_entrance" if mall_id=="mall_demo" else route_targets[0],"waypoints":waypoints,"nodes":points,"polyline_segments":segments,"estimated_distance":round(total,1),"is_demo_map":True}

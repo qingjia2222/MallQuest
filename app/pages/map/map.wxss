@@ -31,3 +31,4 @@
 .ic-btn { flex: 1; text-align: center; border-radius: 40rpx; padding: 20rpx 0; font-size: 28rpx; font-weight: 600; }
 .ic-btn.ghost { background: #fff; color: #7C3AED; border: 2rpx solid var(--border); }
 .ic-btn.primary { background: linear-gradient(135deg, #7C3AED, #06B6D4); color: #fff; }
+.route-waypoints{display:flex;flex-wrap:wrap;gap:12rpx;padding:16rpx 22rpx;background:#fff}.route-waypoint{display:flex;align-items:center;gap:8rpx;padding:8rpx 14rpx;border-radius:28rpx;background:#ede9fe;color:#4c1d95;font-size:22rpx}.route-waypoint text{width:34rpx;height:34rpx;border-radius:50%;background:#7c3aed;color:#fff;text-align:center;line-height:34rpx;font-weight:700}
