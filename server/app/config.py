@@ -1,3 +1,4 @@
+import secrets
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -9,7 +10,7 @@ class Settings(BaseSettings):
     mall_server_port: int = 8000
     mall_db_path: str = str(SERVER_DIR / "data" / "mall.db")
     default_mall_id: str = "mall_demo"
-    token_secret: str = "qd-square-course-demo-secret-change-me"
+    token_secret: str = secrets.token_urlsafe(48)
     token_ttl_seconds: int = 86400
     demo_debug: bool = True
     llm_mode: str = "scripted"
