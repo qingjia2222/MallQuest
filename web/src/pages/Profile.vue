@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import api, { setToken, setSession } from '../api';
+import api, { clearAuth } from '../api';
 
 const router = useRouter();
 const member = ref({ points: 0, level: '普卡', expires_on: '' });
@@ -20,7 +20,7 @@ function goCoupon() { router.push('/coupon'); }
 function goReserve() { router.push('/reserve'); }
 function goPlan() { router.push('/plan'); }
 function goChat(q) { localStorage.setItem('prefill', q || '停车还有空位吗'); router.push('/chat'); }
-function logout(){setToken('');setSession('');localStorage.removeItem('mall_role');router.replace('/login')}
+function logout(){clearAuth();router.replace('/login')}
 onMounted(load);
 </script>
 

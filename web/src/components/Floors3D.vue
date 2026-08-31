@@ -21,6 +21,10 @@ let raf;
 let storeMeshes = [];
 let routeLines = [];
 let navLines = [];
+let routeMarker = null;
+let animationPoints = [];
+let animationStartedAt = 0;
+let animationDuration = 6500;
 let storePositions = {};
 let mainEntrance = null;
 let floorGroups = { F1: null, F2: null };
@@ -284,18 +288,72 @@ function focusFloor(fl) {
   emit('floorschanged', fl);
 }
 function resize() { const w = el.value.clientWidth||800, h = el.value.clientHeight||500; camera.aspect = w/h; camera.updateProjectionMatrix(); renderer.setSize(w,h); }
-function animate() { raf = requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
+function animate(now) {
+  raf = requestAnimationFrame(animate);
+  controls.update();
+  updateMarker(now || performance.now());
+  renderer.render(scene, camera);
+}
+
+function floorNumber(value) {
+  const parsed = Number(String(value == null ? 1 : value).replace(/^F/i, ''));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+}
+function worldPoint(point) {
+  const floor = floorNumber(point.floor);
+  return new THREE.Vector3(point.x, FLOOR_Y['F' + floor] + 1.8, point.z);
+}
+function setAnimationPath(points) {
+  animationPoints = [];
+  for (const point of points || []) {
+    const next = worldPoint(point);
+    if (!animationPoints.length || animationPoints[animationPoints.length - 1].distanceTo(next) > 0.05) animationPoints.push(next);
+  }
+  if (!routeMarker && scene) {
+    routeMarker = new THREE.Mesh(
+      new THREE.SphereGeometry(0.82, 24, 18),
+      new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xef4444, emissiveIntensity: 0.55 })
+    );
+    scene.add(routeMarker);
+  }
+  if (routeMarker) routeMarker.visible = animationPoints.length > 1;
+  replayRoute();
+}
+function replayRoute() {
+  animationStartedAt = performance.now();
+  if (routeMarker && animationPoints.length) {
+    routeMarker.position.copy(animationPoints[0]);
+    routeMarker.visible = animationPoints.length > 1;
+  }
+}
+function updateMarker(now) {
+  if (!routeMarker || !routeMarker.visible || animationPoints.length < 2) return;
+  const lengths = [];
+  let total = 0;
+  for (let i = 0; i < animationPoints.length - 1; i++) {
+    total += animationPoints[i].distanceTo(animationPoints[i + 1]);
+    lengths.push(total);
+  }
+  if (!total) return;
+  const distance = (((now - animationStartedAt) % animationDuration) / animationDuration) * total;
+  let index = lengths.findIndex((value) => value >= distance);
+  if (index < 0) index = lengths.length - 1;
+  const previous = index === 0 ? 0 : lengths[index - 1];
+  const segment = lengths[index] - previous || 1;
+  routeMarker.position.lerpVectors(animationPoints[index], animationPoints[index + 1], (distance - previous) / segment);
+}
 
 // 用 BoxGeometry 画一段粗线段（比 Line 更清晰）
 function segMesh(a, b, color, width) {
   const dx = b.x - a.x, dz = b.z - a.z, len = Math.hypot(dx, dz);
   if (len < 0.01) return null;
   const ang = Math.atan2(dx, dz);
-  const y = FLOOR_Y['F' + (a.floor || 1)] + 1.2;
+  const floor = floorNumber(a.floor);
+  const y = FLOOR_Y['F' + floor] + 1.2;
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(width || 0.6, 0.2, len), new THREE.MeshBasicMaterial({ color }));
   mesh.position.set((a.x + b.x) / 2, y, (a.z + b.z) / 2);
   mesh.rotation.y = ang;
-  mesh.userData = { floor: a.floor || 1 };
+  mesh.userData = { floor };
   return mesh;
 }
 // 方案路线：每段相邻店铺也用走环路径连接，避免穿过中心核心块/边带店铺（导航时只显示导航线）
@@ -303,18 +361,37 @@ function drawRoute(route) {
   clearRoute();
   if (!scene) return;
   if (props.navigate) return;   // 正在导航时不叠加方案路线，避免多条线/废线
-  if (!route || !route.stops || !route.stops.length) return;
+  if (!route || !route.stops || route.stops.length < 2) { setAnimationPath([]); return; }
   const PAL = [0x2BB673, 0xE8616E, 0x4EA8E8, 0xE8912B, 0x9C6ADE];   // 绿/红/蓝/橙/紫，按方案顺序分段着色
-  for (let i = 0; i < route.stops.length - 1; i++) {
-    const a = route.stops[i], b = route.stops[i + 1];
-    const fl = a.floor || 1;
-    const color = PAL[i % PAL.length];
-    const path = walkPath({ x: a.x, z: a.z, floor: fl }, { x: b.x, z: b.z, floor: fl }, fl);
+  const animation = [];
+  const addPath = (path, color) => {
     for (let j = 0; j < path.length - 1; j++) {
       const m = segMesh(path[j], path[j + 1], color, 0.6);
       if (m) { scene.add(m); routeLines.push(m); }
     }
+    animation.push(...path);
+  };
+  for (let i = 0; i < route.stops.length - 1; i++) {
+    const rawA = route.stops[i], rawB = route.stops[i + 1];
+    const a = { ...rawA, floor: floorNumber(rawA.floor) };
+    const b = { ...rawB, floor: floorNumber(rawB.floor) };
+    const color = PAL[i % PAL.length];
+    if (a.floor === b.floor) {
+      addPath(walkPath(a, b, a.floor), color);
+      continue;
+    }
+    const useEscalator = route.vertical_mode === 'escalator';
+    const low = useEscalator ? { x: -8, z: -9.5, floor: 1 } : { x: 0, z: 0, floor: 1 };
+    const high = useEscalator ? { x: 8, z: -9.5, floor: 2 } : { x: 0, z: 0, floor: 2 };
+    const fromTransfer = a.floor === 1 ? low : high;
+    const toTransfer = b.floor === 2 ? high : low;
+    addPath(walkPath(a, fromTransfer, a.floor), color);
+    const transfer = linkMesh(fromTransfer, toTransfer, color, 0.65);
+    if (transfer) { scene.add(transfer); routeLines.push(transfer); }
+    animation.push(fromTransfer, toTransfer);
+    addPath(walkPath(toTransfer, b, b.floor), color);
   }
+  setAnimationPath(animation);
 }
 function clearRoute() { routeLines.forEach(l => scene.remove(l)); routeLines = []; }
 // 竖直电梯段（跨层，中心处）
@@ -372,22 +449,27 @@ function drawNav(nav) {
   const target = storePositions[nav.name];
   if (!target) return;
   const R = INNER - 2;
+  const animation = [];
   if (target.floor === 1) {
     const p = walkPath({ x: 0, z: R, floor: 1 }, { x: target.x, z: target.z, floor: 1 }, 1);
     for (let i = 0; i < p.length - 1; i++) navSeg(p[i], p[i + 1]);
+    animation.push(...p);
   } else {
-    const LF1 = { x: -8, z: -9.5, floor: 1 };   // 扶梯1F梯口（上行低端）
-    const LF2 = { x: 8, z: -9.5, floor: 2 };    // 扶梯2F梯口（上行高端）
-    // 1F：主入口（获得的位置）→ 沿走道走到扶梯1F梯口
+    const useEscalator = nav.vertical_mode === 'escalator';
+    const LF1 = useEscalator ? { x: -8, z: -9.5, floor: 1 } : { x: 0, z: 0, floor: 1 };
+    const LF2 = useEscalator ? { x: 8, z: -9.5, floor: 2 } : { x: 0, z: 0, floor: 2 };
+    // 1F：主入口（获得的位置）→ 沿走道走到换层设施
     const p1 = walkPath({ x: 0, z: INNER + 0.5, floor: 1 }, LF1, 1);
     for (let i = 0; i < p1.length - 1; i++) navSeg(p1[i], p1[i + 1]);
-    // 乘扶梯（跨层斜线，在中庭上边走道，避开中心店铺块）
+    // 乘直梯或扶梯跨层；两者都只连接已建模的换层设施。
     const lm = linkMesh(LF1, LF2, 0x219653, 0.7);
     if (lm) { scene.add(lm); navLines.push(lm); }
-    // 2F：扶梯2F梯口 → 沿走道 → 店
+    // 2F：换层设施 → 沿走道 → 店
     const p2 = walkPath(LF2, { x: target.x, z: target.z, floor: 2 }, 2);
     for (let i = 0; i < p2.length - 1; i++) navSeg(p2[i], p2[i + 1]);
+    animation.push(...p1, LF2, ...p2);
   }
+  setAnimationPath(animation);
   focusFloor('all');   // 导航时地图展示全部楼层，清楚看到电梯上下
 }
 function clearNav() { navLines.forEach(l => scene.remove(l)); navLines = []; }
@@ -395,8 +477,8 @@ function clearNav() { navLines.forEach(l => scene.remove(l)); navLines = []; }
 onMounted(init);
 onBeforeUnmount(() => { if (raf) cancelAnimationFrame(raf); window.removeEventListener('resize', resize); if (renderer) renderer.dispose(); });
 watch(() => props.route, drawRoute, { immediate: true });
-watch(() => props.navigate, (n) => { if (n) drawNav(n); else clearNav(); }, { immediate: true });
-defineExpose({ focusFloor, drawRoute });
+watch(() => props.navigate, (n) => { if (n) drawNav(n); else { clearNav(); drawRoute(props.route); } }, { immediate: true });
+defineExpose({ focusFloor, drawRoute, replayRoute });
 </script>
 
 <template>

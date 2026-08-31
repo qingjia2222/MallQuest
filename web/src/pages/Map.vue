@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue';
+import { ref, reactive, computed, nextTick, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '../api';
 import Floors3D from '../components/Floors3D.vue';
@@ -10,8 +10,13 @@ import oakPlan from '../store/oakwood_plan.json';
 
 const router = useRouter();
 const floorsRef = ref(null);
+const previewFloorsRef = ref(null);
 const availableStores = ref([]);
 const focus = reactive({ show: false, store: null, aiReply: '', asking: false });
+const routePreviewOpen = ref(false);
+const editSaving = ref(false);
+const editNotice = ref('');
+const editError = ref('');
 const live = ref([]);              // 方案中各店实时状态 + 预定情况
 let liveTimer = null;
 
@@ -23,18 +28,18 @@ const route3d = computed(() => {
   const plan = planStore.current;
   if (!plan || !plan.itinerary || !plan.itinerary.length) return null;
   const st = (planStore.navigateTarget && planStore.navigateTarget.start) || { name: '当前位置', x: 1.69, z: 6.73 };
-  const startFloor = 'F' + ((st.floor) || 1);
+  const startFloor = Number(st.floor) || 1;
   const stops = [{ floor: startFloor, x: st.x ?? 1.69, z: st.z ?? 6.73, name: st.name || '当前位置', seq: 1 }];
   plan.itinerary.forEach((s, i) => {
-    const floor = 'F' + (s.floor || 1);
-    const pool = floor === 'F1' ? oakPlan.gd : oakPlan.up;
+    const floor = Number(s.floor) || 1;
+    const pool = floor === 1 ? oakPlan.gd : oakPlan.up;
     const slot = pool.find(r => r.name === s.name);
     let px = 0, pz = 0;
     if (slot) { px = slot.cx; pz = slot.cz; }
     else { px = ((s.pos_x || 500) - 500) / 1000 * 30; pz = ((s.pos_y || 500) - 500) / 1000 * 30; }
     stops.push({ floor, x: px, z: pz, name: s.name, seq: i + 2 });
   });
-  return { stops };
+  return { stops, vertical_mode: (plan.route && plan.route.vertical_mode) || 'elevator' };
 });
 // 导航到单店：起点（同层出入口/电梯）→ 目标店铺，绿色路线
 const navRoute = computed(() => {
@@ -58,6 +63,7 @@ const navRoute = computed(() => {
   ] };
 });
 const displayRoute = computed(() => planStore.navigateTarget ? (navRoute.value || route3d.value) : route3d.value);
+const isCrossFloorRoute = computed(() => route3d.value && new Set(route3d.value.stops.map((stop) => Number(stop.floor))).size > 1);
 
 async function load() {
   try {
@@ -111,27 +117,48 @@ function heroBg(store) {
 function fmStatus(s) { return s.open_status === 'open' ? '营业中' : '未营业'; }
 function fmQ(s) { const q = Number(s.queue_minutes || 0); return q > 0 ? q + ' 分钟' : '免排队'; }
 function goPlan() {
-  // 无方案回对话页去规划；有方案则清除导航、聚焦全部楼层、重画分段路线并下滑到地图
+  // 无方案回对话页去规划；有方案则弹出可重播的沉浸式路线预览。
   if (!hasPlan.value) { router.push('/chat'); return; }
   if (planStore.navigateTarget) setNavigateTarget(null);
-  if (floorsRef.value && floorsRef.value.focusFloor) floorsRef.value.focusFloor('all');
-  if (floorsRef.value && floorsRef.value.drawRoute) floorsRef.value.drawRoute(route3d.value);
-  const el = document.getElementById('plan-map');
-  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  routePreviewOpen.value = true;
+  nextTick(() => previewFloorsRef.value && previewFloorsRef.value.replayRoute());
 }
 function goChat() { router.push('/chat'); }
 // —— 手动编辑推荐方案（规划页内直接调整顺序/删除/添加店铺）——
 const editMode = ref(false);
 const addSel = ref('');
 const editOptions = computed(() => availableStores.value.filter((store) => store.open_status === 'open'));
-function startEdit() { editMode.value = true; }
+function normalizeClock(value) {
+  const match = String(value || '').match(/(\d{1,2})(?::|点)(\d{2})?/);
+  if (!match) return '';
+  let hour = Number(match[1]);
+  if (/下午|晚上|晚/.test(String(value)) && hour < 12) hour += 12;
+  return `${String(hour).padStart(2, '0')}:${String(Number(match[2] || 0)).padStart(2, '0')}`;
+}
+function defaultClock(index) {
+  const base = normalizeClock(planStore.current && planStore.current.slots && planStore.current.slots.time) || '18:00';
+  const [hour, minute] = base.split(':').map(Number);
+  const total = hour * 60 + minute + index * 45;
+  return `${String(Math.floor(total / 60) % 24).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+function startEdit() {
+  editNotice.value = ''; editError.value = '';
+  if (isDone.value) { editError.value = '该方案已确认并执行，事务快照不能覆盖；请点“换一版”生成可编辑的新方案。'; return; }
+  planStore.current.itinerary.forEach((stop, index) => { stop.time_label = normalizeClock(stop.time_label) || defaultClock(index); });
+  editMode.value = true;
+}
 async function finishEdit() {
   if (!planStore.current || !planStore.current.plan_id) { editMode.value = false; return; }
+  if (!planStore.current.itinerary.length) { editError.value = '方案至少保留一个店铺。'; return; }
+  editSaving.value = true; editError.value = ''; editNotice.value = '';
   try {
     const itinerary = planStore.current.itinerary.map((s) => ({ id: s.id, time_label: s.time_label || '' }));
     setCurrentPlan(await api.updatePlan(planStore.current.plan_id, { itinerary }));
-    editMode.value = false; await loadLive(); replayRoute();
-  } catch (e) { focus.aiReply = '方案保存失败：' + (e.message || ''); }
+    editMode.value = false; await loadLive();
+    editNotice.value = '方案已保存，路线已按新顺序重新生成。';
+    goPlan();
+  } catch (e) { editError.value = '方案保存失败：' + (e.message || ''); }
+  finally { editSaving.value = false; }
 }
 function removeStop(i) { if (planStore.current) planStore.current.itinerary.splice(i, 1); }
 function moveStop(i, d) {
@@ -174,6 +201,21 @@ function replayRoute() {
   if (floorsRef.value && floorsRef.value.focusFloor) floorsRef.value.focusFloor('all');
   if (floorsRef.value && floorsRef.value.drawRoute) floorsRef.value.drawRoute(route3d.value);
 }
+function replayPreview() {
+  if (previewFloorsRef.value && previewFloorsRef.value.replayRoute) previewFloorsRef.value.replayRoute();
+}
+async function switchPlanVertical(mode) {
+  if (!planStore.current || !planStore.current.plan_id || (planStore.current.route && planStore.current.route.vertical_mode === mode)) { replayPreview(); return; }
+  try {
+    setCurrentPlan(await api.updatePlan(planStore.current.plan_id, { vertical_mode: mode }));
+    editNotice.value = `已切换为${mode === 'escalator' ? '扶梯' : '直梯'}路线。`;
+    await nextTick(); replayPreview();
+  } catch (e) { editError.value = '换层路线切换失败：' + (e.message || ''); }
+}
+function switchNavVertical(mode) {
+  if (!planStore.navigateTarget) return;
+  setNavigateTarget({ ...planStore.navigateTarget, vertical_mode: mode });
+}
 
 function toStops(it) {
   const people = (planStore.current && planStore.current.slots && planStore.current.slots.people) || 2;
@@ -201,7 +243,8 @@ function actionLabel(a) {
 
     <!-- 导航提示（从首页"导航到此店铺"跳转而来） -->
     <div v-if="planStore.navigateTarget" class="nav-bar">
-      <span class="nb-text">🧭 正在导航到 <b>{{ planStore.navigateTarget.name }}</b>（{{ planStore.navigateTarget.geoloc ? '已定位' : '当前位置' }} · {{ planStore.navigateTarget.floor === 2 ? '乘电梯至2F' : '从主入口' }}）</span>
+      <span class="nb-text">🧭 正在导航到 <b>{{ planStore.navigateTarget.name }}</b>（{{ planStore.navigateTarget.geoloc ? '已定位' : '当前位置' }} · {{ planStore.navigateTarget.floor === 2 ? (planStore.navigateTarget.vertical_mode === 'escalator' ? '乘扶梯至2F' : '乘直梯至2F') : '从主入口' }}）</span>
+      <span v-if="planStore.navigateTarget.floor === 2" class="transfer-buttons"><button :class="{ active: planStore.navigateTarget.vertical_mode !== 'escalator' }" @click="switchNavVertical('elevator')">直梯</button><button :class="{ active: planStore.navigateTarget.vertical_mode === 'escalator' }" @click="switchNavVertical('escalator')">扶梯</button></span>
       <button class="nb-clear" @click="setNavigateTarget(null)">×</button>
     </div>
 
@@ -214,6 +257,8 @@ function actionLabel(a) {
           <button class="pp-btn primary" @click="goPlan">看路线</button>
         </div>
       </div>
+      <p v-if="editNotice" class="edit-notice">{{ editNotice }}</p>
+      <p v-if="editError" class="edit-error">{{ editError }}</p>
 
       <ItineraryCard v-if="!editMode" :itinerary="{
           tag: planStore.current.source === 'online_agent' ? '大模型规划' : '为你定制',
@@ -238,7 +283,7 @@ function actionLabel(a) {
           <select v-model="addSel" class="pe-select"><option value="">＋ 添加店铺</option><option v-for="s in editOptions" :key="s.id" :value="s.id">{{ s.name }} · {{ s.floor }}F</option></select>
           <button class="pe-btn add" @click="addStopSel">添加</button>
         </div>
-        <button class="ic-btn primary pe-done" @click="finishEdit">完成编辑</button>
+        <button class="ic-btn primary pe-done" :disabled="editSaving" @click="finishEdit">{{ editSaving ? '保存并重算路线中…' : '完成编辑' }}</button>
       </div>
 
       <!-- 各店实时状态 + 预定情况 -->
@@ -273,7 +318,22 @@ function actionLabel(a) {
     </div>
 
     <div id="plan-map">
-      <Floors3D ref="floorsRef" :route="route3d" :navigate="planStore.navigateTarget ? { name: planStore.navigateTarget.name, floor: planStore.navigateTarget.floor } : null" @select="onSelect" @floorschanged="onFloorsChanged" />
+      <Floors3D ref="floorsRef" :route="route3d" :navigate="planStore.navigateTarget ? { name: planStore.navigateTarget.name, floor: planStore.navigateTarget.floor, vertical_mode: planStore.navigateTarget.vertical_mode || 'elevator' } : null" @select="onSelect" @floorschanged="onFloorsChanged" />
+    </div>
+
+    <div v-if="routePreviewOpen && route3d" class="route-preview-mask">
+      <div class="route-preview-card">
+        <div class="route-preview-head">
+          <div><b>路线预览</b><span>红点从当前位置沿走廊依次前往方案店铺</span></div>
+          <button @click="routePreviewOpen = false">×</button>
+        </div>
+        <Floors3D ref="previewFloorsRef" :route="route3d" />
+        <div class="route-preview-actions">
+          <template v-if="isCrossFloorRoute"><button class="pp-btn" :class="route3d.vertical_mode === 'elevator' ? 'primary' : 'ghost'" @click="switchPlanVertical('elevator')">直梯路线</button><button class="pp-btn" :class="route3d.vertical_mode === 'escalator' ? 'primary' : 'ghost'" @click="switchPlanVertical('escalator')">扶梯路线</button></template>
+          <button class="pp-btn ghost" @click="replayPreview">重播</button>
+          <button class="pp-btn primary" @click="routePreviewOpen = false">完成预览</button>
+        </div>
+      </div>
     </div>
 
     <!-- 店铺详情弹层 -->
@@ -332,11 +392,17 @@ function actionLabel(a) {
 .nb-text { font-size: 14px; color: #047857; }
 .nb-text b { font-weight: 700; }
 .nb-clear { border: none; background: #fff; color: #047857; width: 26px; height: 26px; border-radius: 50%; font-size: 16px; cursor: pointer; line-height: 1; }
+.transfer-buttons { display: flex; gap: 5px; margin-left: auto; }
+.transfer-buttons button { border: 1px solid #a7f3d0; background: #fff; color: #047857; border-radius: 14px; padding: 4px 9px; cursor: pointer; }
+.transfer-buttons button.active { background: #059669; color: #fff; }
 .plan-panel { background: #fff; border: 1px solid #ede9fe; border-radius: 18px; padding: 16px; margin-bottom: 14px; box-shadow: 0 8px 24px rgba(124,58,237,0.08); }
 .pp-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .pp-title { font-weight: 800; font-size: 16px; display: flex; align-items: center; gap: 8px; }
 .pp-done { background: #ecfdf5; color: #10B981; font-size: 11px; font-weight: 700; padding: 2px 10px; border-radius: 14px; }
 .pp-wait { background: #fef3c7; color: #d97706; font-size: 11px; font-weight: 700; padding: 2px 10px; border-radius: 14px; }
+.edit-notice,.edit-error { margin: 0 0 10px; padding: 9px 12px; border-radius: 10px; font-size: 13px; }
+.edit-notice { color: #047857; background: #ecfdf5; }
+.edit-error { color: #b91c1c; background: #fef2f2; }
 .pp-actions { display: flex; gap: 8px; }
 .pp-btn { border: none; border-radius: 18px; padding: 7px 14px; font-size: 12px; font-weight: 600; cursor: pointer; }
 .pp-btn.ghost { background: #fff; color: var(--primary); border: 1px solid var(--border); }
@@ -367,6 +433,14 @@ function actionLabel(a) {
 .pe-select { flex: 1; padding: 9px 10px; border: 1px solid var(--border); border-radius: 10px; font-size: 14px; }
 .pe-btn.add { width: auto; padding: 0 14px; background: linear-gradient(135deg, var(--primary), var(--cyan)); color: #fff; }
 .pe-done { margin-top: 12px; width: 100%; }
+.route-preview-mask { position: fixed; inset: 0; z-index: 120; background: rgba(15,23,42,.72); display: flex; align-items: center; justify-content: center; padding: 18px; box-sizing: border-box; }
+.route-preview-card { width: min(760px,100%); max-height: calc(100vh - 36px); overflow: auto; background: #f8fafc; border-radius: 22px; padding: 16px; box-sizing: border-box; box-shadow: 0 24px 80px rgba(0,0,0,.35); }
+.route-preview-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.route-preview-head div { display: flex; flex-direction: column; gap: 3px; }
+.route-preview-head b { font-size: 18px; }
+.route-preview-head span { color: #64748b; font-size: 12px; }
+.route-preview-head button { border: 0; background: #e2e8f0; width: 34px; height: 34px; border-radius: 50%; font-size: 21px; cursor: pointer; }
+.route-preview-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; }
 .parking-card { display: flex; align-items: center; gap: 20px; }
 .parking-info { flex: 1; }
 .p-title { font-weight: 700; font-size: 15px; margin-bottom: 12px; }

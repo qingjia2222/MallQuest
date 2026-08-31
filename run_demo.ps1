@@ -31,6 +31,30 @@ if (-not $Python) {
 }
 Write-Host "Using Python: $Python"
 
+# ---- 1.5) Replace stale demo listeners from an earlier run ----
+# Without this, a newly launched backend can fail to bind while the browser
+# silently keeps talking to an old API process.
+function Stop-DemoListener([int]$Port, [string[]]$AllowedProcessNames) {
+  $listenerPids = @()
+  foreach ($line in (netstat -ano -p tcp)) {
+    if ($line -match "^\s*TCP\s+\S+:${Port}\s+\S+\s+LISTENING\s+(\d+)\s*$") {
+      $listenerPids += [int]$Matches[1]
+    }
+  }
+  foreach ($processId in ($listenerPids | Sort-Object -Unique)) {
+    $process = Get-Process -Id $processId -ErrorAction SilentlyContinue
+    if (-not $process) { continue }
+    if ($AllowedProcessNames -notcontains $process.ProcessName) {
+      throw "Port $Port is occupied by $($process.ProcessName) (PID $processId). Close it before starting the demo."
+    }
+    Write-Host "Stopping stale $($process.ProcessName) on port $Port (PID $processId)"
+    Stop-Process -Id $processId -Force
+  }
+}
+
+Stop-DemoListener 8000 @('python','pythonw')
+Stop-DemoListener 5173 @('node')
+
 # ---- 2) Init demo data ----
 & $Python server/scripts/init_demo.py
 $LanAddress = '192.168.40.24'

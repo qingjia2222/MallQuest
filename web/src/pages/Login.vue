@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import api, { setToken, setSession } from '../api';
+import api, { clearAuth, setToken, setSession } from '../api';
 const router = useRouter();
 const role = ref(''); const username = ref('manager'); const phone = ref('11111111111'); const password = ref('123456'); const storeCode = ref('QD-S01-DEMO'); const loading = ref(false); const err = ref('');
 function choose(next) { role.value = next; err.value = ''; if (next === 'manager') { username.value = 'manager'; password.value = 'manager123'; } else if (next === 'visitor') password.value = '123456'; }
@@ -9,6 +9,7 @@ function back() { role.value = ''; }
 async function doLogin() {
   loading.value = true; err.value = '';
   try {
+    clearAuth();
     if (role.value === 'merchant') { const auth = await api.merchantLogin(storeCode.value); setToken(auth.token); setSession(''); localStorage.setItem('mall_role','merchant'); router.replace('/merchant'); return; }
     const auth = role.value === 'manager' ? await api.webLogin(username.value, password.value) : await api.phoneLogin(phone.value, password.value); setToken(auth.token);
     if (role.value === 'manager') { setSession(''); localStorage.setItem('mall_role','manager'); router.replace('/manager'); return; }

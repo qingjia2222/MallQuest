@@ -1,18 +1,34 @@
 # Configure the mini program to use this PC's current LAN IPv4 address.
 # Usage: powershell -ExecutionPolicy Bypass -File .\configure_mini_lan.ps1
 
-$lines = ipconfig
-$inWlan = $false
-$lanIp = $null
-foreach ($line in $lines) {
-  if ($line -match '^Wireless LAN adapter WLAN:') { $inWlan = $true; continue }
-  if ($inWlan -and $line -match '^\S.*adapter.*:$') { break }
-  if ($inWlan -and $line -match '(\d{1,3}(?:\.\d{1,3}){3})') {
-    $candidate = $Matches[1]
-    if ($candidate -notlike '169.254.*') { $lanIp = $candidate; break }
-  }
+$activeInterfaces = [System.Net.NetworkInformation.NetworkInterface]::GetAllNetworkInterfaces() |
+  Where-Object { $_.OperationalStatus -eq [System.Net.NetworkInformation.OperationalStatus]::Up }
+
+function Get-UsableIPv4($networkInterface) {
+  $properties = $networkInterface.GetIPProperties()
+  $address = $properties.UnicastAddresses |
+    Where-Object {
+      $_.Address.AddressFamily -eq [System.Net.Sockets.AddressFamily]::InterNetwork -and
+      $_.Address.IPAddressToString -ne '127.0.0.1' -and
+      -not $_.Address.IPAddressToString.StartsWith('169.254.')
+    } |
+    Select-Object -First 1
+
+  if ($address) { return $address.Address.IPAddressToString }
+  return $null
 }
-if (-not $lanIp) { throw 'No WLAN IPv4 found. Connect this PC and the phone to the same Wi-Fi.' }
+
+# Prefer the active physical WLAN adapter. This works on both Chinese and
+# English Windows and does not depend on ipconfig's localized headings.
+$selectedInterface = $activeInterfaces |
+  Where-Object {
+    $_.NetworkInterfaceType -eq [System.Net.NetworkInformation.NetworkInterfaceType]::Wireless80211 -and
+    (Get-UsableIPv4 $_)
+  } |
+  Select-Object -First 1
+
+$lanIp = if ($selectedInterface) { Get-UsableIPv4 $selectedInterface } else { $null }
+if (-not $lanIp) { throw 'No active WLAN IPv4 found. Connect this PC and the phone to the same Wi-Fi.' }
 
 $requestFile = Join-Path $PSScriptRoot 'app\utils\request.js'
 $source = Get-Content -LiteralPath $requestFile -Raw -Encoding UTF8

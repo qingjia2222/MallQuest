@@ -10,6 +10,8 @@ import Map from './pages/Map.vue';
 import Coupon from './pages/Coupon.vue';
 import Profile from './pages/Profile.vue';
 import Reserve from './pages/Reserve.vue';
+import Merchant from './pages/Merchant.vue';
+import Manager from './pages/Manager.vue';
 import { restoreAuth } from './api';
 
 restoreAuth(); // 刷新后从 localStorage 恢复 token/session
@@ -17,12 +19,14 @@ restoreAuth(); // 刷新后从 localStorage 恢复 token/session
 const routes = [
   { path: '/', redirect: '/login' },
   { path: '/login', component: Login },
-  { path: '/home', component: Home, meta: { auth: true, tab: true } },
-  { path: '/chat', component: Chat, meta: { auth: true, tab: true } },
-  { path: '/map', component: Map, meta: { auth: true, tab: true } },
-  { path: '/coupon', component: Coupon, meta: { auth: true } },
-  { path: '/profile', component: Profile, meta: { auth: true, tab: true } },
-  { path: '/reserve', component: Reserve, meta: { auth: true } }
+  { path: '/home', component: Home, meta: { auth: true, role: 'visitor', tab: true } },
+  { path: '/chat', component: Chat, meta: { auth: true, role: 'visitor', tab: true } },
+  { path: '/map', component: Map, meta: { auth: true, role: 'visitor', tab: true } },
+  { path: '/coupon', component: Coupon, meta: { auth: true, role: 'visitor' } },
+  { path: '/profile', component: Profile, meta: { auth: true, role: 'visitor', tab: true } },
+  { path: '/reserve', component: Reserve, meta: { auth: true, role: 'visitor' } },
+  { path: '/merchant', component: Merchant, meta: { auth: true, role: 'merchant', standalone: true } },
+  { path: '/manager', component: Manager, meta: { auth: true, role: 'manager', standalone: true } }
 ];
 
 const router = createRouter({ history: createWebHashHistory(), routes });
@@ -30,8 +34,11 @@ const router = createRouter({ history: createWebHashHistory(), routes });
 // 登录守卫：需要登录的页面校验 localStorage token
 router.beforeEach((to) => {
   const authed = !!localStorage.getItem('mall_token');
+  const role = localStorage.getItem('mall_role') || 'visitor';
+  const roleHome = role === 'manager' ? '/manager' : role === 'merchant' ? '/merchant' : '/home';
   if (to.meta.auth && !authed) return '/login';
-  if (to.path === '/login' && authed) return '/home';
+  if (to.path === '/login' && authed) return roleHome;
+  if (to.meta.role && to.meta.role !== role) return roleHome;
   return true;
 });
 

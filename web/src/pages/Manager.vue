@@ -1,11 +1,11 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import api, { setToken } from '../api';
+import api, { clearAuth } from '../api';
 const router=useRouter(),grain=ref('month'),analytics=ref(null),created=ref(null),form=reactive({name:'',category:'零售',floor:1}),err=ref('');
 async function load(){try{analytics.value=await api.managerAnalytics(grain.value)}catch(e){err.value=e.message}}
 async function createStore(){try{created.value=await api.managerStore({...form,pos_x:680,pos_y:610})}catch(e){err.value=e.message}}
-function logout(){setToken('');localStorage.removeItem('mall_role');router.replace('/login')}
+function logout(){clearAuth();router.replace('/login')}
 onMounted(load);
 </script>
 

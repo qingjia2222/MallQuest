@@ -54,9 +54,12 @@ async function goNavigate() {
   let start = { name: '主入口', floor: 1, x: 1.69, z: 6.73 };
   try { const loc = await api.location(); if (loc) start = { name: loc.name || '主入口', floor: loc.floor || 1, x: loc.x, z: loc.z }; } catch (e) {}
   const geoloc = await getGeoloc();
-  setNavigateTarget({ name: s.name, floor: s.floor || 1, pos_x: s.pos_x, pos_y: s.pos_y, start, geoloc });
+  setNavigateTarget({ name: s.name, floor: s.floor || 1, pos_x: s.pos_x, pos_y: s.pos_y, start, geoloc, vertical_mode: 'elevator' });
   close();
   // 导航路线直接显示在首页的 3D 地图上，不跳转
+}
+function switchVertical(mode) {
+  if (planStore.navigateTarget) setNavigateTarget({ ...planStore.navigateTarget, vertical_mode: mode });
 }
 async function askAI() {
   const s = focus.value;
@@ -98,12 +101,13 @@ function statusText(s) { return s.open_status === 'open' ? '营业中' : '未营
     <!-- 导航提示（首页内直接导航） -->
     <div v-if="planStore.navigateTarget" class="nav-bar">
       <span class="nb-text">🧭 正在导航到 <b>{{ planStore.navigateTarget.name }}</b>{{ planStore.navigateTarget.geoloc ? '（已定位）' : '' }}</span>
+      <span v-if="planStore.navigateTarget.floor === 2" class="transfer-buttons"><button :class="{ active: planStore.navigateTarget.vertical_mode !== 'escalator' }" @click="switchVertical('elevator')">直梯</button><button :class="{ active: planStore.navigateTarget.vertical_mode === 'escalator' }" @click="switchVertical('escalator')">扶梯</button></span>
       <button class="nb-clear" @click="setNavigateTarget(null)">×</button>
     </div>
 
     <!-- 页面中心：商场地图 -->
     <div class="home-map">
-      <Floors3D ref="floorsRef" :route="null" :navigate="planStore.navigateTarget ? { name: planStore.navigateTarget.name, floor: planStore.navigateTarget.floor } : null" @select="open" />
+      <Floors3D ref="floorsRef" :route="null" :navigate="planStore.navigateTarget ? { name: planStore.navigateTarget.name, floor: planStore.navigateTarget.floor, vertical_mode: planStore.navigateTarget.vertical_mode || 'elevator' } : null" @select="open" />
     </div>
 
     <div class="card home-parking">
@@ -207,6 +211,9 @@ function statusText(s) { return s.open_status === 'open' ? '营业中' : '未营
 .nav-bar { display: flex; align-items: center; justify-content: space-between; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px; padding: 10px 14px; margin: 0 18px 12px; }
 .nb-text { font-size: 14px; color: #047857; }
 .nb-text b { font-weight: 700; }
+.transfer-buttons { display: flex; gap: 5px; margin-left: auto; margin-right: 8px; }
+.transfer-buttons button { border: 1px solid #a7f3d0; background: #fff; color: #047857; border-radius: 14px; padding: 4px 9px; cursor: pointer; }
+.transfer-buttons button.active { background: #059669; color: #fff; }
 .nb-clear { border: none; background: #fff; color: #047857; width: 26px; height: 26px; border-radius: 50%; font-size: 16px; cursor: pointer; line-height: 1; }
 .home-stores { padding: 18px 18px 20px; }
 .hs-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }

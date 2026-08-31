@@ -97,6 +97,17 @@ onMounted(() => {
 function push(role, text) { messages.value.push({ role, text, cards: [] }); }
 function scroll() { requestAnimationFrame(() => { const el = document.querySelector('.chat-scroll'); if (el) el.scrollTop = el.scrollHeight; }); }
 
+function acceptChatData(data) {
+  push('ai', data.reply || '好的，已为你处理。');
+  const msg = messages.value[messages.value.length - 1];
+  msg.cards = toCards(data.cards);
+  if (data.plan) {
+    currentPlan.value = data.plan; setCurrentPlan(data.plan); msg.plan = data.plan;
+    setTimeout(() => openExecuteConfirm(data.plan), 700);
+  }
+  scroll();
+}
+
 // 把后端的 cards 映射成前端富卡片类型
 function toCards(cards) {
   if (!Array.isArray(cards)) return [];
@@ -173,15 +184,7 @@ async function send(txt) {
   try {
     await api.ensureSession();  // 确保有 token + session，缺则自动补
     const data = await api.chat(text);
-    let reply = data.reply || '好的，已为你处理。';
-    push('ai', reply);
-    const msg = messages.value[messages.value.length - 1];
-    msg.cards = toCards(data.cards);
-    if (data.plan) {
-      currentPlan.value = data.plan; setCurrentPlan(data.plan); msg.plan = data.plan;
-      setTimeout(() => openExecuteConfirm(data.plan), 700);   // 规划完成自动弹出确认申请
-    }
-    scroll();
+    acceptChatData(data);
   } catch (e) {
     // session 失效：强制重扫建全新会话再试一次
     if (/session not found|not found/i.test(e.message || '')) {
@@ -189,8 +192,7 @@ async function send(txt) {
         const scan = await api.freshScan();
         setSession(scan.session_id);
         const data = await api.chat(text);
-        push('ai', data.reply || '好的，已为你处理。');
-        scroll();
+        acceptChatData(data);
       } catch (e2) {
         push('ai', '抱歉，请求后端失败：' + (e2.message || ''));
         scroll();

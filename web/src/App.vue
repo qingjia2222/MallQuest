@@ -14,12 +14,14 @@ const tabs = [
 ];
 
 const showTabs = () => !!route.meta.tab;
+const showHeader = () => route.path !== '/login' && !route.meta.standalone;
+const showQueue = () => route.meta.role === 'visitor';
 </script>
 
 <template>
   <div class="app-shell">
     <!-- 顶部商场信息栏（登录后页面统一显示，登录页除外） -->
-    <header v-if="route.path !== '/login'" class="mall-header">
+    <header v-if="showHeader()" class="mall-header">
       <div v-if="!showTabs()" class="mall-back" @click="router.back()">←</div>
       <div v-else class="mall-logo">🛍️</div>
       <div class="mall-info">
@@ -30,7 +32,7 @@ const showTabs = () => !!route.meta.tab;
 
     <!-- 全局到号提醒横幅（跨页面：确认后跳地图仍提醒） -->
     <transition name="fade">
-      <div v-if="queueState.notices.length" class="queue-toast">
+      <div v-if="showQueue() && queueState.notices.length" class="queue-toast">
         <div v-for="n in queueState.notices" :key="n.id" class="qt-item">
           <span class="qt-text">{{ n.text }}</span>
           <span class="qt-close" @click="queueState.notices = queueState.notices.filter(x => x.id !== n.id)">×</span>
@@ -38,7 +40,7 @@ const showTabs = () => !!route.meta.tab;
       </div>
     </transition>
 
-    <main class="app-main" :class="{ 'has-tabs': showTabs(), 'has-header': route.path !== '/login' }">
+    <main class="app-main" :class="{ 'has-tabs': showTabs(), 'has-header': showHeader() }">
       <router-view v-slot="{ Component }">
         <transition name="fade" mode="out-in">
           <component :is="Component" />
