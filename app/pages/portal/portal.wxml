@@ -1,1 +1,25 @@
-<view class="portal"><view class="hero"><view class="eyebrow">QD SQUARE · PRIVATE AI</view><view class="hero-title">选择您的身份</view><view class="hero-copy">不同身份进入独立工作区，数据由同一商场私域平台连接。</view></view><view class="role-card visitor" bindtap="visitor"><view class="role-icon">⌖</view><view class="role-main"><view class="role-title">游客 / 会员</view><view class="role-copy">AI 问答、3D 导览、攻略、优惠、票务与会员服务</view></view><view class="arrow">›</view></view><view class="role-card merchant" bindtap="merchant"><view class="role-icon">店</view><view class="role-main"><view class="role-title">商户登录</view><view class="role-copy">使用店铺编码进入，维护营业、排队和优惠状态</view></view><view class="arrow">›</view></view><view class="role-card manager" bindtap="manager"><view class="role-icon">图</view><view class="role-main"><view class="role-title">商场管理者</view><view class="role-copy">经营看板、实时客流、店铺编码和地图数字化</view></view><view class="arrow">›</view></view><view class="demo-note">课程演示环境 · 经营数据标记为 Mock</view></view>
+<view class="portal">
+  <view class="hero">
+    <view class="eyebrow">QD SQUARE · PRIVATE AI</view>
+    <view class="hero-title">选择您的身份</view>
+    <view class="hero-copy">三类身份连接同一套商场私域平台，登录后进入各自工作区。</view>
+  </view>
+  <view class="role-list">
+    <view class="role-card visitor" bindtap="visitor">
+      <view class="role-icon">⌖</view>
+      <view class="role-main"><view class="role-title">游客 / 会员</view><view class="role-copy">AI 问答、3D 导览、攻略、优惠、票务与会员服务</view></view>
+      <view class="arrow">›</view>
+    </view>
+    <view class="role-card merchant" bindtap="merchant">
+      <view class="role-icon">店</view>
+      <view class="role-main"><view class="role-title">商户登录</view><view class="role-copy">使用店铺编码进入，维护营业、排队和优惠状态</view></view>
+      <view class="arrow">›</view>
+    </view>
+    <view class="role-card manager" bindtap="manager">
+      <view class="role-icon">图</view>
+      <view class="role-main"><view class="role-title">商场管理者</view><view class="role-copy">经营看板、实时客流、店铺编码和地图数字化</view></view>
+      <view class="arrow">›</view>
+    </view>
+  </view>
+  <view class="demo-note">课程演示环境 · 经营数据标记为 Mock</view>
+</view>
