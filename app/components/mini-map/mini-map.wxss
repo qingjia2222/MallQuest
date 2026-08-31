@@ -1,5 +1,8 @@
 .mm { position: relative; background: #f7f3fa; border-radius: 28rpx; overflow: hidden; box-shadow: 0 10rpx 30rpx rgba(124,58,237,.08); }
 .mm-webgl { display: block; width: 100%; height: 560rpx; background: #f7f3fa; }
+.mm-label-layer{position:absolute;inset:0 0 54rpx;z-index:5;pointer-events:none;overflow:hidden}
+.mm-label{position:absolute;transform:translate(-50%,-100%);max-width:132rpx;padding:3rpx 7rpx;border-radius:7rpx;background:rgba(255,255,255,.82);color:#374151;font-size:17rpx;line-height:22rpx;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 2rpx 7rpx rgba(31,41,55,.13)}
+.mm-label.facility{background:rgba(6,182,212,.88);color:#fff;font-weight:650}
 .mm-floors { position:absolute;top:20rpx;left:20rpx;z-index:8;display:flex;flex-direction:column;gap:10rpx; }
 .mm-floor { min-width:64rpx;height:56rpx;padding:0 10rpx;border-radius:14rpx;background:rgba(255,255,255,.92);color:#6B7280;display:flex;align-items:center;justify-content:center;font-size:22rpx;font-weight:600;box-shadow:0 4rpx 10rpx rgba(0,0,0,.08); }
 .mm-floor.active { background:linear-gradient(135deg,#7C3AED,#06B6D4);color:#fff; }

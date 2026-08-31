@@ -4,7 +4,7 @@ const { formatTime } = require('../../utils/format');
 const cleanReply = text => String(text || '').replace(/\*/g, '');
 
 function actionLabel(action) {
-  const labels = { reserve_restaurant: '餐厅预约', reserve_business_space: '商务空间预约', claim_coupon: '优惠券领取', buy_ticket: '电影票购买', queue: '店铺排号' };
+  const labels = { reserve_restaurant: '餐厅预约', reserve_business_space: '商务空间预约', claim_coupon: '优惠券领取', buy_ticket: '电影票购买', purchase_deal: '限时特惠购买', queue: '店铺排号' };
   return `${labels[action.tool] || action.label || action.tool || '服务操作'}：${action.status || '完成'}`;
 }
 function decoratePlan(plan) {

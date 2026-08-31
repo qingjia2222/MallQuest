@@ -7,6 +7,7 @@ from app.core.tools import live_store_status
 from app.db import connection, now_iso
 
 STATES=["IDLE","UNDERSTAND","COLLECT","PLAN","ROUTE","CONFIRM","EXECUTE","DONE"]
+EXECUTABLE_ACTIONS={"reserve_restaurant","reserve_business_space","claim_coupon","buy_ticket","purchase_deal"}
 TEMPLATES={
  "date":{"required":["time","people","budget_per_person","cuisine","want_movie"],"stores":["蜀签成都串串香","世界茶饮"],"actions":["reserve_restaurant","claim_coupon"]},
  "banquet":{"required":["time","people","total_budget","cuisine","private_room"],"stores":["川食公馆","金伯利"],"actions":["reserve_restaurant","claim_coupon"]},
@@ -267,7 +268,9 @@ def confirm_plan(user_id,plan_id,decision,expected_revision=None):
         snapshot={"plan_id":plan_id,"revision":revision,"scene":scene,"slots":slots,"itinerary":itinerary,"route":route,"selected_movie":selected_movie}
         db.execute("INSERT INTO plan_snapshots VALUES(?,?,?,?,?)",("snap_"+uuid.uuid4().hex[:10],plan_id,revision,json.dumps(snapshot,ensure_ascii=False),now_iso()))
         db.execute("UPDATE plans SET state='EXECUTE',updated_at=? WHERE id=?",(now_iso(),plan_id))
-        for action in TEMPLATES[scene]["actions"]:
+        requested=slots.get("requested_actions")
+        actions=[action for action in requested if action in EXECUTABLE_ACTIONS] if isinstance(requested,list) else TEMPLATES[scene]["actions"]
+        for action in dict.fromkeys(actions):
             itinerary_ids=[store["id"] for store in itinerary]; marks=",".join("?" for _ in itinerary_ids)
             if action=="claim_coupon":
                 coupon=db.execute(f"SELECT id FROM coupons WHERE mall_id=? AND store_id IN ({marks}) AND stock>0 ORDER BY id LIMIT 1",(mall,*itinerary_ids)).fetchone() if itinerary_ids else None
@@ -277,6 +280,15 @@ def confirm_plan(user_id,plan_id,decision,expected_revision=None):
                 if product_row:
                     product=product_row["id"]; qty=slots.get("people",1); tid="ut_"+uuid.uuid4().hex[:10]; db.execute("INSERT INTO user_tickets VALUES(?,?,?,?,?,?)",(tid,product,user_id,mall,qty,now_iso())); db.execute("UPDATE ticket_products SET stock=stock-? WHERE id=?",(qty,product)); results.append({"tool":"buy_ticket","status":"success","ticket_id":tid,"store_id":product_row["store_id"],"quantity":qty,"selected_movie":selected_movie})
                 else: results.append({"tool":"buy_ticket","status":"unavailable","reason":"当前方案不含可购票项目"})
+            elif action=="purchase_deal":
+                requested_deal=slots.get("requested_deal_id")
+                deal=db.execute(f"SELECT * FROM deals WHERE mall_id=? AND store_id IN ({marks}) AND stock>0 AND (? IS NULL OR id=?) ORDER BY id LIMIT 1",(mall,*itinerary_ids,requested_deal,requested_deal)).fetchone() if itinerary_ids else None
+                if deal:
+                    quantity=max(1,int(slots.get("quantity") or 1));updated=db.execute("UPDATE deals SET stock=stock-? WHERE id=? AND stock>=?",(quantity,deal["id"],quantity))
+                    if updated.rowcount:
+                        purchase_id="dp_"+uuid.uuid4().hex[:10];db.execute("INSERT INTO deal_purchases VALUES(?,?,?,?,?,?,?,?)",(purchase_id,deal["id"],user_id,mall,quantity,deal["price"],"paid",now_iso()));results.append({"tool":"purchase_deal","status":"success","purchase_id":purchase_id,"deal_id":deal["id"],"store_id":deal["store_id"],"quantity":quantity})
+                    else: results.append({"tool":"purchase_deal","status":"unavailable","reason":"特惠库存不足"})
+                else: results.append({"tool":"purchase_deal","status":"unavailable","reason":"当前方案店铺没有可购买的限时特惠"})
             elif action in ("reserve_restaurant","reserve_business_space"):
                 wanted="商务空间" if action=="reserve_business_space" else None; store=next((s for s in itinerary if (wanted and s["category"]==wanted) or (not wanted and s["reservable"] and s["category"]!="商务空间")),None)
                 if store:

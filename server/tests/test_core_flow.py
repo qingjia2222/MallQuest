@@ -1,5 +1,5 @@
 from fastapi.testclient import TestClient
-from app.db import reset_and_seed
+from app.db import connection, reset_and_seed
 from app.main import app
 from app.core.auth import decode_token
 from app.core.text import plain_text
@@ -46,3 +46,55 @@ def test_chinese_people_slot_reaches_confirmation():
     response=c.post("/api/chat",headers=h,json={"session_id":s,"message":"今晚7点两个人约会，人均250，想吃川菜，还想看电影。"})
     plan=response.json()["data"]["plan"]
     assert plan["state"]=="CONFIRM" and plan["slots"]["people"]==2
+
+def test_explicit_store_reservation_uses_store_entity_and_confirmation_gate():
+    reset_and_seed(); c=TestClient(app); h,s=login_scan(c)
+    response=c.post("/api/chat",headers=h,json={"session_id":s,"message":"帮我预约沃德面包"})
+    assert response.status_code==200
+    data=response.json()["data"]
+    assert data["intent"]=="plan" and data["source"]=="transaction_router"
+    assert data["plan"]["state"]=="CONFIRM"
+    assert [store["name"] for store in data["plan"]["itinerary"]]==["沃德面包"]
+    assert data["plan"]["slots"]["requested_actions"]==["reserve_restaurant"]
+    with connection() as db:
+        before=db.execute("SELECT COUNT(*) FROM reservations").fetchone()[0]
+    confirmed=c.post("/api/plan/confirm",headers=h,json={"plan_id":data["plan"]["plan_id"],"decision":"confirm","expected_revision":data["plan"]["revision"]})
+    assert confirmed.status_code==200
+    result=confirmed.json()["data"]
+    assert any(item["tool"]=="reserve_restaurant" and item["status"]=="success" for item in result["action_results"])
+    with connection() as db:
+        after=db.execute("SELECT COUNT(*) FROM reservations").fetchone()[0]
+    assert after==before+1
+
+def test_every_reservable_store_can_be_selected_by_llm_reservation_command():
+    reset_and_seed(); c=TestClient(app); h,s=login_scan(c)
+    with connection() as db:
+        stores=[dict(row) for row in db.execute("SELECT id,name FROM stores WHERE mall_id='mall_demo' AND reservable=1 AND category!='服务台' ORDER BY id")]
+    assert stores
+    for store in stores:
+        response=c.post("/api/chat",headers=h,json={"session_id":s,"message":f"帮我预约{store['name']}"})
+        assert response.status_code==200,store["name"]
+        plan=response.json()["data"]["plan"]
+        assert plan["state"]=="CONFIRM",store["name"]
+        assert [item["id"] for item in plan["itinerary"]]==[store["id"]],store["name"]
+        assert plan["slots"]["requested_actions"]==["reserve_restaurant"],store["name"]
+
+def test_movie_ticket_skill_stays_disabled_without_a_mapped_cinema():
+    reset_and_seed(); c=TestClient(app); h,s=login_scan(c)
+    response=c.post("/api/chat",headers=h,json={"session_id":s,"message":"帮我买电影票"})
+    data=response.json()["data"]
+    assert data["intent"]=="movie_ticket_unavailable" and "没有电影院" in data["reply"]
+    assert "plan" not in data
+
+def test_llm_coupon_and_deal_purchase_skills_use_confirmation_plans():
+    reset_and_seed(); c=TestClient(app); h,s=login_scan(c)
+    with connection() as db:
+        coupon_store=db.execute("SELECT s.name FROM coupons c JOIN stores s ON s.id=c.store_id WHERE c.mall_id='mall_demo' AND c.stock>0 LIMIT 1").fetchone()[0]
+        deal_store=db.execute("SELECT s.name FROM deals d JOIN stores s ON s.id=d.store_id WHERE d.mall_id='mall_demo' AND d.stock>0 LIMIT 1").fetchone()[0]
+    for message,tool in ((f"帮我领取{coupon_store}的优惠券","claim_coupon"),(f"帮我抢购{deal_store}的特惠","purchase_deal")):
+        offered=c.post("/api/chat",headers=h,json={"session_id":s,"message":message}).json()["data"]
+        assert offered["intent"]=="plan" and offered["plan"]["state"]=="CONFIRM"
+        plan=offered["plan"]
+        done=c.post("/api/plan/confirm",headers=h,json={"plan_id":plan["plan_id"],"decision":"confirm","expected_revision":plan["revision"]})
+        assert done.status_code==200
+        assert any(item["tool"]==tool and item["status"] in {"success","already_claimed"} for item in done.json()["data"]["action_results"])

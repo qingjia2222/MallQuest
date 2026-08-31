@@ -11,6 +11,24 @@
 .plan-hero plan-flow { --primary: #a78bfa; }
 
 .plan-body { padding: 24rpx 32rpx 120rpx; }
+.current-head { display:flex;align-items:center;justify-content:space-between;gap:16rpx;margin:0 0 18rpx;padding:4rpx 2rpx; }
+.current-title { font-size:31rpx;font-weight:750;color:#111827; }
+.current-state { margin-left:10rpx;padding:6rpx 14rpx;border-radius:22rpx;background:#FEF3C7;color:#D97706;font-size:20rpx;font-weight:600; }
+.current-actions { display:flex;gap:10rpx;flex-shrink:0; }
+.small-action { padding:12rpx 20rpx;border:1rpx solid #E5E7EB;border-radius:30rpx;background:#fff;color:#7C3AED;font-size:22rpx;font-weight:650; }
+.small-action.primary { color:#fff;border:0;background:linear-gradient(135deg,#7C3AED,#06B6D4); }
+.plan-editor { background:#fff;border-radius:28rpx;padding:26rpx 22rpx;box-shadow:0 10rpx 30rpx rgba(124,58,237,.08); }
+.editor-title { font-size:27rpx;font-weight:700;margin-bottom:18rpx; }
+.time-row { display:grid;grid-template-columns:44rpx minmax(0,1fr) 170rpx 58rpx 58rpx;align-items:center;gap:8rpx;padding:14rpx 8rpx;border-radius:16rpx;background:#F9FAFB;margin-top:10rpx; }
+.stop-index { width:38rpx;height:38rpx;line-height:38rpx;text-align:center;border-radius:50%;background:#EDE9FE;color:#7C3AED;font-weight:700;font-size:22rpx; }
+.stop-name { overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:25rpx;font-weight:600; }
+.time-input { height:64rpx;line-height:64rpx;padding:0 12rpx;border:1rpx solid #E5E7EB;border-radius:14rpx;background:#fff;font-size:24rpx; }
+.move-btn { width:56rpx!important;min-width:56rpx!important;height:56rpx;line-height:52rpx;padding:0!important;margin:0!important;border:0;background:#fff;color:#7C3AED;font-size:27rpx; }
+.move-btn::after,.editor-save::after { border:0; }
+.editor-buttons { display:flex;gap:14rpx;margin-top:22rpx;align-items:center; }
+.editor-cancel,.editor-save { flex:1;height:76rpx;line-height:76rpx;text-align:center;border-radius:38rpx;font-size:26rpx;font-weight:650;margin:0;padding:0; }
+.editor-cancel { border:1rpx solid #E5E7EB;color:#6B7280;background:#fff; }
+.editor-save { color:#fff;background:linear-gradient(135deg,#7C3AED,#06B6D4); }
 
 .q-label { font-size: 24rpx; color: #9CA3AF; margin-top: 40rpx; }
 .q-title { font-size: 40rpx; font-weight: 700; margin: 16rpx 0 40rpx; }

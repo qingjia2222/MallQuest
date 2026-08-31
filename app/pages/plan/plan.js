@@ -1,7 +1,7 @@
 // pages/plan/plan.js - 甲方 PlanFlow/行程卡 + 乙方 Planner 状态机
 const { request } = require('../../utils/request');
 Page({
-  data: { step: 1, goalText: '我今天约会', form: {}, questions: [], qIndex: 0, currentQ: {}, options: [], itinerary: {}, generating: false, executing: false, plan: null },
+  data: { step: 1, goalText: '我今天约会', form: {}, questions: [], qIndex: 0, currentQ: {}, options: [], itinerary: {}, generating: false, executing: false, editing: false, editSaving: false, plan: null },
   async onLoad() {
     const existing = getApp().globalData.currentPlan || (getApp().globalData.planState && getApp().globalData.planState.current);
     if (existing) {
@@ -50,7 +50,7 @@ Page({
     const stops = (plan.itinerary || []).map((s, index) => ({ ...s, time: s.time_label || (index ? `第 ${index + 1} 站` : time), time_label: s.time_label || '', waiting: s.queue_minutes || 0 }));
     const labels = { reserve_restaurant: '餐厅预约', reserve_business_space: '商务空间预约', claim_coupon: '优惠券领取', buy_ticket: '电影票购买' };
     const actions = (plan.action_results || []).map(a => ({ label: `${labels[a.tool] || a.tool}：${a.status}`, ok: a.status === 'success' || a.status === 'already_claimed' }));
-    this.setData({ plan, step, itinerary: { tag: plan.state === 'DONE' ? '已执行' : '等待确认', stops, actions } });
+    this.setData({ plan, step, editing: false, itinerary: { tag: plan.state === 'DONE' ? '已执行' : '等待确认', stops, actions } });
   },
   onChangePlan() { this.generatePlan(this.data.form); },
   async copyForEdit(plan) {
@@ -67,10 +67,14 @@ Page({
   },
   editStopTime(e) { this.setData({ [`plan.itinerary[${e.currentTarget.dataset.index}].time_label`]: e.detail.value }); },
   moveStop(e) { const index=Number(e.currentTarget.dataset.index),delta=Number(e.currentTarget.dataset.delta),next=index+delta,list=[...(this.data.plan.itinerary||[])]; if(next<0||next>=list.length)return; const tmp=list[index];list[index]=list[next];list[next]=tmp;this.setData({'plan.itinerary':list}); },
+  startEdit() { if (this.data.step === 4) this.setData({ editing: true }); },
+  cancelEdit() { this.present(this.data.plan, 4); },
   async savePlan() {
     if (!this.data.plan || !this.data.plan.plan_id) return;
-    try { const plan=await request(`/api/plan/${this.data.plan.plan_id}`,{method:'PATCH',data:{itinerary:this.data.plan.itinerary.map(s=>({id:s.id,time_label:s.time_label||''})),expected_revision:this.data.plan.revision}}); getApp().globalData.currentPlan=plan; getApp().setPlanState({current:plan}); this.present(plan,4); wx.showToast({title:'时间已同步'}); }
+    this.setData({editSaving:true});
+    try { const plan=await request(`/api/plan/${this.data.plan.plan_id}`,{method:'PATCH',data:{itinerary:this.data.plan.itinerary.map(s=>({id:s.id,time_label:s.time_label||''})),expected_revision:this.data.plan.revision}}); getApp().globalData.currentPlan=plan; getApp().setPlanState({current:plan}); this.present(plan,4); wx.showToast({title:'方案已同步'}); }
     catch(e){wx.showToast({title:e.message,icon:'none'})}
+    finally{this.setData({editSaving:false})}
   },
   async onConfirm() {
     if (!this.data.plan || this.data.plan.state !== 'CONFIRM') return;

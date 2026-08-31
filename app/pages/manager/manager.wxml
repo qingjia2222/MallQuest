@@ -1,18 +1,14 @@
 <view class="page">
   <view wx:if="{{!token}}" class="card login-card">
     <view class="role-tag">管理者独立入口</view><view class="title">星河里 管理驾驶舱</view><view class="muted">使用管理者账号进入经营管理</view>
-    <input data-key="username" value="{{username}}" bindinput="field" placeholder="管理账号"/><input password data-key="password" value="{{password}}" bindinput="field" placeholder="密码"/><button class="button" bindtap="login">进入管理驾驶舱</button>
+    <input class="login-input" data-key="username" value="{{username}}" bindinput="field" placeholder="管理账号" placeholder-class="input-placeholder" confirm-type="next" />
+    <input class="login-input" password="{{true}}" data-key="password" value="{{password}}" bindinput="field" placeholder="密码" placeholder-class="input-placeholder" confirm-type="done" bindconfirm="login" />
+    <view class="demo-hint">演示账号：manager / manager123</view>
+    <button class="button" loading="{{loggingIn}}" disabled="{{loggingIn}}" bindtap="login">进入管理驾驶舱</button>
   </view>
   <block wx:else>
-    <view class="dashboard-head">
-      <view><view class="small">星河里 · MANAGEMENT</view><view class="head-title">经营驾驶舱</view></view>
-      <view class="head-actions"><picker range="{{grainLabels}}" value="{{grainIndex}}" bindchange="pickGrain"><view class="grain">{{grainLabels[grainIndex]}} ›</view></picker><view class="exit" bindtap="logout">退出</view></view>
-    </view>
-    <view wx:if="{{analytics}}">
-      <view class="kpis"><view class="kpi"><text>客流</text><strong>{{analytics.current.footfall}}</strong></view><view class="kpi"><text>营收</text><strong>¥{{analytics.current.revenue}}</strong></view><view class="kpi"><text>转化率</text><strong>{{analytics.current.conversion_rate}}</strong></view></view>
-      <view class="card"><view class="section-title">客流趋势</view><view wx:for="{{analytics.series}}" wx:key="label" class="bar-row"><text>{{item.label}}</text><view class="bar-track"><view class="bar" style="width:{{item.barWidth}}%"/></view><text>{{item.footfall}}</text></view></view>
-      <view class="card"><view class="section-title">实时监测</view><view class="realtime"><view><strong>{{analytics.realtime.visitors_in_mall}}</strong><text>场内人数</text></view><view><strong>{{analytics.realtime.entrances_per_minute}}</strong><text>每分钟入场</text></view><view><strong>{{analytics.realtime.occupancy_level}}</strong><text>拥挤程度</text></view></view></view>
-    </view>
+    <view class="dashboard-head"><view><view class="small">星河里 · MANAGEMENT</view><view class="head-title">经营驾驶舱</view></view><view class="head-actions"><picker range="{{grainLabels}}" value="{{grainIndex}}" bindchange="pickGrain"><view class="grain">{{grainLabels[grainIndex]}} ›</view></picker><view class="exit" bindtap="logout">退出</view></view></view>
+    <view wx:if="{{analytics}}"><view class="kpis"><view class="kpi"><text>客流</text><strong>{{analytics.current.footfall}}</strong></view><view class="kpi"><text>营收</text><strong>¥{{analytics.current.revenue}}</strong></view><view class="kpi"><text>转化率</text><strong>{{analytics.current.conversion_rate}}</strong></view></view><view class="card"><view class="section-title">客流趋势</view><view wx:for="{{analytics.series}}" wx:key="label" class="bar-row"><text>{{item.label}}</text><view class="bar-track"><view class="bar" style="width:{{item.barWidth}}%"/></view><text>{{item.footfall}}</text></view></view><view class="card"><view class="section-title">实时监测</view><view class="realtime"><view><strong>{{analytics.realtime.visitors_in_mall}}</strong><text>场内人数</text></view><view><strong>{{analytics.realtime.entrances_per_minute}}</strong><text>每分钟入场</text></view><view><strong>{{analytics.realtime.occupancy_level}}</strong><text>拥挤程度</text></view></view></view></view>
     <view class="card"><view class="section-title">创建入驻店铺编码</view><input data-key="storeName" value="{{storeName}}" bindinput="field" placeholder="店铺名称"/><input data-key="storeCategory" value="{{storeCategory}}" bindinput="field" placeholder="店铺类别"/><input type="number" data-key="storeFloor" value="{{storeFloor}}" bindinput="field" placeholder="楼层"/><button class="button" bindtap="createStore">创建店铺与编码</button><view wx:if="{{created}}" class="created"><view>店铺编码</view><strong>{{created.store_code}}</strong><view class="muted">交给商户后从商户独立入口登录</view></view></view>
   </block>
 </view>

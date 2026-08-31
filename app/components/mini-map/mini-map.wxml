@@ -1,6 +1,9 @@
 <view class="mm">
   <canvas id="mall3d" type="webgl" class="mm-webgl"
           catchtouchstart="onTouchStart" catchtouchmove="onTouchMove" catchtouchend="onTouchEnd"></canvas>
+  <view class="mm-label-layer">
+    <view wx:for="{{labels}}" wx:key="key" class="mm-label {{item.facility ? 'facility' : ''}}" style="left:{{item.x}}px;top:{{item.y}}px">{{item.name}}</view>
+  </view>
 
   <view class="mm-floors">
     <view class="mm-floor {{floor === 0 ? 'active' : ''}}" data-f="0" bindtap="setFloor">全部</view>
@@ -19,5 +22,5 @@
       <text>{{item.category === '咖啡' ? '☕' : item.category === '影院' ? '🎬' : item.category === '甜品' ? '🍰' : '🏬'}}</text>
     </view>
   </view>
-  <view class="mm-legend">{{webglReady ? '拖动旋转 · 点击店铺 · 红点为实时路线' : '当前设备使用平面兼容模式'}}</view>
+  <view class="mm-legend">{{webglReady ? '上下左右拖动查看 · 点击店铺 · 红点为实时路线' : '当前设备使用平面兼容模式'}}</view>
 </view>

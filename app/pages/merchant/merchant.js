@@ -1,1 +1,20 @@
-const{request}=require('../../utils/request');Page({data:{storeCode:'',token:'',store:null,statuses:['open','busy','closed'],statusLabels:['正常营业','客流繁忙','暂停营业'],statusIndex:0,queueMinutes:0,seatsAvailable:0,dealTitle:'',dealPrice:'',dealStock:''},code(e){this.setData({storeCode:e.detail.value})},field(e){this.setData({[e.currentTarget.dataset.key]:e.detail.value})},pickStatus(e){this.setData({statusIndex:Number(e.detail.value)})},logout(){this.setData({token:'',store:null,storeCode:''});wx.reLaunch({url:'/pages/portal/portal'})},async login(){try{const auth=await request('/api/merchant/auth/store-code',{method:'POST',data:{store_code:this.data.storeCode},token:''});this.setData({token:auth.token});await this.load()}catch(e){wx.showModal({title:'登录失败',content:e.message,showCancel:false})}},async load(){const store=await request('/api/merchant/store',{token:this.data.token}),index=Math.max(0,this.data.statuses.indexOf(store.live_open_status));this.setData({store,statusIndex:index,queueMinutes:store.live_queue_minutes,seatsAvailable:store.live_seats_available})},async updateStatus(){try{const store=await request('/api/merchant/store/status',{method:'PATCH',token:this.data.token,data:{open_status:this.data.statuses[this.data.statusIndex],queue_minutes:Number(this.data.queueMinutes),seats_available:Number(this.data.seatsAvailable)}});this.setData({store});wx.showToast({title:'状态已同步'})}catch(e){wx.showModal({title:'更新失败',content:e.message,showCancel:false})}},async publishDeal(){try{await request('/api/merchant/store/deals',{method:'PUT',token:this.data.token,data:{title:this.data.dealTitle,price:Number(this.data.dealPrice),stock:Number(this.data.dealStock)}});await this.load();wx.showToast({title:'优惠已发布'})}catch(e){wx.showModal({title:'发布失败',content:e.message,showCancel:false})}}})
+const { request } = require('../../utils/request');
+
+Page({
+  data: { storeCode:'', token:'', store:null, loggingIn:false, statuses:['open','busy','closed'], statusLabels:['正常营业','客流繁忙','暂停营业'], statusIndex:0, queueMinutes:0, seatsAvailable:0, dealTitle:'', dealPrice:'', dealStock:'' },
+  code(e) { this.setData({ storeCode:e.detail.value }); },
+  field(e) { this.setData({ [e.currentTarget.dataset.key]:e.detail.value }); },
+  pickStatus(e) { this.setData({ statusIndex:Number(e.detail.value) }); },
+  logout() { this.setData({token:'',store:null,storeCode:''}); wx.reLaunch({url:'/pages/portal/portal'}); },
+  async login() {
+    const storeCode=String(this.data.storeCode||'').trim().toUpperCase();
+    if(!storeCode) return wx.showModal({title:'请填写店铺编码',content:'请输入商场管理者创建的店铺编码，例如 QD-S01-DEMO。',showCancel:false});
+    this.setData({storeCode,loggingIn:true});
+    try { const auth=await request('/api/merchant/auth/store-code',{method:'POST',data:{store_code:storeCode},token:''}); this.setData({token:auth.token}); await this.load(); }
+    catch(e) { wx.showModal({title:'登录失败',content:e.message,showCancel:false}); }
+    finally { this.setData({loggingIn:false}); }
+  },
+  async load() { const store=await request('/api/merchant/store',{token:this.data.token}),index=Math.max(0,this.data.statuses.indexOf(store.live_open_status)); this.setData({store,statusIndex:index,queueMinutes:store.live_queue_minutes,seatsAvailable:store.live_seats_available}); },
+  async updateStatus() { try { const store=await request('/api/merchant/store/status',{method:'PATCH',token:this.data.token,data:{open_status:this.data.statuses[this.data.statusIndex],queue_minutes:Number(this.data.queueMinutes),seats_available:Number(this.data.seatsAvailable)}}); this.setData({store}); wx.showToast({title:'状态已同步'}); } catch(e) { wx.showModal({title:'更新失败',content:e.message,showCancel:false}); } },
+  async publishDeal() { try { await request('/api/merchant/store/deals',{method:'PUT',token:this.data.token,data:{title:this.data.dealTitle,price:Number(this.data.dealPrice),stock:Number(this.data.dealStock)}}); await this.load(); wx.showToast({title:'优惠已发布'}); } catch(e) { wx.showModal({title:'发布失败',content:e.message,showCancel:false}); } }
+});

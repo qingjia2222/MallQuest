@@ -263,7 +263,7 @@ function actionLabel(a) {
   if (a.label) return a.label;
   const t = a.tool || a.action || '';
   if (t === 'queue') return `${a.store_id ? '已排号：' + a.store_id : '已排队'}${a.queue_minutes ? '（约' + a.queue_minutes + '分钟）' : ''}`;
-  const map = { claim_coupon: '领取优惠券', buy_ticket: '购买门票', reserve_restaurant: '预约餐厅', reserve_business_space: '预约商务空间' };
+  const map = { claim_coupon: '领取优惠券', buy_ticket: '购买门票', purchase_deal: '购买限时特惠', reserve_restaurant: '预约餐厅', reserve_business_space: '预约商务空间' };
   return map[t] || t;
 }
 function onCardTap(card) {

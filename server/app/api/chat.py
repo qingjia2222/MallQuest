@@ -8,9 +8,42 @@ from app.core.navigation import is_navigation_intent, resolve_navigation
 from app.core.orchestrator import try_online, try_online_planning
 from app.core.planner import detect_scene, create_plan, create_plan_from_agent, is_plain_query, is_plan_request
 from app.core.tools import run_tool
-from app.db import connection, load_json, now_iso
+from app.datasource.registry import registry
+from app.db import connection, load_json, now_iso, rows_to_dicts
 from app.core.text import plain_text
 log=logging.getLogger("mall-assistant.chat")
+
+ACTION_WORDS={
+    "reserve_restaurant": ("预约", "预订", "订位", "排号"),
+    "claim_coupon": ("领券", "领取优惠券", "领优惠券"),
+    "buy_ticket": ("买电影票", "购买电影票", "订电影票", "购票"),
+    "purchase_deal": ("抢购", "购买特惠", "购买优惠", "下单特惠"),
+}
+ACTION_LABELS={"reserve_restaurant":"预约","claim_coupon":"领取优惠券","buy_ticket":"购买电影票","purchase_deal":"购买限时特惠"}
+
+def _explicit_action(text):
+    """识别需要写业务数据的明确动作；真正写入仍必须经过 Plan 确认门禁。"""
+    if any(word in text for word in ("规划", "方案", "攻略", "行程", "路线", "安排")):
+        return None
+    if "优惠券" in text and any(word in text for word in ("领", "领取", "帮我拿")):
+        return "claim_coupon"
+    for action,words in ACTION_WORDS.items():
+        if any(word in text for word in words): return action
+    return None
+
+def _mentioned_stores(mall_id,text,action):
+    """优先按数据库中的完整店名识别，避免把“帮我预约沃德面包”整句送进 LIKE。"""
+    stores=registry.stores(mall_id,"")
+    exact=[store for store in stores if store.get("name") and store["name"] in text]
+    if exact: return sorted(exact,key=lambda item:len(item["name"]),reverse=True)
+    if action=="buy_ticket":
+        cinemas=[store for store in stores if store.get("category")=="影院"]
+        if len(cinemas)==1: return cinemas
+    cleaned=text
+    for words in ACTION_WORDS.values():
+        for word in words: cleaned=cleaned.replace(word,"")
+    cleaned=re.sub(r"^(?:请|麻烦|帮我|我要|我想|想要)+|(?:一下|一个|吧|。|！|!|？|\?)+$","",cleaned.strip())
+    return registry.stores(mall_id,cleaned) if cleaned else []
 
 def _plan_existing(session):
     """取该会话当前已生成方案里的店铺名，供规划 agent 在其基础上增补。"""
@@ -63,6 +96,33 @@ def chat(body:ChatBody,auth:AuthContext=Depends(require_auth)):
         session_context=load_json(session["context_json"]); navigation=resolve_navigation(session["mall_id"],text,session_context.get("entry_node"))
         destination=navigation["destination_store"]
         return done({"reply":f"已为你找到前往{destination['name']}的路线，路线动画已打开。当前预计排队 {destination['queue_minutes']} 分钟。","intent":"navigation","navigation":navigation,"cards":[navigation],"degraded":False})
+    action=_explicit_action(text)
+    if action:
+        matches=_mentioned_stores(session["mall_id"],text,action)
+        if action=="buy_ticket": matches=[store for store in matches if store.get("category")=="影院"]
+        if not matches:
+            if action=="buy_ticket":
+                return done({"reply":"当前地图与商场数据库中没有电影院，暂不提供电影票购买。我不会创建虚假影院或票务记录。","intent":"movie_ticket_unavailable","result":[],"cards":[],"degraded":False,"source":"transaction_router"})
+            return done({"reply":f"我识别到你要{ACTION_LABELS[action]}，但当前商场没有找到对应店铺。请只补充店名，我会接着处理。","intent":"action_store_missing","result":[],"cards":[{"type":"stores","data":[]}],"degraded":False,"source":"transaction_router"})
+        store=matches[0]
+        if action=="reserve_restaurant" and not store.get("reservable"):
+            return done({"reply":f"已找到{store['name']}，但该店当前未开放预约。你可以让我查询实时排队，或换一家可预约店铺。","intent":"reservation_unavailable","result":[store],"cards":[{"type":"stores","data":[store]}],"degraded":False,"source":"transaction_router"})
+        slots={"requested_actions":[action]}
+        if action=="purchase_deal":
+            with connection() as db:
+                deals=rows_to_dicts(db.execute("SELECT id,title,stock FROM deals WHERE mall_id=? AND store_id=? AND stock>0 ORDER BY id",(session["mall_id"],store["id"])).fetchall())
+            if not deals:
+                return done({"reply":f"已找到{store['name']}，但该店当前没有可购买的限时特惠。你可以让我查询今日特惠。","intent":"deal_unavailable","result":[store],"cards":[{"type":"stores","data":[store]}],"degraded":False,"source":"transaction_router"})
+            selected=next((deal for deal in deals if deal["title"] in text),deals[0]);slots["requested_deal_id"]=selected["id"]
+        people=re.search(r"(\d+|[一二两三四五六七八九十])\s*(?:位|个人|人)",text)
+        if people:
+            raw=people.group(1); slots["people"]=int(raw) if raw.isdigit() else {"一":1,"二":2,"两":2,"三":3,"四":4,"五":5,"六":6,"七":7,"八":8,"九":9,"十":10}[raw]
+        time_match=re.search(r"((?:今天|今晚|明天|明晚)?\s*(?:下午|晚上)?\s*\d{1,2}(?::\d{2}|点\d{0,2}分?))",text)
+        if time_match: slots["time"]=time_match.group(1).replace(" ","")
+        plan=create_plan(auth.user_id,session["mall_id"],body.session_id,text,"casual",slots,{"store_ids":[store["id"]]},source="transaction_router")
+        when=plan["slots"].get("time","今天18:00"); count=plan["slots"].get("people",2)
+        reply=f"已找到{store['name']}（{store['floor']}F），并生成{ACTION_LABELS[action]}确认方案：{when}，{count}人。确认后才会正式写入，时间和人数仍可调整。"
+        return done({"reply":reply,"intent":"plan","plan":plan,"cards":[plan["card"]],"degraded":False,"mode":"deterministic","source":"transaction_router"})
     scene=detect_scene(text)
     if not scene and is_plan_request(text) and not is_plain_query(text): scene="casual"
     if scene:
