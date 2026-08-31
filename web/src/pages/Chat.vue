@@ -3,7 +3,6 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import api, { BASE } from '../api';
 import { startQueueWatch } from '../store/queue';
-import storeInfo from '../store/store_info.json';
 import RichCard from '../components/RichCard.vue';
 import PlanOverlay from '../components/PlanOverlay.vue';
 import { setCurrentPlan } from '../store/plan';
@@ -207,8 +206,7 @@ async function send(txt) {
 function movieOptions(plan) {
   if (!plan || !plan.itinerary) return [];
   for (const s of plan.itinerary) {
-    const info = storeInfo[s.name] || {};
-    if (info.now_showing && info.now_showing.length) return info.now_showing;
+    if (s.now_showing && s.now_showing.length) return s.now_showing;
   }
   return [];
 }
@@ -232,15 +230,15 @@ async function runExecute(doBooking) {
   const plan = pendingPlan.value;
   showConfirm.value = false; pendingPlan.value = null; confirmStep.value = 1;
   if (!plan) return;
-  if (doBooking && plan.plan_id) { await onConfirmPlan(plan.plan_id); }
+  if (doBooking && plan.plan_id) { await onConfirmPlan(plan.plan_id, chosenMovie.value ? { selected_movie: chosenMovie.value } : {}); }
   else { currentPlan.value = plan; setCurrentPlan(plan); router.push('/map'); }
 }
 // 确认方案并执行
-async function onConfirmPlan(planId) {
+async function onConfirmPlan(planId, modifications = {}) {
   if (!planId) return;
   loading.value = true;
   try {
-    const data = await api.confirmPlan(planId, 'confirm');
+    const data = await api.confirmPlan(planId, 'confirm', modifications);
     setCurrentPlan(data);
     const last = [...messages.value].reverse().find(m => m.plan);
     if (last) last.plan = { ...last.plan, ...data, state: 'DONE' };

@@ -31,6 +31,7 @@
   <view wx:if="{{step >= 4}}" class="plan-body">
     <itinerary-card itinerary="{{itinerary}}" bind:stoptap="onStopTap"
                     bind:confirm="onConfirm" bind:change="onChangePlan" />
+    <view wx:if="{{step === 4}}" class="card"><view class="q-label">手动调整顺序与到店时间</view><view wx:for="{{plan.itinerary}}" wx:key="id" class="time-row"><text>{{item.name}}</text><input type="time" value="{{item.time_label}}" data-index="{{index}}" bindinput="editStopTime" /><button size="mini" data-index="{{index}}" data-delta="-1" bindtap="moveStop">↑</button><button size="mini" data-index="{{index}}" data-delta="1" bindtap="moveStop">↓</button></view><button bindtap="savePlan">保存并重新生成路线</button></view>
     <view wx:if="{{step === 5}}" class="done-tip">✅ 方案已执行，去地图查看路线</view>
     <view class="plan-nav">
       <view class="ic-btn ghost" bindtap="goChat">返回对话</view>

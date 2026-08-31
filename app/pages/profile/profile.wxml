@@ -23,7 +23,7 @@
   <view class="pf-assets">
     <view class="pa" bindtap="goCoupon"><text class="pa-num">{{myCoupons}}</text><text class="pa-label">优惠券</text></view>
     <view class="pa" bindtap="goReserve"><text class="pa-num">{{myReservations}}</text><text class="pa-label">预约</text></view>
-    <view class="pa"><text class="pa-num">0</text><text class="pa-label">待评价</text></view>
+    <view class="pa" bindtap="goCoupon"><text class="pa-num">{{myOrders}}</text><text class="pa-label">订单 / 票券</text></view>
   </view>
 
   <view class="section-title">💡 试试对我说</view>

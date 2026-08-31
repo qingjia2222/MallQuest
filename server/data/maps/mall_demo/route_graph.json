@@ -181,6 +181,213 @@
       "store_id": "s20"
     },
     {
+      "id": "f1_map_26ac620bb7",
+      "floor": 1,
+      "x": 140.0,
+      "y": 320.0,
+      "type": "store_entrance",
+      "label": "面包新语入口",
+      "store_id": "map_26ac620bb7"
+    },
+    {
+      "id": "f1_map_6090f50459",
+      "floor": 1,
+      "x": 245.0,
+      "y": 320.0,
+      "type": "store_entrance",
+      "label": "思百食Spiceee入口",
+      "store_id": "map_6090f50459"
+    },
+    {
+      "id": "f1_map_bf16a8dc62",
+      "floor": 1,
+      "x": 455.0,
+      "y": 320.0,
+      "type": "store_entrance",
+      "label": "途尚咖啡入口",
+      "store_id": "map_bf16a8dc62"
+    },
+    {
+      "id": "f1_map_f3c427b32c",
+      "floor": 1,
+      "x": 560.0,
+      "y": 320.0,
+      "type": "store_entrance",
+      "label": "天辣小馆入口",
+      "store_id": "map_f3c427b32c"
+    },
+    {
+      "id": "f1_map_49f63ea7e6",
+      "floor": 1,
+      "x": 665.0,
+      "y": 320.0,
+      "type": "store_entrance",
+      "label": "吟松日本料理入口",
+      "store_id": "map_49f63ea7e6"
+    },
+    {
+      "id": "f1_map_c9a9be7e57",
+      "floor": 1,
+      "x": 770.0,
+      "y": 320.0,
+      "type": "store_entrance",
+      "label": "世界茶饮入口",
+      "store_id": "map_c9a9be7e57"
+    },
+    {
+      "id": "f1_map_b50c92b2ea",
+      "floor": 1,
+      "x": 875.0,
+      "y": 320.0,
+      "type": "store_entrance",
+      "label": "丸龟制面入口",
+      "store_id": "map_b50c92b2ea"
+    },
+    {
+      "id": "f1_map_c43775e5f0",
+      "floor": 1,
+      "x": 140.0,
+      "y": 320.0,
+      "type": "store_entrance",
+      "label": "拼桌茶餐厅入口",
+      "store_id": "map_c43775e5f0"
+    },
+    {
+      "id": "f1_map_497207c319",
+      "floor": 1,
+      "x": 245.0,
+      "y": 320.0,
+      "type": "store_entrance",
+      "label": "爪财猫寿司入口",
+      "store_id": "map_497207c319"
+    },
+    {
+      "id": "f1_map_f036628c2e",
+      "floor": 1,
+      "x": 350.0,
+      "y": 320.0,
+      "type": "store_entrance",
+      "label": "手工茶坊入口",
+      "store_id": "map_f036628c2e"
+    },
+    {
+      "id": "f1_map_c39336b475",
+      "floor": 1,
+      "x": 455.0,
+      "y": 320.0,
+      "type": "store_entrance",
+      "label": "吉布鲁牛排海鲜自助餐厅入口",
+      "store_id": "map_c39336b475"
+    },
+    {
+      "id": "f1_map_bfa08b95ee",
+      "floor": 1,
+      "x": 560.0,
+      "y": 320.0,
+      "type": "store_entrance",
+      "label": "米桃餐厅入口",
+      "store_id": "map_bfa08b95ee"
+    },
+    {
+      "id": "f1_map_01e529ac41",
+      "floor": 1,
+      "x": 665.0,
+      "y": 320.0,
+      "type": "store_entrance",
+      "label": "渝利火锅入口",
+      "store_id": "map_01e529ac41"
+    },
+    {
+      "id": "f1_map_578482464a",
+      "floor": 1,
+      "x": 770.0,
+      "y": 320.0,
+      "type": "store_entrance",
+      "label": "麻省理功深海烤鱼入口",
+      "store_id": "map_578482464a"
+    },
+    {
+      "id": "f1_map_21cca561b9",
+      "floor": 1,
+      "x": 875.0,
+      "y": 320.0,
+      "type": "store_entrance",
+      "label": "见面入口",
+      "store_id": "map_21cca561b9"
+    },
+    {
+      "id": "f1_map_101bed149d",
+      "floor": 1,
+      "x": 120.0,
+      "y": 390.0,
+      "type": "store_entrance",
+      "label": "沃德面包入口",
+      "store_id": "map_101bed149d"
+    },
+    {
+      "id": "f1_map_2d1c13b09e",
+      "floor": 1,
+      "x": 245.0,
+      "y": 320.0,
+      "type": "store_entrance",
+      "label": "北疆饭店入口",
+      "store_id": "map_2d1c13b09e"
+    },
+    {
+      "id": "f1_map_a081aac711",
+      "floor": 1,
+      "x": 320.0,
+      "y": 390.0,
+      "type": "store_entrance",
+      "label": "小杨生煎入口",
+      "store_id": "map_a081aac711"
+    },
+    {
+      "id": "f1_map_3adfc94e9b",
+      "floor": 1,
+      "x": 520.0,
+      "y": 390.0,
+      "type": "store_entrance",
+      "label": "藤尾食堂入口",
+      "store_id": "map_3adfc94e9b"
+    },
+    {
+      "id": "f1_map_d9db330639",
+      "floor": 1,
+      "x": 875.0,
+      "y": 520.0,
+      "type": "store_entrance",
+      "label": "天御皇茶入口",
+      "store_id": "map_d9db330639"
+    },
+    {
+      "id": "f1_map_e2422e8e96",
+      "floor": 1,
+      "x": 140.0,
+      "y": 320.0,
+      "type": "store_entrance",
+      "label": "蜀签成都串串香入口",
+      "store_id": "map_e2422e8e96"
+    },
+    {
+      "id": "f1_map_8176d1272d",
+      "floor": 1,
+      "x": 245.0,
+      "y": 320.0,
+      "type": "store_entrance",
+      "label": "鸿匠铁板烧日本料理入口",
+      "store_id": "map_8176d1272d"
+    },
+    {
+      "id": "f1_map_ed9455f88a",
+      "floor": 1,
+      "x": 350.0,
+      "y": 320.0,
+      "type": "store_entrance",
+      "label": "味千面食料理入口",
+      "store_id": "map_ed9455f88a"
+    },
+    {
       "id": "f2_c0",
       "floor": 2,
       "x": 120,
@@ -358,6 +565,222 @@
       "type": "store_entrance",
       "label": "海味坊入口",
       "store_id": "s22"
+    },
+    {
+      "id": "f2_map_50db46249f",
+      "floor": 2,
+      "x": 350.0,
+      "y": 320.0,
+      "type": "store_entrance",
+      "label": "卫生间入口",
+      "store_id": "map_50db46249f"
+    },
+    {
+      "id": "f2_map_25e0a129d0",
+      "floor": 2,
+      "x": 520.0,
+      "y": 390.0,
+      "type": "store_entrance",
+      "label": "鮨谷入口",
+      "store_id": "map_25e0a129d0"
+    },
+    {
+      "id": "f2_map_185ba3ba4c",
+      "floor": 2,
+      "x": 720.0,
+      "y": 390.0,
+      "type": "store_entrance",
+      "label": "格瑞特运动馆入口",
+      "store_id": "map_185ba3ba4c"
+    },
+    {
+      "id": "f2_map_4c44400a85",
+      "floor": 2,
+      "x": 720.0,
+      "y": 390.0,
+      "type": "store_entrance",
+      "label": "酷锐视觉入口",
+      "store_id": "map_4c44400a85"
+    },
+    {
+      "id": "f2_map_661fa38347",
+      "floor": 2,
+      "x": 880.0,
+      "y": 390.0,
+      "type": "store_entrance",
+      "label": "星巴克入口",
+      "store_id": "map_661fa38347"
+    },
+    {
+      "id": "f2_map_e0a2dc2ddf",
+      "floor": 2,
+      "x": 120.0,
+      "y": 495.0,
+      "type": "store_entrance",
+      "label": "不二烫捞入口",
+      "store_id": "map_e0a2dc2ddf"
+    },
+    {
+      "id": "f2_map_9f4821f35a",
+      "floor": 2,
+      "x": 245.0,
+      "y": 520.0,
+      "type": "store_entrance",
+      "label": "小米之家入口",
+      "store_id": "map_9f4821f35a"
+    },
+    {
+      "id": "f2_map_06705733e0",
+      "floor": 2,
+      "x": 350.0,
+      "y": 520.0,
+      "type": "store_entrance",
+      "label": "八点醒入口",
+      "store_id": "map_06705733e0"
+    },
+    {
+      "id": "f2_map_b9fc3b3e2d",
+      "floor": 2,
+      "x": 455.0,
+      "y": 520.0,
+      "type": "store_entrance",
+      "label": "消防兼安保入口",
+      "store_id": "map_b9fc3b3e2d"
+    },
+    {
+      "id": "f2_map_ba44652c4a",
+      "floor": 2,
+      "x": 560.0,
+      "y": 520.0,
+      "type": "store_entrance",
+      "label": "福气糖入口",
+      "store_id": "map_ba44652c4a"
+    },
+    {
+      "id": "f2_map_c38062bc29",
+      "floor": 2,
+      "x": 665.0,
+      "y": 520.0,
+      "type": "store_entrance",
+      "label": "撒露入口",
+      "store_id": "map_c38062bc29"
+    },
+    {
+      "id": "f2_map_1f40345431",
+      "floor": 2,
+      "x": 770.0,
+      "y": 520.0,
+      "type": "store_entrance",
+      "label": "开心丽果入口",
+      "store_id": "map_1f40345431"
+    },
+    {
+      "id": "f2_map_eeba8a586d",
+      "floor": 2,
+      "x": 880.0,
+      "y": 495.0,
+      "type": "store_entrance",
+      "label": "翠华入口",
+      "store_id": "map_eeba8a586d"
+    },
+    {
+      "id": "f2_map_cb765334ba",
+      "floor": 2,
+      "x": 140.0,
+      "y": 520.0,
+      "type": "store_entrance",
+      "label": "立方铁入口",
+      "store_id": "map_cb765334ba"
+    },
+    {
+      "id": "f2_map_d39c5f9999",
+      "floor": 2,
+      "x": 245.0,
+      "y": 520.0,
+      "type": "store_entrance",
+      "label": "欧凯萨入口",
+      "store_id": "map_d39c5f9999"
+    },
+    {
+      "id": "f2_map_399cad11a2",
+      "floor": 2,
+      "x": 350.0,
+      "y": 520.0,
+      "type": "store_entrance",
+      "label": "大众书局入口",
+      "store_id": "map_399cad11a2"
+    },
+    {
+      "id": "f2_map_16a1a17625",
+      "floor": 2,
+      "x": 455.0,
+      "y": 520.0,
+      "type": "store_entrance",
+      "label": "阅江轩入口",
+      "store_id": "map_16a1a17625"
+    },
+    {
+      "id": "f2_map_1a51e82ffe",
+      "floor": 2,
+      "x": 560.0,
+      "y": 520.0,
+      "type": "store_entrance",
+      "label": "鱼螺满筐入口",
+      "store_id": "map_1a51e82ffe"
+    },
+    {
+      "id": "f2_map_8654786861",
+      "floor": 2,
+      "x": 665.0,
+      "y": 520.0,
+      "type": "store_entrance",
+      "label": "金伯利入口",
+      "store_id": "map_8654786861"
+    },
+    {
+      "id": "f2_map_7eefd00fa9",
+      "floor": 2,
+      "x": 770.0,
+      "y": 520.0,
+      "type": "store_entrance",
+      "label": "满记甜品入口",
+      "store_id": "map_7eefd00fa9"
+    },
+    {
+      "id": "f2_map_530c942f8b",
+      "floor": 2,
+      "x": 455.0,
+      "y": 320.0,
+      "type": "store_entrance",
+      "label": "川食公馆入口",
+      "store_id": "map_530c942f8b"
+    },
+    {
+      "id": "f2_map_198018c6cf",
+      "floor": 2,
+      "x": 560.0,
+      "y": 320.0,
+      "type": "store_entrance",
+      "label": "秦香阁餐厅入口",
+      "store_id": "map_198018c6cf"
+    },
+    {
+      "id": "f2_map_f10af70f0b",
+      "floor": 2,
+      "x": 665.0,
+      "y": 320.0,
+      "type": "store_entrance",
+      "label": "米芝莲入口",
+      "store_id": "map_f10af70f0b"
+    },
+    {
+      "id": "f2_map_57bb213731",
+      "floor": 2,
+      "x": 770.0,
+      "y": 320.0,
+      "type": "store_entrance",
+      "label": "有线电视入口",
+      "store_id": "map_57bb213731"
     },
     {
       "id": "f1_escalator",
@@ -553,6 +976,236 @@
       0.0
     ],
     [
+      "f1_map_26ac620bb7",
+      "f1_c0",
+      20.0
+    ],
+    [
+      "f1_map_26ac620bb7",
+      "f1_c1",
+      180.0
+    ],
+    [
+      "f1_map_6090f50459",
+      "f1_c0",
+      125.0
+    ],
+    [
+      "f1_map_6090f50459",
+      "f1_c1",
+      75.0
+    ],
+    [
+      "f1_map_bf16a8dc62",
+      "f1_c1",
+      135.0
+    ],
+    [
+      "f1_map_bf16a8dc62",
+      "f1_c2",
+      65.0
+    ],
+    [
+      "f1_map_f3c427b32c",
+      "f1_c2",
+      40.0
+    ],
+    [
+      "f1_map_f3c427b32c",
+      "f1_c3",
+      160.0
+    ],
+    [
+      "f1_map_49f63ea7e6",
+      "f1_c2",
+      145.0
+    ],
+    [
+      "f1_map_49f63ea7e6",
+      "f1_c3",
+      55.0
+    ],
+    [
+      "f1_map_c9a9be7e57",
+      "f1_c3",
+      50.0
+    ],
+    [
+      "f1_map_c9a9be7e57",
+      "f1_c4",
+      110.0
+    ],
+    [
+      "f1_map_b50c92b2ea",
+      "f1_c3",
+      155.0
+    ],
+    [
+      "f1_map_b50c92b2ea",
+      "f1_c4",
+      5.0
+    ],
+    [
+      "f1_map_c43775e5f0",
+      "f1_c0",
+      20.0
+    ],
+    [
+      "f1_map_c43775e5f0",
+      "f1_c1",
+      180.0
+    ],
+    [
+      "f1_map_497207c319",
+      "f1_c0",
+      125.0
+    ],
+    [
+      "f1_map_497207c319",
+      "f1_c1",
+      75.0
+    ],
+    [
+      "f1_map_f036628c2e",
+      "f1_c1",
+      30.0
+    ],
+    [
+      "f1_map_f036628c2e",
+      "f1_c2",
+      170.0
+    ],
+    [
+      "f1_map_c39336b475",
+      "f1_c1",
+      135.0
+    ],
+    [
+      "f1_map_c39336b475",
+      "f1_c2",
+      65.0
+    ],
+    [
+      "f1_map_bfa08b95ee",
+      "f1_c2",
+      40.0
+    ],
+    [
+      "f1_map_bfa08b95ee",
+      "f1_c3",
+      160.0
+    ],
+    [
+      "f1_map_01e529ac41",
+      "f1_c2",
+      145.0
+    ],
+    [
+      "f1_map_01e529ac41",
+      "f1_c3",
+      55.0
+    ],
+    [
+      "f1_map_578482464a",
+      "f1_c3",
+      50.0
+    ],
+    [
+      "f1_map_578482464a",
+      "f1_c4",
+      110.0
+    ],
+    [
+      "f1_map_21cca561b9",
+      "f1_c3",
+      155.0
+    ],
+    [
+      "f1_map_21cca561b9",
+      "f1_c4",
+      5.0
+    ],
+    [
+      "f1_map_101bed149d",
+      "f1_c0",
+      70.0
+    ],
+    [
+      "f1_map_101bed149d",
+      "f1_c5",
+      130.0
+    ],
+    [
+      "f1_map_2d1c13b09e",
+      "f1_c0",
+      125.0
+    ],
+    [
+      "f1_map_2d1c13b09e",
+      "f1_c1",
+      75.0
+    ],
+    [
+      "f1_map_a081aac711",
+      "f1_c1",
+      70.0
+    ],
+    [
+      "f1_map_a081aac711",
+      "f1_c6",
+      130.0
+    ],
+    [
+      "f1_map_3adfc94e9b",
+      "f1_c2",
+      70.0
+    ],
+    [
+      "f1_map_3adfc94e9b",
+      "f1_c7",
+      130.0
+    ],
+    [
+      "f1_map_d9db330639",
+      "f1_c8",
+      155.0
+    ],
+    [
+      "f1_map_d9db330639",
+      "f1_c9",
+      5.0
+    ],
+    [
+      "f1_map_e2422e8e96",
+      "f1_c0",
+      20.0
+    ],
+    [
+      "f1_map_e2422e8e96",
+      "f1_c1",
+      180.0
+    ],
+    [
+      "f1_map_8176d1272d",
+      "f1_c0",
+      125.0
+    ],
+    [
+      "f1_map_8176d1272d",
+      "f1_c1",
+      75.0
+    ],
+    [
+      "f1_map_ed9455f88a",
+      "f1_c1",
+      30.0
+    ],
+    [
+      "f1_map_ed9455f88a",
+      "f1_c2",
+      170.0
+    ],
+    [
       "f2_c0",
       "f2_c1",
       200.0
@@ -726,6 +1379,246 @@
       "f2_s22",
       "f2_c7",
       180.0
+    ],
+    [
+      "f2_map_50db46249f",
+      "f2_c1",
+      30.0
+    ],
+    [
+      "f2_map_50db46249f",
+      "f2_c2",
+      170.0
+    ],
+    [
+      "f2_map_25e0a129d0",
+      "f2_c2",
+      70.0
+    ],
+    [
+      "f2_map_25e0a129d0",
+      "f2_c7",
+      130.0
+    ],
+    [
+      "f2_map_185ba3ba4c",
+      "f2_c3",
+      70.0
+    ],
+    [
+      "f2_map_185ba3ba4c",
+      "f2_c8",
+      130.0
+    ],
+    [
+      "f2_map_4c44400a85",
+      "f2_c3",
+      70.0
+    ],
+    [
+      "f2_map_4c44400a85",
+      "f2_c8",
+      130.0
+    ],
+    [
+      "f2_map_661fa38347",
+      "f2_c4",
+      70.0
+    ],
+    [
+      "f2_map_661fa38347",
+      "f2_c9",
+      130.0
+    ],
+    [
+      "f2_map_e0a2dc2ddf",
+      "f2_c0",
+      175.0
+    ],
+    [
+      "f2_map_e0a2dc2ddf",
+      "f2_c5",
+      25.0
+    ],
+    [
+      "f2_map_9f4821f35a",
+      "f2_c5",
+      125.0
+    ],
+    [
+      "f2_map_9f4821f35a",
+      "f2_c6",
+      75.0
+    ],
+    [
+      "f2_map_06705733e0",
+      "f2_c6",
+      30.0
+    ],
+    [
+      "f2_map_06705733e0",
+      "f2_c7",
+      170.0
+    ],
+    [
+      "f2_map_b9fc3b3e2d",
+      "f2_c6",
+      135.0
+    ],
+    [
+      "f2_map_b9fc3b3e2d",
+      "f2_c7",
+      65.0
+    ],
+    [
+      "f2_map_ba44652c4a",
+      "f2_c7",
+      40.0
+    ],
+    [
+      "f2_map_ba44652c4a",
+      "f2_c8",
+      160.0
+    ],
+    [
+      "f2_map_c38062bc29",
+      "f2_c7",
+      145.0
+    ],
+    [
+      "f2_map_c38062bc29",
+      "f2_c8",
+      55.0
+    ],
+    [
+      "f2_map_1f40345431",
+      "f2_c8",
+      50.0
+    ],
+    [
+      "f2_map_1f40345431",
+      "f2_c9",
+      110.0
+    ],
+    [
+      "f2_map_eeba8a586d",
+      "f2_c4",
+      175.0
+    ],
+    [
+      "f2_map_eeba8a586d",
+      "f2_c9",
+      25.0
+    ],
+    [
+      "f2_map_cb765334ba",
+      "f2_c5",
+      20.0
+    ],
+    [
+      "f2_map_cb765334ba",
+      "f2_c6",
+      180.0
+    ],
+    [
+      "f2_map_d39c5f9999",
+      "f2_c5",
+      125.0
+    ],
+    [
+      "f2_map_d39c5f9999",
+      "f2_c6",
+      75.0
+    ],
+    [
+      "f2_map_399cad11a2",
+      "f2_c6",
+      30.0
+    ],
+    [
+      "f2_map_399cad11a2",
+      "f2_c7",
+      170.0
+    ],
+    [
+      "f2_map_16a1a17625",
+      "f2_c6",
+      135.0
+    ],
+    [
+      "f2_map_16a1a17625",
+      "f2_c7",
+      65.0
+    ],
+    [
+      "f2_map_1a51e82ffe",
+      "f2_c7",
+      40.0
+    ],
+    [
+      "f2_map_1a51e82ffe",
+      "f2_c8",
+      160.0
+    ],
+    [
+      "f2_map_8654786861",
+      "f2_c7",
+      145.0
+    ],
+    [
+      "f2_map_8654786861",
+      "f2_c8",
+      55.0
+    ],
+    [
+      "f2_map_7eefd00fa9",
+      "f2_c8",
+      50.0
+    ],
+    [
+      "f2_map_7eefd00fa9",
+      "f2_c9",
+      110.0
+    ],
+    [
+      "f2_map_530c942f8b",
+      "f2_c1",
+      135.0
+    ],
+    [
+      "f2_map_530c942f8b",
+      "f2_c2",
+      65.0
+    ],
+    [
+      "f2_map_198018c6cf",
+      "f2_c2",
+      40.0
+    ],
+    [
+      "f2_map_198018c6cf",
+      "f2_c3",
+      160.0
+    ],
+    [
+      "f2_map_f10af70f0b",
+      "f2_c2",
+      145.0
+    ],
+    [
+      "f2_map_f10af70f0b",
+      "f2_c3",
+      55.0
+    ],
+    [
+      "f2_map_57bb213731",
+      "f2_c3",
+      50.0
+    ],
+    [
+      "f2_map_57bb213731",
+      "f2_c4",
+      110.0
     ],
     [
       "f1_c7",

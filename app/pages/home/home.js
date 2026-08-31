@@ -1,13 +1,13 @@
 const { request } = require('../../utils/request');
 
 Page({
-  data: { stores: [], route: [], activeId: '', focusStore: null, showDetail: false, loading: true },
+  data: { stores: [], route: [], parking: { areas: [], total_free: 0, total: 0 }, activeId: '', focusStore: null, showDetail: false, loading: true },
   async onShow() {
     try {
       const app = getApp(); await app.ensureSession();
-      const scene = await request('/api/maps/mall_demo/scene');
+      const [scene,parking] = await Promise.all([request('/api/maps/mall_demo/scene'),request(`/api/parking?session_id=${app.globalData.sessionId}`)]);
       const stores = (scene.stores || []).map(s => ({ ...s, pos_x: s.pos_x / 10, pos_y: s.pos_y / 7.6, waiting: s.queue_minutes || 0 }));
-      this.setData({ stores, loading: false });
+      this.setData({ stores, parking: {...parking,total:(parking.areas||[]).reduce((sum,a)=>sum+a.total,0)}, loading: false });
     } catch (e) { this.setData({ loading: false }); wx.showToast({ title: e.message || '店铺加载失败', icon: 'none' }); }
   },
   async onStoreTap(e) {

@@ -49,11 +49,12 @@ def test_party_a_map_geometry_is_merged_with_backend_store_data():
     response=client.get("/api/maps/mall_demo/scene",headers=headers)
     assert response.status_code==200
     stores=response.json()["data"]["stores"]
-    assert len(stores)==22
-    assert all(s["map_source"]=="party_a_oakwood_plan" for s in stores)
+    # Party-A's current GitHub catalog contains 69 actual store-detail entries.
+    assert len(stores)==69
+    assert all(s["map_source"] in {"party_a_oakwood_plan","party_a_mall_ring"} for s in stores)
     target=next(s for s in stores if s["id"]=="s01")
     assert target["name"]=="蜀香小院" and target["map_slot"]=="shop102114"
-    assert target["map_x"]==-12.6 and target["queue_minutes"]==12
+    assert target["map_x"]==-12.6 and target["queue_minutes"]==23
     assert target["store_code"]=="QD-S01-DEMO"
 
 def test_store_code_resolves_to_the_same_customer_store_and_llm_answer():

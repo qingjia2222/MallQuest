@@ -2,17 +2,15 @@
 import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '../api';
-import ParkingGauge from '../components/ParkingGauge.vue';
 import Floors3D from '../components/Floors3D.vue';
 import ItineraryCard from '../components/ItineraryCard.vue';
-import { planStore, setNavigateTarget } from '../store/plan';
+import { planStore, setCurrentPlan, setNavigateTarget } from '../store/plan';
 import { renderMd } from '../utils/md';
 import oakPlan from '../store/oakwood_plan.json';
-import storeInfo from '../store/store_info.json';
 
 const router = useRouter();
 const floorsRef = ref(null);
-const parking = reactive({ free: 0, total: 0, areas: [] });
+const availableStores = ref([]);
 const focus = reactive({ show: false, store: null, aiReply: '', asking: false });
 const live = ref([]);              // 方案中各店实时状态 + 预定情况
 let liveTimer = null;
@@ -63,10 +61,7 @@ const displayRoute = computed(() => planStore.navigateTarget ? (navRoute.value |
 
 async function load() {
   try {
-    const p = await api.parking();
-    parking.free = p.total_free || 0;
-    parking.total = (p.areas || []).reduce((a, x) => a + (x.total || 0), 0);
-    parking.areas = p.areas || [];
+    availableStores.value = await api.stores() || [];
   } catch (e) {}
 }
 
@@ -89,7 +84,7 @@ onMounted(() => {
 onBeforeUnmount(stopLive);
 watch(() => planStore.current, (v) => { if (v && v.itinerary && v.itinerary.length) startLive(); else { live.value = []; stopLive(); } });
 
-function onSelect(store) { focus.store = store; focus.aiReply = ''; focus.show = true; }
+function onSelect(store) { focus.store = availableStores.value.find((item) => item.id === store.id || item.name === store.name) || store; focus.aiReply = ''; focus.show = true; }
 async function askAI() {
   const s = focus.store;
   if (!s || focus.asking) return;
@@ -128,9 +123,16 @@ function goChat() { router.push('/chat'); }
 // —— 手动编辑推荐方案（规划页内直接调整顺序/删除/添加店铺）——
 const editMode = ref(false);
 const addSel = ref('');
-const editOptions = computed(() => Object.keys(storeInfo).filter((n) => storeInfo[n].open_status === 'open'));
+const editOptions = computed(() => availableStores.value.filter((store) => store.open_status === 'open'));
 function startEdit() { editMode.value = true; }
-function finishEdit() { editMode.value = false; }
+async function finishEdit() {
+  if (!planStore.current || !planStore.current.plan_id) { editMode.value = false; return; }
+  try {
+    const itinerary = planStore.current.itinerary.map((s) => ({ id: s.id, time_label: s.time_label || '' }));
+    setCurrentPlan(await api.updatePlan(planStore.current.plan_id, { itinerary }));
+    editMode.value = false; await loadLive(); replayRoute();
+  } catch (e) { focus.aiReply = '方案保存失败：' + (e.message || ''); }
+}
 function removeStop(i) { if (planStore.current) planStore.current.itinerary.splice(i, 1); }
 function moveStop(i, d) {
   const arr = planStore.current ? planStore.current.itinerary : null;
@@ -139,9 +141,9 @@ function moveStop(i, d) {
   if (j >= 0 && j < arr.length) { const t = arr[i]; arr[i] = arr[j]; arr[j] = t; }
 }
 function addStopSel() {
-  const n = addSel.value; addSel.value = ''; if (!n) return;
-  const info = storeInfo[n]; if (!info) return;
-  planStore.current.itinerary.push({ name: n, floor: info.floor || 1, category: info.category || '零售', queue_minutes: info.queue_minutes || 0, seats_available: info.seats_available || 0, id: n, time_label: '' });
+  const id = addSel.value; addSel.value = ''; if (!id) return;
+  const store = availableStores.value.find((item) => item.id === id); if (!store) return;
+  planStore.current.itinerary.push({ ...store, time_label: '' });
 }
 // 换一版：把当前方案引用发到对话，让 agent 换一版
 function goRevise() {
@@ -168,15 +170,19 @@ async function goNavigate() {
 }
 function formatArea(a) { return `${a.area} ${a.free}/${a.total}`; }
 function onFloorsChanged(f) {}
+function replayRoute() {
+  if (floorsRef.value && floorsRef.value.focusFloor) floorsRef.value.focusFloor('all');
+  if (floorsRef.value && floorsRef.value.drawRoute) floorsRef.value.drawRoute(route3d.value);
+}
 
 function toStops(it) {
   const people = (planStore.current && planStore.current.slots && planStore.current.slots.people) || 2;
   return (it || []).map((s, i) => {
-    const info = storeInfo[s.name] || {};
+    const info = availableStores.value.find((item) => item.id === s.id || item.name === s.name) || {};
     return { time: s.time_label || `${i + 1}`, name: s.name || '', floor: s.floor ?? '', category: s.category || '', waiting: s.waiting_time ?? (s.queue_minutes ?? null), desc: info.desc || s.desc || '', recommend: info.recommend || [], now_showing: info.now_showing || [], people };
   });
 }
-function storeReco(name) { const info = storeInfo[name] || {}; return (info.recommend || []).join('、'); }
+function storeReco(name) { const info = availableStores.value.find((item) => item.name === name) || {}; return (info.recommend || []).join('、'); }
 function actionLabel(a) {
   if (!a) return '';
   if (a.label) return a.label;
@@ -221,6 +227,7 @@ function actionLabel(a) {
         <div v-for="(s, idx) in planStore.current.itinerary" :key="idx" class="pe-row">
           <span class="pe-idx">{{ idx + 1 }}</span>
           <span class="pe-name">{{ s.name }}</span>
+          <input v-model="s.time_label" class="pe-time" type="time" aria-label="到店时间" />
           <span class="pe-ops">
             <button class="pe-btn" @click="moveStop(idx, -1)">↑</button>
             <button class="pe-btn" @click="moveStop(idx, 1)">↓</button>
@@ -228,7 +235,7 @@ function actionLabel(a) {
           </span>
         </div>
         <div class="pe-add">
-          <select v-model="addSel" class="pe-select"><option value="">＋ 添加店铺</option><option v-for="n in editOptions" :key="n" :value="n">{{ n }}</option></select>
+          <select v-model="addSel" class="pe-select"><option value="">＋ 添加店铺</option><option v-for="s in editOptions" :key="s.id" :value="s.id">{{ s.name }} · {{ s.floor }}F</option></select>
           <button class="pe-btn add" @click="addStopSel">添加</button>
         </div>
         <button class="ic-btn primary pe-done" @click="finishEdit">完成编辑</button>
@@ -267,17 +274,6 @@ function actionLabel(a) {
 
     <div id="plan-map">
       <Floors3D ref="floorsRef" :route="route3d" :navigate="planStore.navigateTarget ? { name: planStore.navigateTarget.name, floor: planStore.navigateTarget.floor } : null" @select="onSelect" @floorschanged="onFloorsChanged" />
-    </div>
-
-    <!-- 停车位 -->
-    <div class="card parking-card">
-      <ParkingGauge :free="parking.free" :total="parking.total" />
-      <div class="parking-info">
-        <div class="p-title">🚗 实时停车位</div>
-        <div class="p-areas">
-          <span v-for="a in parking.areas" :key="a.area" class="p-area">{{ formatArea(a) }}</span>
-        </div>
-      </div>
     </div>
 
     <!-- 店铺详情弹层 -->
@@ -363,6 +359,7 @@ function actionLabel(a) {
 .pe-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: #f8fafc; margin-bottom: 6px; }
 .pe-idx { width: 20px; height: 20px; border-radius: 50%; background: #ede9fe; color: #7C3AED; font-size: 12px; font-weight: 700; text-align: center; flex-shrink: 0; }
 .pe-name { flex: 1; font-size: 14px; font-weight: 600; }
+.pe-time { width: 92px; border: 1px solid var(--border); border-radius: 8px; padding: 5px 7px; color: var(--text); background: #fff; }
 .pe-ops { display: flex; gap: 5px; }
 .pe-btn { width: 26px; height: 26px; border-radius: 8px; border: none; background: #fff; color: #7C3AED; font-size: 14px; cursor: pointer; }
 .pe-btn.del { color: #dc2626; }

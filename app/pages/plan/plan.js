@@ -32,12 +32,19 @@ Page({
   },
   present(plan, step) {
     const time = (plan.slots && plan.slots.time) || '19:00';
-    const stops = (plan.itinerary || []).map((s, index) => ({ ...s, time: index ? `第 ${index + 1} 站` : time, waiting: s.queue_minutes || 0 }));
+    const stops = (plan.itinerary || []).map((s, index) => ({ ...s, time: s.time_label || (index ? `第 ${index + 1} 站` : time), time_label: s.time_label || '', waiting: s.queue_minutes || 0 }));
     const labels = { reserve_restaurant: '餐厅预约', reserve_business_space: '商务空间预约', claim_coupon: '优惠券领取', buy_ticket: '电影票购买' };
     const actions = (plan.action_results || []).map(a => ({ label: `${labels[a.tool] || a.tool}：${a.status}`, ok: a.status === 'success' || a.status === 'already_claimed' }));
     this.setData({ plan, step, itinerary: { tag: plan.state === 'DONE' ? '已执行' : '等待确认', stops, actions } });
   },
   onChangePlan() { this.generatePlan(this.data.form); },
+  editStopTime(e) { this.setData({ [`plan.itinerary[${e.currentTarget.dataset.index}].time_label`]: e.detail.value }); },
+  moveStop(e) { const index=Number(e.currentTarget.dataset.index),delta=Number(e.currentTarget.dataset.delta),next=index+delta,list=[...(this.data.plan.itinerary||[])]; if(next<0||next>=list.length)return; const tmp=list[index];list[index]=list[next];list[next]=tmp;this.setData({'plan.itinerary':list}); },
+  async savePlan() {
+    if (!this.data.plan || !this.data.plan.plan_id) return;
+    try { const plan=await request(`/api/plan/${this.data.plan.plan_id}`,{method:'PATCH',data:{itinerary:this.data.plan.itinerary.map(s=>({id:s.id,time_label:s.time_label||''}))}}); getApp().globalData.currentPlan=plan; getApp().setPlanState({current:plan}); this.present(plan,4); wx.showToast({title:'时间已同步'}); }
+    catch(e){wx.showToast({title:e.message,icon:'none'})}
+  },
   async onConfirm() {
     if (!this.data.plan || this.data.plan.state !== 'CONFIRM') return;
     this.setData({ executing: true });

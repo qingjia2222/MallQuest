@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS stores(id TEXT PRIMARY KEY, mall_id TEXT NOT NULL REF
 CREATE TABLE IF NOT EXISTS parking(id TEXT PRIMARY KEY, mall_id TEXT NOT NULL, area TEXT NOT NULL, total INTEGER NOT NULL, free INTEGER NOT NULL, updated_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS members(user_id TEXT NOT NULL, mall_id TEXT NOT NULL, points INTEGER NOT NULL, level TEXT NOT NULL, expires_on TEXT NOT NULL, PRIMARY KEY(user_id,mall_id));
 CREATE TABLE IF NOT EXISTS deals(id TEXT PRIMARY KEY, mall_id TEXT NOT NULL, store_id TEXT, title TEXT NOT NULL, price REAL NOT NULL, stock INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS deal_purchases(id TEXT PRIMARY KEY, deal_id TEXT NOT NULL, user_id TEXT NOT NULL, mall_id TEXT NOT NULL, quantity INTEGER NOT NULL, unit_price REAL NOT NULL, status TEXT NOT NULL, purchased_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS coupons(id TEXT PRIMARY KEY, mall_id TEXT NOT NULL, store_id TEXT, title TEXT NOT NULL, stock INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS user_coupons(id TEXT PRIMARY KEY, coupon_id TEXT NOT NULL, user_id TEXT NOT NULL, mall_id TEXT NOT NULL, claimed_at TEXT NOT NULL, UNIQUE(coupon_id,user_id,mall_id));
 CREATE TABLE IF NOT EXISTS reservations(id TEXT PRIMARY KEY, user_id TEXT NOT NULL, mall_id TEXT NOT NULL, store_id TEXT NOT NULL, kind TEXT NOT NULL, reserved_for TEXT NOT NULL, people INTEGER NOT NULL, notes TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL);
@@ -40,6 +41,8 @@ CREATE TABLE IF NOT EXISTS user_tickets(id TEXT PRIMARY KEY, product_id TEXT NOT
 CREATE TABLE IF NOT EXISTS store_status(store_id TEXT PRIMARY KEY, mall_id TEXT NOT NULL, open_status TEXT NOT NULL, queue_minutes INTEGER NOT NULL, seats_available INTEGER NOT NULL, ticket_stock INTEGER NOT NULL, updated_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS sessions(id TEXT PRIMARY KEY, user_id TEXT NOT NULL, mall_id TEXT NOT NULL, intent TEXT, slots_json TEXT NOT NULL, plan_id TEXT, plan_state TEXT NOT NULL, context_json TEXT NOT NULL, updated_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS plans(id TEXT PRIMARY KEY, session_id TEXT NOT NULL, user_id TEXT NOT NULL, mall_id TEXT NOT NULL, scene TEXT NOT NULL, slots_json TEXT NOT NULL, state TEXT NOT NULL, itinerary_json TEXT NOT NULL, route_json TEXT NOT NULL, action_results_json TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS plan_snapshots(id TEXT PRIMARY KEY, plan_id TEXT NOT NULL, revision INTEGER NOT NULL, snapshot_json TEXT NOT NULL, created_at TEXT NOT NULL, UNIQUE(plan_id,revision));
+CREATE TABLE IF NOT EXISTS store_details(store_id TEXT PRIMARY KEY REFERENCES stores(id), details_json TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS store_profiles(store_id TEXT PRIMARY KEY REFERENCES stores(id), store_code TEXT NOT NULL UNIQUE, manager_name TEXT NOT NULL, employees_json TEXT NOT NULL, business_hours TEXT NOT NULL, service_tags TEXT NOT NULL, contact TEXT NOT NULL, updated_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS merchant_store_access(user_id TEXT NOT NULL REFERENCES users(id), mall_id TEXT NOT NULL, store_id TEXT NOT NULL REFERENCES stores(id), PRIMARY KEY(user_id,store_id));
 CREATE TABLE IF NOT EXISTS manager_access(user_id TEXT NOT NULL REFERENCES users(id), mall_id TEXT NOT NULL, PRIMARY KEY(user_id,mall_id));
@@ -59,6 +62,64 @@ CREATE TABLE IF NOT EXISTS store_map_bindings(
   source TEXT NOT NULL
 );
 """
+
+def _ensure_columns(db) -> None:
+    """Small in-place migrations keep an existing demo database usable after updates."""
+    columns={row["name"] for row in db.execute("PRAGMA table_info(reservations)").fetchall()}
+    if "scheduled_at" not in columns:
+        db.execute("ALTER TABLE reservations ADD COLUMN scheduled_at TEXT")
+    if "duration_minutes" not in columns:
+        db.execute("ALTER TABLE reservations ADD COLUMN duration_minutes INTEGER NOT NULL DEFAULT 60")
+
+def _party_a_assets():
+    root=Path(__file__).resolve().parents[2]/"web"/"src"/"store"
+    info_path=root/"store_info.json"; ring_path=root/"mall_ring.json"
+    if not info_path.exists(): return {}, {"stores":[],"corners":{}}
+    return json.loads(info_path.read_text(encoding="utf-8")), json.loads(ring_path.read_text(encoding="utf-8"))
+
+def _stable_catalog_id(name: str) -> str:
+    return "map_"+hashlib.sha1(name.encode("utf-8")).hexdigest()[:10]
+
+def seed_party_a_catalog(db) -> None:
+    """Import Party-A's actual 69-store catalog into SQLite.
+
+    The JSON files remain frozen 3D/render seed assets. All application reads and
+    writes after initialization use SQLite and stable store ids.
+    """
+    info,ring=_party_a_assets()
+    if not info: return
+    aliases={"QD星幕影院":"星河里星幕影院","QD服务台":"星河里服务台"}
+    existing={row["name"]:row["id"] for row in db.execute("SELECT id,name FROM stores WHERE mall_id='mall_demo'")}
+    for old,new in aliases.items():
+        if new in existing: existing[old]=existing[new]
+    ring_slots={}
+    for item in ring.get("stores",[]):
+        ring_slots.setdefault(item["name"],item)
+    for floor,names in ring.get("corners",{}).items():
+        for index,name in enumerate(names):
+            ring_slots.setdefault(name,{"name":name,"floor":int(str(floor).replace("F","")),"side":4,"sid":index,"per":4})
+    for index,(asset_name,details) in enumerate(info.items()):
+        db_name=aliases.get(asset_name,asset_name); store_id=existing.get(asset_name) or existing.get(db_name) or _stable_catalog_id(asset_name)
+        floor=int(details.get("floor") or 1); queue=int(details.get("queue_minutes") or 0); seats=int(details.get("seats_available") or 0)
+        category=details.get("category") or "零售"; tags=",".join(details.get("tags") or [])
+        if store_id not in existing.values():
+            pos_x=140+(index%8)*105; pos_y=180+((index//8)%5)*105
+            reservable=int(category in {"餐饮","影院","商务空间","儿童乐园"})
+            avg_price=60 if category=="餐饮" else 45 if category=="饮品甜品" else 120
+            db.execute("INSERT OR IGNORE INTO stores VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",(store_id,"mall_demo",db_name,category,floor,pos_x,pos_y,f"f{floor}_{store_id}",avg_price,details.get("open_status") or "open",queue,reservable,seats,tags))
+            existing[db_name]=store_id
+        else:
+            db.execute("UPDATE stores SET category=?,floor=?,open_status=?,queue_minutes=?,seats_available=?,tags=? WHERE id=?",(category,floor,details.get("open_status") or "open",queue,seats,tags,store_id))
+        db.execute("INSERT OR REPLACE INTO store_details VALUES(?,?)",(store_id,json.dumps({**details,"asset_name":asset_name},ensure_ascii=False)))
+        db.execute("INSERT OR IGNORE INTO store_status VALUES(?,?,?,?,?,?,?)",(store_id,"mall_demo",details.get("open_status") or "open",queue,seats,0,now_iso()))
+        slot=ring_slots.get(asset_name)
+        if slot:
+            side=int(slot.get("side",0)); sid=int(slot.get("sid",0)); per=max(1,int(slot.get("per",5)))
+            # Stable adapter coordinates; Floors3D retains ownership of visual geometry.
+            angle=(side+(sid+0.5)/per)*1.57079632679
+            x=round(14.5*__import__("math").cos(angle),2); z=round(9.2*__import__("math").sin(angle),2)
+            source_key=f"ring_f{floor}_s{side}_{sid}"
+            db.execute("INSERT OR REPLACE INTO store_map_bindings VALUES(?,?,?,?,?,?,?,?,?,?)",(store_id,"mall_demo",source_key,asset_name,floor,x,z,3.2,2.4,"party_a_mall_ring"))
 
 MAIN_STORES = [
  ("s01","蜀香小院","川菜",1,220,210,180,12,1,26,"约会,家宴,包间"),("s02","锦城宴府","川菜",2,250,180,260,8,1,36,"家宴,包间,高端"),
@@ -135,6 +196,7 @@ def reset_and_seed() -> None:
     if path.exists(): path.unlink()
     with connection() as db:
         db.executescript(SCHEMA)
+        _ensure_columns(db)
         db.executemany("INSERT INTO malls VALUES(?,?,?)",[("mall_demo","星河里",1),("mall_alt","邻里荟",1)])
         db.executemany("INSERT INTO users VALUES(?,?,?)",[("user_demo","演示会员",now_iso()),("user_alt","隔离测试会员",now_iso())])
         for username,user_id,password in [("demo","user_demo","demo123"),("alt","user_alt","alt123")]:
@@ -145,6 +207,7 @@ def reset_and_seed() -> None:
         alt=[("a01","邻里咖啡","咖啡",1,250,250,35,2,0,10,"休息"),("a02","邻里餐厅","家常菜",1,500,250,80,5,1,16,"家庭"),("a03","邻里服务台","服务台",1,150,500,0,0,0,0,"服务"),("a04","邻里亲子屋","儿童乐园",1,500,500,50,3,0,0,"亲子")]
         for sid,name,cat,floor,x,y,price,queue,reservable,seats,tags in alt:
             db.execute("INSERT INTO stores VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",(sid,"mall_alt",name,cat,floor,x,y,f"a_{sid}",price,"open",queue,reservable,seats,tags))
+        seed_party_a_catalog(db)
         db.executemany("INSERT INTO parking VALUES(?,?,?,?,?,?)",[("p1","mall_demo","B1-A",320,86,now_iso()),("p2","mall_demo","B1-B",280,42,now_iso()),("p3","mall_demo","B2-C",260,119,now_iso()),("pa","mall_alt","地面停车区",80,21,now_iso())])
         db.executemany("INSERT INTO members VALUES(?,?,?,?,?)",[("user_demo","mall_demo",2680,"金卡","2027-12-31"),("user_demo","mall_alt",120,"普卡","2027-06-30"),("user_alt","mall_demo",60,"普卡","2027-03-31")])
         deals=[("d1","s01","川菜双人餐",238,30),("d2","s09","双人电影套票",108,50),("d3","s10","儿童乐园下午票",88,40),("d4","s13","生日礼物满减",399,12),("d5","s16","商务会议两小时",680,8),("d6","s17","商务晚宴套餐",1288,10),("d7","s07","第二杯半价",18,80),("d8","s11","亲子套餐",198,25)]
@@ -154,13 +217,13 @@ def reset_and_seed() -> None:
         products=[("t_movie","s09","星河里星幕影院电影票",54,120),("t_child","s10","奇趣儿童乐园单次票",88,80)]
         db.executemany("INSERT INTO ticket_products VALUES(?,?,?,?,?,?)",[(i,"mall_demo",s,t,p,stock) for i,s,t,p,stock in products])
         rows=db.execute("SELECT id,mall_id,open_status,queue_minutes,seats_available FROM stores").fetchall()
-        db.executemany("INSERT INTO store_status VALUES(?,?,?,?,?,?,?)",[(r["id"],r["mall_id"],r["open_status"],r["queue_minutes"],r["seats_available"],120 if r["id"]=="s09" else 80 if r["id"]=="s10" else 0,now_iso()) for r in rows])
+        db.executemany("INSERT OR REPLACE INTO store_status VALUES(?,?,?,?,?,?,?)",[(r["id"],r["mall_id"],r["open_status"],r["queue_minutes"],r["seats_available"],120 if r["id"]=="s09" else 80 if r["id"]=="s10" else 0,now_iso()) for r in rows])
         seed_commercial(db)
 
 def ensure_database() -> None:
     with connection() as db:
-        db.executescript(SCHEMA); exists=db.execute("SELECT 1 FROM malls LIMIT 1").fetchone()
-        if exists: seed_commercial(db)
+        db.executescript(SCHEMA); _ensure_columns(db); exists=db.execute("SELECT 1 FROM malls LIMIT 1").fetchone()
+        if exists: seed_party_a_catalog(db); seed_commercial(db)
     if not exists: reset_and_seed()
 
 def rows_to_dicts(rows): return [dict(row) for row in rows]

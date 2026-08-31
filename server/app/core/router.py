@@ -82,6 +82,9 @@ def build_route(mall_id,store_ids,vertical_mode="elevator"):
     with connection() as db: rows=db.execute(f"SELECT id,route_node FROM stores WHERE mall_id=? AND id IN ({marks})",(mall_id,*store_ids)).fetchall()
     mapping={r["id"]:r["route_node"] for r in rows}
     if len(mapping)!=len(store_ids): raise HTTPException(status_code=400,detail="plan contains store outside current mall")
+    graph_nodes,_=_graph(mall_id)
+    if mall_id=="mall_demo" and any(node not in graph_nodes for node in mapping.values()):
+        write_demo_maps()
     all_nodes=[]; total=0; nodes={}
     for idx in range(len(store_ids)-1):
         path,dist,nodes=shortest_path(mall_id,mapping[store_ids[idx]],mapping[store_ids[idx+1]],vertical_mode); total+=dist; all_nodes.extend(path if idx==0 else path[1:])

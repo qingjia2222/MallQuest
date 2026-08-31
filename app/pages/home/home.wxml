@@ -3,6 +3,7 @@
   <view class="home-title">星河里 · 购物中心</view>
   <view class="home-sub">点击店铺查看实时状态 · 规划后在「规划」页看路线</view>
   <mini-map stores="{{stores}}" route="{{route}}" activeId="{{activeId}}" bind:storetap="onStoreTap" />
+  <view class="parking-card card"><parking-gauge free="{{parking.total_free}}" total="{{parking.total}}" /><view class="parking-info"><view class="p-title">实时停车位</view><view class="p-areas"><text wx:for="{{parking.areas}}" wx:key="area">{{item.area}} {{item.free}}/{{item.total}}</text></view></view></view>
   <view class="store-head"><text>店铺一览</text><text>{{stores.length}} 家</text></view>
   <view wx:if="{{loading}}" class="empty">加载中…</view>
   <view class="store-grid">

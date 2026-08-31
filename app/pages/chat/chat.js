@@ -27,7 +27,7 @@ Page({
   data: {
     messages: [], input: '', loading: false, scrollTop: 0,
     navigation: null, navVisible: false, navStores: [], navInstruction: '',
-    showConfirm: false, confirmStep: 1, pendingPlan: null, executing: false
+    showConfirm: false, confirmStep: 1, pendingPlan: null, movieOptions: [], chosenMovie: '', executing: false
   },
 
   onLoad() {
@@ -109,8 +109,10 @@ Page({
   openExecuteConfirm() {
     const plan = getApp().globalData.currentPlan;
     if (!plan || plan.state === 'DONE') { this.openPlanRoute(); return; }
-    this.setData({ showConfirm: true, confirmStep: 1, pendingPlan: plan });
+    const cinema=(plan.itinerary||[]).find(s=>s.now_showing&&s.now_showing.length), movies=cinema?cinema.now_showing:[];
+    this.setData({ showConfirm: true, confirmStep: 1, pendingPlan: plan, movieOptions:movies, chosenMovie:movies[0]||'' });
   },
+  chooseMovie(e){this.setData({chosenMovie:e.currentTarget.dataset.movie})},
   cancelExecute() { this.setData({ showConfirm: false, confirmStep: 1, pendingPlan: null }); },
   nextConfirm() { this.setData({ confirmStep: 2 }); },
   async runExecute(e) {
@@ -120,7 +122,8 @@ Page({
     if (!booking) { await this.openPlanRoute(); return; }
     this.setData({ executing: true, loading: true });
     try {
-      const done = decoratePlan(await request('/api/plan/confirm', { method: 'POST', data: { plan_id: plan.plan_id, decision: 'confirm' } }));
+      const modifications=this.data.chosenMovie?{selected_movie:this.data.chosenMovie}:{};
+      const done = decoratePlan(await request('/api/plan/confirm', { method: 'POST', data: { plan_id: plan.plan_id, decision: 'confirm', modifications } }));
       const app = getApp(); app.globalData.currentPlan = done; app.setPlanState({ current: done });
       const messages = this.data.messages.map(m => m.plan && m.plan.plan_id === done.plan_id ? { ...m, plan: done } : m);
       this.setData({ messages }); this.push('ai', '方案已确认并执行，预约、排号、领券或演示票务结果已更新。现在为你展示路线。');

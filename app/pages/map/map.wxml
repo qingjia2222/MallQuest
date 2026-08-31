@@ -11,19 +11,6 @@
   <mini-map stores="{{stores}}" route="{{route}}" routeNodes="{{routeNodes}}" activeId="{{activeId}}"
             bind:storetap="onStoreTap" />
 
-  <!-- 停车位概览 -->
-  <view class="parking-card card">
-    <parking-gauge free="{{parking.total_free}}" total="{{parking.total}}" />
-    <view class="parking-info">
-      <view class="p-title">🚗 实时停车位</view>
-      <view class="p-areas">
-        <view wx:for="{{parking.areas}}" wx:key="id" class="p-area">
-          <text>{{item.area}}</text><text class="p-free">{{item.free}} 空</text>
-        </view>
-      </view>
-    </view>
-  </view>
-
   <!-- 店铺详情弹层 -->
   <view wx:if="{{showDetail && focusStore}}" class="detail-mask" bindtap="closeDetail">
     <view class="detail" catchtap="noop">

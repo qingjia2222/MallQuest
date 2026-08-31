@@ -3,7 +3,7 @@ import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '../api';
 import Floors3D from '../components/Floors3D.vue';
-import storeInfo from '../store/store_info.json';
+import ParkingGauge from '../components/ParkingGauge.vue';
 import { planStore, setNavigateTarget } from '../store/plan';
 import { renderMd } from '../utils/md';
 
@@ -14,6 +14,7 @@ const focus = ref(null);        // 店铺详情浮层
 const floorsRef = ref(null);
 const asking = ref(false);
 const aiReply = ref('');
+const parking = ref({ total_free: 0, total: 0, areas: [] });
 
 onMounted(async () => {
   loading.value = true;
@@ -24,23 +25,8 @@ onMounted(async () => {
   } catch (e) {
     try { const scan = await api.freshScan(); qd = (await api.stores()) || []; } catch (e2) {}
   }
-  const qdByName = {};
-  qd.forEach(s => { if (s && s.name) qdByName[s.name] = s; });
-  const list = [];
-  Object.keys(storeInfo).forEach(name => {
-    const info = storeInfo[name] || {};
-    if (info.open_status === 'closed') return;              // 只展示营业商铺
-    const q = qdByName[name] || {};
-    list.push({
-      name, category: info.category || q.category || '零售',
-      hero: info.hero || '🏬', desc: info.desc,
-      recommend: info.recommend || [], now_showing: info.now_showing || [],
-      tags: info.tags || [], open_status: info.open_status || 'open',
-      queue_minutes: q.queue_minutes ?? info.queue_minutes ?? null, seats_available: q.seats_available ?? info.seats_available ?? null,
-      floor: q.floor ?? info.floor ?? '', id: name
-    });
-  });
-  stores.value = list;
+  stores.value = qd;
+  try { const p = await api.parking(); parking.value = { ...p, total: (p.areas || []).reduce((sum, area) => sum + area.total, 0) }; } catch (e) {}
   loading.value = false;
 });
 
@@ -54,7 +40,7 @@ const filteredStores = computed(() => {
 });
 function setFilter(k) { filterBy.value = k; activeCat.value = ''; }
 
-function open(store) { const info = storeInfo[store.name] || {}; focus.value = { ...store, ...info }; aiReply.value = ''; }
+function open(store) { const live=stores.value.find((item) => item.id === store.id || item.name === store.name) || {}; focus.value = { ...store, ...live }; aiReply.value = ''; }
 function close() { focus.value = null; aiReply.value = ''; }
 function getGeoloc() {
   return new Promise((resolve) => {
@@ -118,6 +104,11 @@ function statusText(s) { return s.open_status === 'open' ? '营业中' : '未营
     <!-- 页面中心：商场地图 -->
     <div class="home-map">
       <Floors3D ref="floorsRef" :route="null" :navigate="planStore.navigateTarget ? { name: planStore.navigateTarget.name, floor: planStore.navigateTarget.floor } : null" @select="open" />
+    </div>
+
+    <div class="card home-parking">
+      <ParkingGauge :free="parking.total_free" :total="parking.total" />
+      <div><div class="hp-title">实时停车位</div><div class="hp-areas"><span v-for="a in parking.areas" :key="a.area">{{ a.area }} {{ a.free }}/{{ a.total }}</span></div></div>
     </div>
 
     <!-- 下方：店铺详情列表 -->
@@ -209,6 +200,10 @@ function statusText(s) { return s.open_status === 'open' ? '营业中' : '未营
 .hh-title { font-size: 22px; font-weight: 800; }
 .hh-sub { font-size: 12px; color: #9CA3AF; margin-top: 4px; }
 .home-map { padding: 0 18px; }
+.home-parking { margin: 14px 18px 0; display: flex; align-items: center; gap: 18px; }
+.hp-title { font-weight: 800; margin-bottom: 8px; }
+.hp-areas { display: flex; flex-wrap: wrap; gap: 6px; color: #64748b; font-size: 12px; }
+.hp-areas span { background: #f8fafc; border-radius: 10px; padding: 4px 8px; }
 .nav-bar { display: flex; align-items: center; justify-content: space-between; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px; padding: 10px 14px; margin: 0 18px 12px; }
 .nb-text { font-size: 14px; color: #047857; }
 .nb-text b { font-weight: 700; }

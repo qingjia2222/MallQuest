@@ -6,12 +6,13 @@ import api, { setToken, setSession } from '../api';
 const router = useRouter();
 const member = ref({ points: 0, level: '普卡', expires_on: '' });
 const reservationCount = ref(0);
+const assets = ref({ coupons: 0, reservations: 0, tickets: 0, deal_purchases: 0 });
 const loading = ref(true);
 
 async function load() {
   loading.value = true;
   try { member.value = await api.memberPoints() || { points: 0 }; } catch (e) {}
-  try { const rs = await api.reservations(); reservationCount.value = Array.isArray(rs) ? rs.length : 0; } catch (e) {}
+  try { assets.value = await api.memberAssets(); reservationCount.value = assets.value.reservations || 0; } catch (e) {}
   loading.value = false;
 }
 
@@ -36,9 +37,9 @@ onMounted(load);
     </div>
 
     <div class="pf-assets">
-      <div class="pa" @click="goCoupon"><div class="pa-num">—</div><div class="pa-label">优惠券</div></div>
+      <div class="pa" @click="goCoupon"><div class="pa-num">{{ assets.coupons }}</div><div class="pa-label">优惠券</div></div>
       <div class="pa" @click="goReserve"><div class="pa-num">{{ reservationCount }}</div><div class="pa-label">预约</div></div>
-      <div class="pa"><div class="pa-num">0</div><div class="pa-label">待评价</div></div>
+      <div class="pa" @click="goCoupon"><div class="pa-num">{{ assets.deal_purchases + assets.tickets }}</div><div class="pa-label">订单 / 票券</div></div>
     </div>
 
     <button class="logout" @click="logout">退出游客 / 会员端</button>

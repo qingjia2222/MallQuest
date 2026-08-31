@@ -8,6 +8,6 @@
 .\run_demo.ps1
 ```
 
-随后打开 Web `http://127.0.0.1:5173`，或在微信开发者工具导入 `app/`。小程序游客使用微信登录，Web 游客联调用 `demo / demo123`；商户演示编码 `QD-S01-DEMO`；管理者演示账号 `manager / manager123`。真实凭证只放未提交的 `server/.env`，自动测试会强制使用 mock/scripted，不消耗线上额度。
+随后打开 Web `http://127.0.0.1:5173`，或在微信开发者工具导入 `app/`。游客/会员手机号联调用 `11111111111 / 123456`，Web 也保留 `demo / demo123`；商户演示编码 `QD-S01-DEMO`；管理者演示账号 `manager / manager123`。真实凭证只放未提交的 `server/.env`，自动测试会强制使用 scripted，不消耗线上额度。
 
-主要文档：`docs/api-contract.md`、`docs/demo-script.md`、`docs/test-report.md`、`docs/teacher-qa.md`、`server/README.md`。地图明确为两层 星河里 Demo 2.5D 仿真图；问路时会自动弹出红点路线动画，普通攻略问答不会触发。正式 3D 模型、室内定位与生产经营数据留作真实项目接入。
+主要文档：`docs/api-contract.md`、`docs/demo-script.md`、`docs/test-report.md`、`docs/teacher-qa.md`、`server/README.md`。当前以甲组最新 3D 场景和实际 69 家店铺目录为准，SQLite 是店铺状态、计划、预约、领券、抢购和票务的运行期唯一事实源。问路时会自动弹出走廊约束的红点路线动画，并可切换直梯或扶梯；普通攻略问答不会触发路线。

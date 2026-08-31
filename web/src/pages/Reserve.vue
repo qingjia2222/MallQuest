@@ -84,7 +84,7 @@ function nameOf(s) { return s.name || s.store_name || ''; }
       <div class="section-title">📋 我的预约（{{ reservationList.length }}）</div>
       <div class="card">
         <div v-if="!reservationList.length" class="empty">暂无预约记录</div>
-        <div v-for="r in reservationList" :key="r.id" class="rs-row"><span class="rs-k">{{ r.reserved_for }}</span><span class="rs-v">{{ r.status }}</span></div>
+        <div v-for="r in reservationList" :key="r.id" class="rs-row"><span class="rs-k">{{ r.reserved_for }} · {{ r.store_name || r.store_id }}</span><span class="rs-v">{{ r.status }}</span></div>
       </div>
     </div>
   </div>

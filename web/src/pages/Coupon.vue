@@ -5,16 +5,11 @@ import api from '../api';
 
 const deals = ref([]);
 const loading = ref(true);
-// 后端 /api/deals 返回特惠；优惠券展示模拟列表（真实领券走 /api/coupons/claim）
-const coupons = ref([
-  { id: 'c1', title: '蜀香小院满 200 减 30', scope: '蜀香小院', expire: '今日 24 点', color: '#7C3AED' },
-  { id: 'c2', title: '礼物研究所满 300 减 50', scope: '礼物研究所', expire: '本月内', color: '#06B6D4' },
-  { id: 'c6', title: '奶茶第二杯半价', scope: '茉语奶茶', expire: '本周内', color: '#F59E0B' }
-]);
+const coupons = ref([]);
 
 async function load() {
   loading.value = true;
-  try { deals.value = await api.deals() || []; } catch (e) {}
+  try { const data = await Promise.all([api.deals(), api.coupons()]); deals.value = data[0] || []; coupons.value = (data[1] || []).map((c, i) => ({ ...c, scope: c.store_name || '星河里', expire: '有效期以券面为准', color: ['#7C3AED','#06B6D4','#F59E0B'][i % 3] })); } catch (e) {}
   loading.value = false;
 }
 
@@ -26,7 +21,10 @@ async function claim(coupon) {
     alert('领取成功');
   } catch (e) { alert('领取失败：' + (e.message || '')); }
 }
-function buy(id) { alert('已下单 ' + id); }
+async function buy(deal) {
+  try { await api.purchaseDeal(deal.id); await load(); alert('抢购成功，已加入会员资产'); }
+  catch (e) { alert('抢购失败：' + (e.message || '')); }
+}
 function price(s) { return s.promo_price ?? s.price ?? s; }
 onMounted(load);
 </script>
@@ -42,7 +40,7 @@ onMounted(load);
         <div class="deal-tag">今日特惠</div>
         <div class="deal-price"><span class="dp-cur">¥{{ d.price }}</span><span class="dp-stock">剩 {{ d.stock }} 份</span></div>
       </div>
-      <button class="deal-buy" @click="buy(d.id)">抢</button>
+      <button class="deal-buy" :class="{ purchased: d.purchased_quantity > 0 }" @click="buy(d)">{{ d.purchased_quantity > 0 ? `已购${d.purchased_quantity}` : '抢' }}</button>
     </div>
     <p v-if="!loading && !deals.length" class="empty">暂无特惠</p>
 

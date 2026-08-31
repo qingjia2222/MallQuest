@@ -16,7 +16,7 @@
         <text class="dp-stock">剩 {{item.stock}} 份</text>
       </view>
     </view>
-    <view class="deal-buy" bindtap="buyDeal" data-id="{{item.id}}">抢</view>
+    <view class="deal-buy" bindtap="buyDeal" data-id="{{item.id}}">{{item.purchased_quantity ? '再抢' : '抢'}}</view>
   </view>
 
   <!-- 优惠券 -->

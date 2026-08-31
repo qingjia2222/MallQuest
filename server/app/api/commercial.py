@@ -43,20 +43,24 @@ def map_scene(mall_id:str,auth:AuthContext=Depends(require_auth)):
         stores=db.execute("""SELECT s.id,s.name,s.category,s.floor,s.pos_x,s.pos_y,
             ss.open_status,ss.queue_minutes,ss.seats_available,sp.store_code,sp.business_hours,sp.service_tags,
             mb.source_key AS map_slot,mb.source_label AS map_label,mb.map_x,mb.map_z,
-            mb.map_width,mb.map_depth,mb.source AS map_source
+            mb.map_width,mb.map_depth,mb.source AS map_source,sd.details_json
             FROM stores s
             LEFT JOIN store_status ss ON ss.store_id=s.id
             LEFT JOIN store_profiles sp ON sp.store_id=s.id
             LEFT JOIN store_map_bindings mb ON mb.store_id=s.id AND mb.mall_id=s.mall_id
+            LEFT JOIN store_details sd ON sd.store_id=s.id
             WHERE s.mall_id=? ORDER BY s.floor,s.id""",(mall_id,)).fetchall()
-    return envelope({"mall_id":mall_id,"mall_name":mall["name"],"map_mode":job["map_mode"] if job else "demo_2_5d","status":job["status"] if job else "published","stores":[{**dict(row),"shape":{"x":row["pos_x"]-55,"y":row["pos_y"]-30,"width":110,"height":60}} for row in stores]})
+    catalog=[]
+    for row in stores:
+        item=dict(row); details=json.loads(item.pop("details_json") or "{}"); item.update({key:value for key,value in details.items() if key not in item or item[key] in (None,"")}); item["tags"]=details.get("tags") or [tag for tag in str(item.get("service_tags") or "").split(",") if tag]; item["shape"]={"x":row["pos_x"]-55,"y":row["pos_y"]-30,"width":110,"height":60}; catalog.append(item)
+    return envelope({"mall_id":mall_id,"mall_name":mall["name"],"map_mode":job["map_mode"] if job else "demo_2_5d","status":job["status"] if job else "published","stores":catalog})
 
 @router.get("/stores/{store_id}/public-status")
 def public_store(store_id:str,mall_id:str=Query(...),auth:AuthContext=Depends(require_auth)):
     with connection() as db:
-        row=db.execute("SELECT s.id,s.name,s.category,s.floor,s.avg_price,ss.open_status,ss.queue_minutes,ss.seats_available,sp.store_code,sp.business_hours,sp.service_tags,d.title AS deal_title,d.price AS deal_price FROM stores s LEFT JOIN store_status ss ON ss.store_id=s.id LEFT JOIN store_profiles sp ON sp.store_id=s.id LEFT JOIN deals d ON d.store_id=s.id AND d.mall_id=s.mall_id AND d.stock>0 WHERE s.id=? AND s.mall_id=? ORDER BY d.price LIMIT 1",(store_id,mall_id)).fetchone()
+        row=db.execute("SELECT s.id,s.name,s.category,s.floor,s.avg_price,ss.open_status,ss.queue_minutes,ss.seats_available,sp.store_code,sp.business_hours,sp.service_tags,d.title AS deal_title,d.price AS deal_price,sd.details_json FROM stores s LEFT JOIN store_status ss ON ss.store_id=s.id LEFT JOIN store_profiles sp ON sp.store_id=s.id LEFT JOIN deals d ON d.store_id=s.id AND d.mall_id=s.mall_id AND d.stock>0 LEFT JOIN store_details sd ON sd.store_id=s.id WHERE s.id=? AND s.mall_id=? ORDER BY d.price LIMIT 1",(store_id,mall_id)).fetchone()
     if not row: raise HTTPException(status_code=404,detail="store not found")
-    return envelope(dict(row))
+    data=dict(row); details=json.loads(data.pop("details_json") or "{}"); data.update({key:value for key,value in details.items() if key not in data or data[key] in (None,"")}); return envelope(data)
 
 class StoreCodeBody(BaseModel): store_code:str
 

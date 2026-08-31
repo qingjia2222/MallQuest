@@ -11,6 +11,7 @@ from app.db import connection, rows_to_dicts
 router=APIRouter(prefix="/plan",tags=["plan"])
 class PlanBody(BaseModel): session_id:str; text:str=""; scene:str|None=None; slots:dict=Field(default_factory=dict)
 class ConfirmBody(BaseModel): plan_id:str; decision:str; modifications:dict=Field(default_factory=dict)
+class PlanPatchBody(BaseModel): itinerary:list[dict]|None=None; strategy:str|None=None; vertical_mode:str|None=None; selected_movie:str|None=None
 def session_for(user_id,session_id):
     with connection() as db: row=db.execute("SELECT * FROM sessions WHERE id=? AND user_id=?",(session_id,user_id)).fetchone()
     if not row: raise HTTPException(status_code=404,detail="session not found")
@@ -24,7 +25,11 @@ def route(plan_id:str=Query(...),auth:AuthContext=Depends(require_auth)): return
 @router.post("/confirm")
 def confirm(body:ConfirmBody,auth:AuthContext=Depends(require_auth)):
     if body.decision in ("modify","换一版","修改"): return envelope(revise_plan(auth.user_id,body.plan_id,body.modifications))
+    if body.modifications: revise_plan(auth.user_id,body.plan_id,body.modifications)
     return envelope(confirm_plan(auth.user_id,body.plan_id,body.decision))
+@router.patch("/{plan_id}")
+def patch_plan(plan_id:str,body:PlanPatchBody,auth:AuthContext=Depends(require_auth)):
+    return envelope(revise_plan(auth.user_id,plan_id,body.model_dump(exclude_none=True)))
 def _parse_time(text):
     """把「今晚19:00 / 明天下午3点」这类时间解析成 datetime，算不了就返回 None。"""
     if not text: return None

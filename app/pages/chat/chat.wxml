@@ -60,6 +60,7 @@
         <view class="cf-title">是否按照方案执行？</view>
         <view class="cf-sub">可以继续沟通调整，也可以确认后查看同一界面的 3D 路线。</view>
         <view class="cf-stops"><text wx:for="{{pendingPlan.itinerary}}" wx:key="id">{{item.name}}</text></view>
+        <view wx:if="{{movieOptions.length}}" class="cf-stops"><text>选择影院场次：</text><text wx:for="{{movieOptions}}" wx:key="*this" data-movie="{{item}}" bindtap="chooseMovie">{{chosenMovie === item ? '✓ ' : ''}}{{item}}</text></view>
         <view class="cf-actions"><button class="cf-ghost" bindtap="cancelExecute">继续沟通</button><button class="cf-primary" bindtap="nextConfirm">同意，继续</button></view>
       </block>
       <block wx:else>

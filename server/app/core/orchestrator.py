@@ -3,6 +3,7 @@ from pathlib import Path
 from app.config import settings
 from app.core.metrics import metrics
 from app.core.tools import run_tool, schemas
+from app.core.text import plain_text
 
 log=logging.getLogger("mall-assistant.orchestrator")
 PROMPTS=Path(__file__).resolve().parents[1]/"prompts"
@@ -20,14 +21,16 @@ def _online_enabled(): return settings.llm_mode=="online" and bool(settings.llm_
 
 def _run_tool_loop(system_prompt,user_message,context,available_kinds=("read",),max_iter=6,collect=None):
     client=_client()
-    messages=[{"role":"system","content":system_prompt},{"role":"user","content":user_message}]
+    history=[{"role":item["role"],"content":item["content"]} for item in (context.get("history") or [])[-12:] if item.get("role") in {"user","assistant"} and item.get("content")]
+    messages=[{"role":"system","content":system_prompt},*history,{"role":"user","content":user_message}]
     tools=_tools_for(available_kinds); observations=[]
     for _ in range(max_iter):
         completion=client.chat.completions.create(model=settings.llm_model,messages=messages,tools=tools,tool_choice="auto"); msg=completion.choices[0].message
         messages.append(msg.model_dump(exclude_none=True))
         if not msg.tool_calls:
             metrics.increment("llm_online_count")
-            result={"reply":msg.content or "已完成查询。","tool_calls":observations,"degraded":False,"mode":"online"}
+            reply=msg.content or "已完成查询。"
+            result={"reply":reply if collect else plain_text(reply),"tool_calls":observations,"degraded":False,"mode":"online"}
             return collect(result) if collect else result
         for call in msg.tool_calls:
             args=json.loads(call.function.arguments or "{}"); result=run_tool(call.function.name,context,args)
