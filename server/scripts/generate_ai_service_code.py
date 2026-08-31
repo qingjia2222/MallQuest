@@ -1,4 +1,4 @@
-"""Generate the QD square AI service Mini Program code without logging credentials."""
+"""Generate the 星河里 AI service Mini Program code without logging credentials."""
 from pathlib import Path
 import sys
 

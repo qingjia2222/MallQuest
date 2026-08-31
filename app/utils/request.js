@@ -2,7 +2,7 @@
 // 【接后端提醒】当前 demoMode=true 时，页面直接读 utils/mock 数据；
 // 关闭演示模式后，把这些调用切到真实接口即可，见下方 <to-fetch> 注释。
 
-const BASE_URL = 'http://127.0.0.1:8000'; // 队友后端(QD square)地址
+const BASE_URL = 'http://127.0.0.1:8000'; // 队友后端(星河里)地址
 
 /**
  * 发起请求并解包 {code, message, data}。

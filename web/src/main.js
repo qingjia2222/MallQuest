@@ -4,6 +4,7 @@ import App from './App.vue';
 import './theme.css';
 
 import Login from './pages/Login.vue';
+import Home from './pages/Home.vue';
 import Chat from './pages/Chat.vue';
 import Plan from './pages/Plan.vue';
 import Map from './pages/Map.vue';
@@ -12,10 +13,14 @@ import Profile from './pages/Profile.vue';
 import Reserve from './pages/Reserve.vue';
 import Merchant from './pages/Merchant.vue';
 import Manager from './pages/Manager.vue';
+import { restoreAuth } from './api';
+
+restoreAuth(); // 刷新后从 localStorage 恢复 token/session
 
 const routes = [
   { path: '/', redirect: '/login' },
   { path: '/login', component: Login },
+  { path: '/home', component: Home, meta: { auth: true, tab: true } },
   { path: '/chat', component: Chat, meta: { auth: true, tab: true } },
   { path: '/plan', component: Plan, meta: { auth: true } },
   { path: '/map', component: Map, meta: { auth: true, tab: true } },
@@ -35,7 +40,25 @@ router.beforeEach((to) => {
   const role = localStorage.getItem('mall_role') || 'visitor';
   if (to.meta.role && to.meta.role !== role) return '/login';
   if (to.meta.auth && !to.meta.role && role !== 'visitor') return '/login';
+  if (to.path === '/login' && authed) return role === 'manager' ? '/manager' : role === 'merchant' ? '/merchant' : '/home';
   return true;
 });
 
-createApp(App).use(router).mount('#app');
+// —— 全局错误捕获：把「空白页」背后的真实错误显示到页面顶部红条 ——
+function showError(msg, extra = '') {
+  let el = document.getElementById('app-error');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'app-error';
+    el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:#fff;padding:10px 16px;font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-all;';
+    document.body.appendChild(el);
+  }
+  el.textContent = '⚠ 页面错误：' + msg + (extra ? '  [' + extra + ']' : '');
+}
+
+const app = createApp(App);
+app.config.errorHandler = (err, _inst, info) => { showError((err && err.message) || String(err), info); };
+window.addEventListener('error', (e) => showError(e.message || '脚本错误', (e.filename || '') + ':' + (e.lineno || '')));
+window.addEventListener('unhandledrejection', (e) => showError('Promise: ' + ((e.reason && e.reason.message) || e.reason), ''));
+
+app.use(router).mount('#app');

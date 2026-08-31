@@ -9,7 +9,7 @@ Page({
     connecting: false,
     connected: false,
     playing: false,
-    mallName: 'QD square',
+    mallName: '星河里',
     sourceText: ''
   },
 
@@ -38,7 +38,7 @@ Page({
       const data = await scan(this.data.serviceCode);
       getApp().globalData.mall = { id: data.mall_id, name: data.mall_name };
       const sourceText = ((data.datasource_connection && data.datasource_connection.sources) || []).map(item => item.label).join(' · ');
-      this.setData({ connected: true, mallName: data.mall_name || 'QD square', sourceText });
+      this.setData({ connected: true, mallName: data.mall_name || '星河里', sourceText });
       setTimeout(() => this.enterHome(), 1400);
     } catch (e) {
       this.setData({ connecting: false, playing: false });

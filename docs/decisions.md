@@ -2,7 +2,7 @@
 
 1. 甲方先提供初始化骨架，随后在提交 `f95a217` 恢复精修小程序组件与 Vue Web；融合时保留甲方粒子、富卡片、PlanFlow、行程卡、2.5D 地图、停车仪表盘和优惠券视觉，并把其中的 Mock/占位请求改接乙方真实接口。甲方未覆盖的三角色与商业工作区由乙方补齐。
 2. 后端采用 FastAPI + 标准库 sqlite3，避免为课程 Demo 引入 ORM 迁移和中间件集群。
-3. 主商场内部 ID 固定 `mall_demo`、展示名暂定 `QD square`；隔离测试商场为 `mall_alt`。
+3. 主商场内部 ID 固定 `mall_demo`、展示名暂定 `星河里`；隔离测试商场为 `mall_alt`。
 4. 在线模型采用千问 OpenAI-compatible 地址，Key 只写本地 `server/.env`；默认 scripted 保证离线演示。
 5. 微信真实 `code2session` 代码保留；凭证缺失期间使用 `WX_AUTH_MODE=mock`。
 6. 无真实楼层图，生成两层明确标注 Demo 的 SVG 与可解释路网，路线使用 Dijkstra。

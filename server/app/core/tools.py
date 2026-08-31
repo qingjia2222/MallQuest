@@ -1,6 +1,11 @@
 from app.core.rag import answer
 from app.datasource.registry import registry
 from app.db import connection, rows_to_dicts
+from datetime import datetime, timezone
+def _minutes_since(iso):
+    try:
+        dt=datetime.fromisoformat(iso); return max(0,(datetime.now(timezone.utc)-dt).total_seconds()/60)
+    except Exception: return 0
 def query_mall_info(*,mall_id,**_): return {"mall_id":mall_id,"name":registry.get(mall_id).name}
 def query_parking_status(*,mall_id,**_):
     with connection() as db: rows=db.execute("SELECT area,total,free,updated_at FROM parking WHERE mall_id=? ORDER BY area",(mall_id,)).fetchall()
@@ -30,7 +35,13 @@ def my_coupons(*,mall_id,user_id,**_):
 def live_store_status(*,mall_id,store_ids,**_):
     if not store_ids:return []
     with connection() as db: rows=db.execute(f"SELECT * FROM store_status WHERE mall_id=? AND store_id IN ({','.join('?' for _ in store_ids)})",(mall_id,*store_ids)).fetchall()
-    return rows_to_dicts(rows)
+    out=rows_to_dicts(rows)
+    for r in out:
+        elapsed=int(_minutes_since(r.get("updated_at","")))
+        q=int(r.get("queue_minutes") or 0)
+        r["queue_minutes"]=max(0,q-elapsed)
+        r["wait_seconds"]=r["queue_minutes"]*60
+    return out
 TOOLS={name:{"name":name,"description":desc,"parameters":params,"kind":"read","callback":cb} for name,desc,params,cb in [
  ("query_mall_info","查询当前商场信息",{"type":"object","properties":{}},query_mall_info),("query_parking_status","查询当前商场停车空位",{"type":"object","properties":{}},query_parking_status),("search_stores","按店名或类别关键词搜索当前商场店铺",{"type":"object","properties":{"keyword":{"type":"string"}}},search_stores),("query_queue_status","查询当前需要排队的店铺并按等待时间排序",{"type":"object","properties":{"minimum_minutes":{"type":"integer","minimum":1}}},query_queue_status),("get_store_detail","查询当前商场单店详情",{"type":"object","properties":{"store_id":{"type":"string"}},"required":["store_id"]},get_store_detail),("query_member_points","查询当前用户积分",{"type":"object","properties":{}},query_member_points),("query_points_rules","检索积分规则知识库",{"type":"object","properties":{"query":{"type":"string"}}},query_points_rules),("get_today_deals","查询今日特惠",{"type":"object","properties":{}},get_today_deals),("my_coupons","查询当前用户优惠券",{"type":"object","properties":{}},my_coupons),("live_store_status","查询店铺实时状态",{"type":"object","properties":{"store_ids":{"type":"array","items":{"type":"string"}}}},live_store_status)]}
 

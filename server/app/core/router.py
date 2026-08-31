@@ -6,7 +6,7 @@ from app.db import connection
 MAP_ROOT=Path(__file__).resolve().parents[2]/"data"/"maps"
 def _svg(floor,stores):
     boxes="".join(f'<rect x="{s["pos_x"]-55}" y="{s["pos_y"]-30}" width="110" height="60" rx="12" fill="#fff" stroke="#7C3AED"/><text x="{s["pos_x"]}" y="{s["pos_y"]+5}" text-anchor="middle" font-size="13" fill="#312E81">{s["name"]}</text>' for s in stores)
-    return f'<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="760" viewBox="0 0 1000 760"><rect width="1000" height="760" fill="#F4F6FB"/><text x="40" y="50" font-size="28" fill="#4C1D95">QD square {floor}F · DEMO MAP</text><path d="M120 320H880M120 520H880M520 120V680" stroke="#CBD5E1" stroke-width="70" fill="none" stroke-linecap="round"/><path d="M120 320H880M120 520H880M520 120V680" stroke="#fff" stroke-width="42" fill="none" stroke-linecap="round"/>{boxes}<circle cx="520" cy="520" r="25" fill="#06B6D4"/><text x="520" y="525" text-anchor="middle" fill="white" font-size="12">电梯</text></svg>'
+    return f'<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="760" viewBox="0 0 1000 760"><rect width="1000" height="760" fill="#F4F6FB"/><text x="40" y="50" font-size="28" fill="#4C1D95">星河里 {floor}F · DEMO MAP</text><path d="M120 320H880M120 520H880M520 120V680" stroke="#CBD5E1" stroke-width="70" fill="none" stroke-linecap="round"/><path d="M120 320H880M120 520H880M520 120V680" stroke="#fff" stroke-width="42" fill="none" stroke-linecap="round"/>{boxes}<circle cx="520" cy="520" r="25" fill="#06B6D4"/><text x="520" y="525" text-anchor="middle" fill="white" font-size="12">电梯</text></svg>'
 
 def write_demo_maps():
     root=MAP_ROOT/"mall_demo"; root.mkdir(parents=True,exist_ok=True)
@@ -22,7 +22,7 @@ def write_demo_maps():
             nearest=min(range(len(corridor)),key=lambda i:math.dist((s["pos_x"],s["pos_y"]),corridor[i])); edges.append([nid,f"f{floor}_c{nearest}",math.dist((s["pos_x"],s["pos_y"]),corridor[nearest])])
     edges.append(["f1_c7","f2_c7",35]); nodes["f1_c7"].update(type="elevator",label="电梯 1F"); nodes["f2_c7"].update(type="elevator",label="电梯 2F")
     (root/"route_graph.json").write_text(json.dumps({"mall_id":"mall_demo","nodes":list(nodes.values()),"edges":edges},ensure_ascii=False,indent=2),encoding="utf-8")
-    (root/"map_manifest.json").write_text(json.dumps({"mall_id":"mall_demo","mall_name":"QD square","is_demo_map":True,"floors":[{"floor":1,"image":"floor_1.svg","width":1000,"height":760},{"floor":2,"image":"floor_2.svg","width":1000,"height":760}]},ensure_ascii=False,indent=2),encoding="utf-8")
+    (root/"map_manifest.json").write_text(json.dumps({"mall_id":"mall_demo","mall_name":"星河里","is_demo_map":True,"floors":[{"floor":1,"image":"floor_1.svg","width":1000,"height":760},{"floor":2,"image":"floor_2.svg","width":1000,"height":760}]},ensure_ascii=False,indent=2),encoding="utf-8")
 
 def _graph(mall_id):
     path=MAP_ROOT/mall_id/"route_graph.json"

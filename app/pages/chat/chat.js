@@ -19,7 +19,7 @@ Page({
 
   onLoad() {
     const app = getApp();
-    const name = (app.globalData.mall && app.globalData.mall.name) || 'QD square';
+    const name = (app.globalData.mall && app.globalData.mall.name) || '星河里';
     this.push('ai', `已接入「${name}」私有数据。我是你的 AI 私域助手，问我停车、积分、特惠，或说「帮我规划约会」。`);
   },
 
@@ -76,7 +76,7 @@ Page({
 
   async speak(e) {
     try {
-      const text = e.currentTarget.dataset.text || '欢迎来到 QD square';
+      const text = e.currentTarget.dataset.text || '欢迎来到星河里';
       const data = await request('/api/tts', { method: 'POST', data: { text } });
       const audio = wx.createInnerAudioContext(); audio.src = 'http://127.0.0.1:8000' + data.audio_url; audio.play();
     } catch (err) { wx.showToast({ title: err.message || '播报失败', icon: 'none' }); }

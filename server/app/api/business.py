@@ -56,3 +56,8 @@ def products(session_id:str,auth:AuthContext=Depends(require_auth)):
 def my_tickets(auth:AuthContext=Depends(require_auth)):
     with connection() as db: rows=db.execute("SELECT * FROM user_tickets WHERE user_id=?",(auth.user_id,)).fetchall()
     return envelope(rows_to_dicts(rows))
+@router.get("/stores")
+def stores(session_id:str,auth:AuthContext=Depends(require_auth)):
+    mall=mall_for(auth,session_id)
+    with connection() as db: rows=db.execute("SELECT * FROM stores WHERE mall_id=? ORDER BY floor,id",(mall,)).fetchall()
+    return envelope(rows_to_dicts(rows))

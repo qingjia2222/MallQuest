@@ -1,5 +1,5 @@
 // app.js - 商场 AI 私域服务助手 全局入口
-// 接队友后端(QD square, 8000)：login()/scan() 在 utils/auth.js；demoMode=false 走真实接口
+// 接队友后端(星河里, 8000)：login()/scan() 在 utils/auth.js；demoMode=false 走真实接口
 const auth = require('./utils/auth');
 
 App({

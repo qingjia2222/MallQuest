@@ -1,4 +1,4 @@
-# QD square Demo one-click launcher (auto-detect OpenCV env python)
+# 星河里 Demo one-click launcher (auto-detect OpenCV env python)
 # Usage (from project root D:\shixi\MallQuest):
 #   powershell -ExecutionPolicy Bypass -File run_demo.ps1
 

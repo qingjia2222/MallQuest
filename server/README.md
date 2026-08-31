@@ -1,4 +1,4 @@
-# QD square 后端
+# 星河里 后端
 
 FastAPI 统一服务，包含游客手机号登录、保留的微信登录适配、商户店铺编码登录、管理者账号登录、AI 服务码绑定私有数据源、Token 权限隔离、SQLite 私有数据源、工具注册表、千问兼容 LLM、scripted fallback、RAG、八态 Planner、五场景事务、Dijkstra 两层路线与路线动画数据、Windows TTS、经营指标和测试。
 

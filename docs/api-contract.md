@@ -1,4 +1,4 @@
-# QD square API 契约（冻结版）
+# 星河里 API 契约（冻结版）
 
 Base URL：`http://127.0.0.1:8000`。除音频/地图文件外，响应统一为 `{code,message,request_id,timestamp,data}`。受保护接口使用 `Authorization: Bearer <token>`。
 

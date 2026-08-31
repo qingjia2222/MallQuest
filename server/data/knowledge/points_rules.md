@@ -1,4 +1,4 @@
-# QD square 积分规则
+# 星河里积分规则
 mall_id: mall_demo
 
 ## 积分有效期
