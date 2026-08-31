@@ -349,7 +349,7 @@ function actionLabel(a) {
             <div class="d-name">{{ focus.store.name }}</div>
             <div class="d-meta">
               <span class="d-badge">{{ focus.store.category || focus.store.cat }}</span>
-              <span class="d-loc">{{ focus.store.loc || focus.store.floor }}</span>
+              <span class="d-loc">{{ focus.store.loc || focus.store.floor }} · 编码 {{ focus.store.store_code || '待分配' }}</span>
             </div>
           </div>
           <div class="d-close" @click="focus.show = false">×</div>

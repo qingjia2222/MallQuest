@@ -144,7 +144,7 @@ function statusText(s) { return s.open_status === 'open' ? '营业中' : '未营
           <div class="sc-emoji">{{ s.hero || '🏬' }}</div>
           <div class="sc-main">
             <div class="sc-name">{{ s.name }}</div>
-            <div class="sc-meta"><span class="sc-badge">{{ s.category }}</span><span v-if="s.floor" class="sc-floor">{{ s.floor }}F</span></div>
+            <div class="sc-meta"><span class="sc-badge">{{ s.category }}</span><span v-if="s.floor" class="sc-floor">{{ s.floor }}F</span><span v-if="s.store_code" class="sc-code">{{ s.store_code }}</span></div>
             <div class="sc-status">
               <span v-if="s.queue_minutes !== null" class="sc-tag" :class="{ hot: Number(s.queue_minutes || 0) > 0 }">排 {{ queueText(s) }}</span>
               <span v-if="s.seats_available !== null" class="sc-tag">余 {{ s.seats_available }}</span>
@@ -168,7 +168,7 @@ function statusText(s) { return s.open_status === 'open' ? '营业中' : '未营
             <div class="d-name">{{ focus.name }}</div>
             <div class="d-meta">
               <span class="d-badge">{{ focus.category }}</span>
-              <span class="d-loc">{{ focus.floor }}F · {{ focus.avg_price ? '¥' + focus.avg_price + '/人' : '' }}</span>
+              <span class="d-loc">{{ focus.floor }}F · 编码 {{ focus.store_code || '待分配' }}<template v-if="focus.avg_price"> · ¥{{ focus.avg_price }}/人</template></span>
             </div>
           </div>
           <div class="d-close" @click="close">×</div>
@@ -232,6 +232,7 @@ function statusText(s) { return s.open_status === 'open' ? '营业中' : '未营
 .sc-main { flex: 1; min-width: 0; }
 .sc-name { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sc-meta { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+.sc-code { color: #7C3AED; font-size: 10px; font-weight: 700; }
 .sc-badge { background: #f1f5f9; color: #475569; font-size: 11px; padding: 2px 8px; border-radius: 12px; }
 .sc-floor { font-size: 11px; color: #9CA3AF; }
 .sc-status { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }

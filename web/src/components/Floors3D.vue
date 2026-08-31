@@ -160,7 +160,11 @@ function buildCorners(group, fl, flNum, edged, armLen) {
     const info = infoOf(cornerNames[k]);
     const cornerStore = { name: cornerNames[k], floor: fl, floor2: flNum, cat: '零售',
       category: info.category, desc: info.desc, tags: info.tags, floorName: fl, loc: '『' + fl + '』· 转角商铺', id: 'corner_'+flNum+'_'+k };
-    storePositions[cornerNames[k]] = { x: cx, z: cz, floor: flNum };
+    // 转角店的导航终点放在朝中庭的内角门口，不把路线画进 L 形店体中心。
+    storePositions[cornerNames[k]] = {
+      x: cx, z: cz, floor: flNum,
+      entrance: { x: sx * INNER, z: sz * INNER, floor: flNum }
+    };
     armX.userData = { store: cornerStore };
     armZ.userData = { store: cornerStore };
     storeMeshes.push(armX); storeMeshes.push(armZ);
@@ -197,7 +201,12 @@ function placeShop(group, r, px, pz, size, fl, flNum) {
   } };
   group.add(tile);
   if (!isFac) storeMeshes.push(tile);   // 卫生间等设施不参与点击查店
-  storePositions[r.name] = { x: px, z: pz, floor: flNum };
+  const side = Number(r.side);
+  const entrance = side === 0 ? { x: px, z: -INNER, floor: flNum }
+    : side === 1 ? { x: INNER, z: pz, floor: flNum }
+      : side === 2 ? { x: px, z: INNER, floor: flNum }
+        : { x: -INNER, z: pz, floor: flNum };
+  storePositions[r.name] = { x: px, z: pz, floor: flNum, entrance };
   addLabel(group, r.name, px, 2.0, pz, Math.min(Math.max(sx, 4), 9));
 }
 
@@ -373,11 +382,11 @@ function drawRoute(route) {
   };
   for (let i = 0; i < route.stops.length - 1; i++) {
     const rawA = route.stops[i], rawB = route.stops[i + 1];
-    const a = { ...rawA, floor: floorNumber(rawA.floor) };
-    const b = { ...rawB, floor: floorNumber(rawB.floor) };
+    const a = routePoint(rawA);
+    const b = routePoint(rawB);
     const color = PAL[i % PAL.length];
     if (a.floor === b.floor) {
-      addPath(walkPath(a, b, a.floor), color);
+      addPath(corridorPath(a, b, a.floor), color);
       continue;
     }
     const useEscalator = route.vertical_mode === 'escalator';
@@ -385,11 +394,11 @@ function drawRoute(route) {
     const high = useEscalator ? { x: 8, z: -9.5, floor: 2 } : { x: 0, z: 0, floor: 2 };
     const fromTransfer = a.floor === 1 ? low : high;
     const toTransfer = b.floor === 2 ? high : low;
-    addPath(walkPath(a, fromTransfer, a.floor), color);
+    addPath(corridorPath(a, fromTransfer, a.floor), color);
     const transfer = linkMesh(fromTransfer, toTransfer, color, 0.65);
     if (transfer) { scene.add(transfer); routeLines.push(transfer); }
     animation.push(fromTransfer, toTransfer);
-    addPath(walkPath(toTransfer, b, b.floor), color);
+    addPath(corridorPath(toTransfer, b, b.floor), color);
   }
   setAnimationPath(animation);
 }
@@ -404,28 +413,87 @@ function vSeg(x, z, f1, f2, color, width) {
   mesh.userData = { floor: 'all' };
   return mesh;
 }
-// 沿中庭环道走：起点 → 侧角 → 沿侧边 → 店门。半径 R 夹在中心核心块(<15)与边带店(>21)之间的走道空隙
-function walkPath(s, t, fl) {
-  fl = fl || s.floor;
-  const R = INNER - 2;
-  const clamp = (v) => Math.max(-R, Math.min(R, v));
-  const A = { x: clamp(s.x), z: clamp(s.z) };
-  const D = { x: clamp(t.x), z: clamp(t.z) };   // 店门口（朝中庭一侧）
-  const sx = D.x >= 0 ? 1 : -1;
-  const sz = D.z >= 0 ? 1 : -1;
-  const path = [];
-  const push = (p) => { if (!path.length || Math.hypot(path[path.length - 1].x - p.x, path[path.length - 1].z - p.z) > 0.5) path.push(p); };
-  if (Math.abs(A.x) < 2 && Math.abs(A.z) < 2) {
-    // 起点在中心（电梯）：先沿 x=0 竖着出中庭到环边，避开瀑布厅等中心块
-    push({ x: 0, z: sz * R, floor: fl });
-    push({ x: sx * R, z: sz * R, floor: fl });
-    push({ x: sx * R, z: D.z, floor: fl });
-  } else {
-    push({ x: A.x, z: A.z, floor: fl });
-    push({ x: sx * R, z: A.z, floor: fl });     // 先沿当前 z 水平走到侧边环
-    push({ x: sx * R, z: D.z, floor: fl });     // 沿侧边竖直
+// 3D 场景坐标适配：业务路线给出店名时，以店门而不是店体中心作为终点。
+function routePoint(raw) {
+  const floor = floorNumber(raw.floor);
+  if (/当前位置|主入口|入口/.test(raw.name || '')) return { x: 0, z: INNER + 0.5, floor: 1 };
+  const store = storePositions[raw.name];
+  if (store && store.entrance) return { ...store.entrance };
+  return { x: Number(raw.x) || 0, z: Number(raw.z) || 0, floor };
+}
+
+// 中庭实体占据中央区域，因此路线只在这条矩形走廊骨架上运行。
+// RX 位于左右商铺内边界以内，RZ 位于服务台/瀑布厅外侧，所有主干段均不会穿越实体。
+const CORRIDOR_RX = INNER - 3;
+const CORRIDOR_RZ = 9.5;
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function corridorPort(point) {
+  // 直梯位于中心，使用南侧中央通道接入外环；主入口也从同一通道进入。
+  if (Math.abs(point.x) < 1 && Math.abs(point.z) < 1) return { x: 0, z: CORRIDOR_RZ, floor: point.floor };
+  if (Math.abs(point.x) < 1 && point.z > CORRIDOR_RZ) return { x: 0, z: CORRIDOR_RZ, floor: point.floor };
+  const candidates = [
+    { x: clamp(point.x, -CORRIDOR_RX, CORRIDOR_RX), z: -CORRIDOR_RZ, floor: point.floor },
+    { x: CORRIDOR_RX, z: clamp(point.z, -CORRIDOR_RZ, CORRIDOR_RZ), floor: point.floor },
+    { x: clamp(point.x, -CORRIDOR_RX, CORRIDOR_RX), z: CORRIDOR_RZ, floor: point.floor },
+    { x: -CORRIDOR_RX, z: clamp(point.z, -CORRIDOR_RZ, CORRIDOR_RZ), floor: point.floor }
+  ];
+  return candidates.reduce((best, item) => {
+    const distance = Math.abs(item.x - point.x) + Math.abs(item.z - point.z);
+    return !best || distance < best.distance ? { ...item, distance } : best;
+  }, null);
+}
+function perimeterScalar(point) {
+  const rx = CORRIDOR_RX, rz = CORRIDOR_RZ;
+  if (Math.abs(point.z + rz) < 0.01) return point.x + rx;
+  if (Math.abs(point.x - rx) < 0.01) return 2 * rx + point.z + rz;
+  if (Math.abs(point.z - rz) < 0.01) return 2 * rx + 2 * rz + rx - point.x;
+  return 4 * rx + 2 * rz + rz - point.z;
+}
+function perimeterPoint(value, floor) {
+  const rx = CORRIDOR_RX, rz = CORRIDOR_RZ, total = 4 * rx + 4 * rz;
+  const s = ((value % total) + total) % total;
+  if (s <= 2 * rx) return { x: -rx + s, z: -rz, floor };
+  if (s <= 2 * rx + 2 * rz) return { x: rx, z: -rz + s - 2 * rx, floor };
+  if (s <= 4 * rx + 2 * rz) return { x: rx - (s - 2 * rx - 2 * rz), z: rz, floor };
+  return { x: -rx, z: rz - (s - 4 * rx - 2 * rz), floor };
+}
+function clockwiseArc(from, to, floor) {
+  const rx = CORRIDOR_RX, rz = CORRIDOR_RZ, total = 4 * rx + 4 * rz;
+  const start = perimeterScalar(from);
+  let end = perimeterScalar(to);
+  while (end < start) end += total;
+  const corners = [2 * rx, 2 * rx + 2 * rz, 4 * rx + 2 * rz, total, total + 2 * rx,
+    total + 2 * rx + 2 * rz, total + 4 * rx + 2 * rz];
+  return [from, ...corners.filter((s) => s > start + 0.01 && s < end - 0.01).map((s) => perimeterPoint(s, floor)), to];
+}
+function shortestPerimeter(from, to, floor) {
+  const total = 4 * CORRIDOR_RX + 4 * CORRIDOR_RZ;
+  const a = perimeterScalar(from), b = perimeterScalar(to);
+  const clockwise = (b - a + total) % total;
+  if (clockwise <= total - clockwise) return clockwiseArc(from, to, floor);
+  return clockwiseArc(to, from, floor).reverse();
+}
+function appendUnique(path, point) {
+  const last = path[path.length - 1];
+  if (!last || Math.abs(last.x - point.x) > 0.01 || Math.abs(last.z - point.z) > 0.01 || last.floor !== point.floor) path.push(point);
+}
+function spur(point, port) {
+  const path = [{ ...point }];
+  if (Math.abs(point.x - port.x) > 0.01 && Math.abs(point.z - port.z) > 0.01) {
+    // 先沿商铺内边界走，再垂直接入主走廊，避免斜线切过转角店。
+    path.push({ x: port.x, z: point.z, floor: point.floor });
   }
-  push({ x: D.x, z: D.z, floor: fl });        // 拐进店门口
+  path.push({ ...port });
+  return path;
+}
+function corridorPath(s, t, fl) {
+  const floor = fl || s.floor;
+  const start = { ...s, floor }, end = { ...t, floor };
+  const fromPort = corridorPort(start), toPort = corridorPort(end);
+  const path = [];
+  spur(start, fromPort).forEach((p) => appendUnique(path, p));
+  shortestPerimeter(fromPort, toPort, floor).forEach((p) => appendUnique(path, p));
+  spur(end, toPort).reverse().forEach((p) => appendUnique(path, p));
   return path;
 }
 // 跨层斜线段（乘扶梯）：连接两个不同楼层的点，斜向跨层，userData='all' 始终显示
@@ -448,10 +516,9 @@ function drawNav(nav) {
   if (!scene || !nav || !nav.name) return;
   const target = storePositions[nav.name];
   if (!target) return;
-  const R = INNER - 2;
   const animation = [];
   if (target.floor === 1) {
-    const p = walkPath({ x: 0, z: R, floor: 1 }, { x: target.x, z: target.z, floor: 1 }, 1);
+    const p = corridorPath({ x: 0, z: INNER + 0.5, floor: 1 }, target.entrance || target, 1);
     for (let i = 0; i < p.length - 1; i++) navSeg(p[i], p[i + 1]);
     animation.push(...p);
   } else {
@@ -459,13 +526,13 @@ function drawNav(nav) {
     const LF1 = useEscalator ? { x: -8, z: -9.5, floor: 1 } : { x: 0, z: 0, floor: 1 };
     const LF2 = useEscalator ? { x: 8, z: -9.5, floor: 2 } : { x: 0, z: 0, floor: 2 };
     // 1F：主入口（获得的位置）→ 沿走道走到换层设施
-    const p1 = walkPath({ x: 0, z: INNER + 0.5, floor: 1 }, LF1, 1);
+    const p1 = corridorPath({ x: 0, z: INNER + 0.5, floor: 1 }, LF1, 1);
     for (let i = 0; i < p1.length - 1; i++) navSeg(p1[i], p1[i + 1]);
     // 乘直梯或扶梯跨层；两者都只连接已建模的换层设施。
     const lm = linkMesh(LF1, LF2, 0x219653, 0.7);
     if (lm) { scene.add(lm); navLines.push(lm); }
     // 2F：换层设施 → 沿走道 → 店
-    const p2 = walkPath(LF2, { x: target.x, z: target.z, floor: 2 }, 2);
+    const p2 = corridorPath(LF2, target.entrance || target, 2);
     for (let i = 0; i < p2.length - 1; i++) navSeg(p2[i], p2[i + 1]);
     animation.push(...p1, LF2, ...p2);
   }
