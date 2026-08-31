@@ -14,6 +14,9 @@ class Registry:
         return DataSource(row["id"],row["name"])
     def stores(self,mall_id:str,keyword:str=""):
         self.get(mall_id); like=f"%{keyword}%"
-        with connection() as db: rows=db.execute("SELECT * FROM stores WHERE mall_id=? AND (name LIKE ? OR category LIKE ? OR tags LIKE ?) ORDER BY floor,id",(mall_id,like,like,like)).fetchall()
+        with connection() as db: rows=db.execute("""SELECT s.*,sp.store_code,sp.business_hours,sp.service_tags
+            FROM stores s LEFT JOIN store_profiles sp ON sp.store_id=s.id
+            WHERE s.mall_id=? AND (s.name LIKE ? OR s.category LIKE ? OR s.tags LIKE ? OR UPPER(COALESCE(sp.store_code,'')) LIKE UPPER(?))
+            ORDER BY s.floor,s.id""",(mall_id,like,like,like,like)).fetchall()
         return rows_to_dicts(rows)
 registry=Registry()

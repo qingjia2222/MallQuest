@@ -8,7 +8,7 @@
     <view class="mt-btn" bindtap="goPlan">帮我规划</view>
   </view>
 
-  <mini-map stores="{{stores}}" route="{{route}}" activeId="{{activeId}}"
+  <mini-map stores="{{stores}}" route="{{route}}" routeNodes="{{routeNodes}}" activeId="{{activeId}}"
             bind:storetap="onStoreTap" />
 
   <!-- 停车位概览 -->
@@ -31,7 +31,8 @@
         <view class="d-emoji">🏬</view>
         <view class="d-main">
           <text class="d-name">{{focusStore.name}}</text>
-          <text class="d-meta">{{focusStore.category}} · {{focusStore.floor}}F · {{focusStore.business_hours}}</text>
+          <text class="d-meta">{{focusStore.category}} · {{focusStore.floor}}F · 编码 {{focusStore.store_code || '待分配'}}</text>
+          <text class="d-meta">{{focusStore.business_hours}}</text>
         </view>
         <view class="d-close" bindtap="closeDetail">×</view>
       </view>

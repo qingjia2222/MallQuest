@@ -59,5 +59,7 @@ def my_tickets(auth:AuthContext=Depends(require_auth)):
 @router.get("/stores")
 def stores(session_id:str,auth:AuthContext=Depends(require_auth)):
     mall=mall_for(auth,session_id)
-    with connection() as db: rows=db.execute("SELECT * FROM stores WHERE mall_id=? ORDER BY floor,id",(mall,)).fetchall()
+    with connection() as db: rows=db.execute("""SELECT s.*,sp.store_code,sp.business_hours,sp.service_tags
+        FROM stores s LEFT JOIN store_profiles sp ON sp.store_id=s.id
+        WHERE s.mall_id=? ORDER BY s.floor,s.id""",(mall,)).fetchall()
     return envelope(rows_to_dicts(rows))

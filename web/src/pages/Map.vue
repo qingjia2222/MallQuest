@@ -5,9 +5,8 @@ import api from '../api';
 import ParkingGauge from '../components/ParkingGauge.vue';
 import Floors3D from '../components/Floors3D.vue';
 import ItineraryCard from '../components/ItineraryCard.vue';
-import { planStore } from '../store/plan';
+import { planStore, setCurrentPlan } from '../store/plan';
 import { renderMd } from '../utils/md';
-import oakPlan from '../store/oakwood_plan.json';
 
 const router = useRouter();
 const floorsRef = ref(null);
@@ -20,23 +19,25 @@ let liveTimer = null;
 const hasPlan = computed(() => !!(planStore.current && planStore.current.itinerary && planStore.current.itinerary.length));
 const isDone = computed(() => !!planStore.current && planStore.current.state === 'DONE');
 const isNavigation = computed(() => !!planStore.current && planStore.current.source === 'navigation');
+const activeRoute = computed(() => planStore.current && ((planStore.current.navigation) || (planStore.current.route)) || null);
+const isCrossFloor = computed(() => new Set(((activeRoute.value && activeRoute.value.nodes) || []).map(n => n.floor)).size > 1);
+const verticalMode = computed(() => activeRoute.value && activeRoute.value.vertical_mode || 'elevator');
 
-// 规划路线：按后端 itinerary 店名，在 oakwood 对应层找同名店的精确矩形坐标(cx/cz)
+// 规划路线直接使用后端走廊节点，不再根据店铺中心猜测连线。
 const route3d = computed(() => {
   const plan = planStore.current;
-  if (!plan || !plan.itinerary || !plan.itinerary.length) return null;
-  const stops = plan.itinerary.map((s, i) => {
-    const floor = 'F' + (s.floor || 1);
-    const bound = sceneStores.value.find(r => r.id === s.store_id || r.name === s.name);
-    const pool = floor === 'F1' ? oakPlan.gd : oakPlan.up;
-    const slot = pool.find(r => r.name === s.name);
-    let px = 0, pz = 0;
-    if (bound && bound.map_x != null && bound.map_z != null) { px = bound.map_x; pz = bound.map_z; }
-    else if (slot) { px = slot.cx; pz = slot.cz; }
-    else { px = ((s.pos_x || 500) - 500) / 1000 * 30; pz = ((s.pos_y || 500) - 500) / 1000 * 30; }
-    return { floor, x: px, z: pz, name: s.name, seq: i + 1 };
-  });
-  return { stops };
+  if (!plan) return null;
+  const graphNodes = (plan.navigation && plan.navigation.nodes) || (plan.route && plan.route.nodes) || [];
+  if (graphNodes.length) {
+    return { stops: graphNodes.map((node, i) => ({
+      floor: `F${node.floor || 1}`,
+      x: ((Number(node.x || 500) - 500) / 1000) * 50,
+      z: ((Number(node.y || 380) - 380) / 760) * 42,
+      name: node.label || '', type: node.type || '', seq: i + 1
+    })) };
+  }
+  // 禁止把店铺中心直接连线：旧方案若没有后端走廊节点，不展示可能穿墙的路线。
+  return null;
 });
 
 async function load() {
@@ -90,11 +91,23 @@ function goPlan() {
 }
 function goChat() { router.push('/chat'); }
 function replayRoute() { if (floorsRef.value && floorsRef.value.replayRoute) floorsRef.value.replayRoute(); }
+async function switchTransfer(mode) {
+  const plan=planStore.current;if(!plan||!isCrossFloor.value)return;
+  try{
+    if(plan.plan_id){setCurrentPlan(await api.confirmPlan(plan.plan_id,'modify',{vertical_mode:mode}));}
+    else if(plan.navigation){
+      const name=plan.navigation.destination_store.name;
+      const navigation=await api.navigationResolve(`怎么走${mode==='escalator'?'扶梯':'直梯'}去${name}？`,plan.navigation.start_node);
+      setCurrentPlan({...plan,navigation,itinerary:[plan.itinerary[0],navigation.destination_store]});
+    }
+    replayRoute();
+  }catch(e){focus.aiReply='路线切换失败：'+(e.message||'');}
+}
 function formatArea(a) { return `${a.area} ${a.free}/${a.total}`; }
 function onFloorsChanged(f) {}
 
 function toStops(it) {
-  return (it || []).map((s, i) => ({ time: s.time_label || `${i + 1}`, name: s.name || '', floor: s.floor ?? '', category: s.category || '', waiting: s.waiting_time ?? (s.queue_minutes ?? null), desc: s.desc || '' }));
+  return (it || []).map((s, i) => { const current=live.value.find(x=>x.store_id===s.id); return { time: s.time_label || `${i + 1}`, name: s.name || '', floor: s.floor ?? '', category: s.category || '', waiting: current ? current.queue_minutes : (s.waiting_time ?? (s.queue_minutes ?? null)), desc: s.desc || '' }; });
 }
 function actionLabel(a) {
   if (!a) return '';
@@ -103,6 +116,17 @@ function actionLabel(a) {
   if (t === 'queue') return `${a.store_id ? '已排号' : '已排队'}${a.queue_minutes ? '（约' + a.queue_minutes + '分钟）' : ''}`;
   const map = { claim_coupon: '领取优惠券', buy_ticket: '购买门票', reserve_restaurant: '预约餐厅', reserve_business_space: '预约商务空间' };
   return map[t] || t;
+}
+function itineraryView(plan){
+  return {tag:plan.source==='online_agent'?'大模型规划':'为你定制',stops:toStops(plan.itinerary),
+    actions:(plan.action_results||[]).map(a=>({label:actionLabel(a),ok:!['failed','unavailable'].includes(a.status)})),
+    selectedStrategy:plan.route&&plan.route.selected_strategy,
+    alternatives:((plan.route&&plan.route.alternatives)||[]).map(a=>({strategy:a.strategy,label:a.label,
+      estimated_total_minutes:a.metrics.estimated_total_minutes,estimated_distance:a.metrics.estimated_distance,estimated_wait_minutes:a.metrics.estimated_wait_minutes}))};
+}
+async function chooseStrategy(strategy){
+  const plan=planStore.current;if(!plan||!plan.plan_id)return;
+  try{setCurrentPlan(await api.confirmPlan(plan.plan_id,'modify',{strategy}));}catch(e){focus.aiReply='方案切换失败：'+(e.message||'');}
 }
 </script>
 
@@ -122,12 +146,10 @@ function actionLabel(a) {
         </div>
       </div>
 
+      <div v-if="isCrossFloor" class="transfer-selector"><span>换层方式</span><button :class="{active:verticalMode==='elevator'}" @click="switchTransfer('elevator')">直梯</button><button :class="{active:verticalMode==='escalator'}" @click="switchTransfer('escalator')">扶梯</button></div>
+
       <div v-if="isNavigation" class="nav-summary"><span>您当前所在位置</span><i>→</i><strong>{{planStore.current.itinerary[planStore.current.itinerary.length-1].name}}</strong></div>
-      <ItineraryCard v-else :itinerary="{
-          tag: planStore.current.source === 'online_agent' ? '大模型规划' : '为你定制',
-          stops: toStops(planStore.current.itinerary),
-          actions: (planStore.current.action_results || []).map(a => ({ label: actionLabel(a), ok: a.status !== 'failed' }))
-        }" @confirm="goChat" @change="goChat" @stoptap="goChat" />
+      <ItineraryCard v-else :itinerary="itineraryView(planStore.current)" @confirm="goChat" @change="goChat" @strategy="chooseStrategy" @stoptap="goChat" />
 
       <!-- 各店实时状态 + 预定情况 -->
       <div class="pp-status">
@@ -159,7 +181,7 @@ function actionLabel(a) {
       </div>
     </div>
 
-    <Floors3D ref="floorsRef" :route="route3d" @select="onSelect" @floorschanged="onFloorsChanged" />
+    <Floors3D v-if="sceneStores.length" ref="floorsRef" :route="route3d" :stores="sceneStores" @select="onSelect" @floorschanged="onFloorsChanged" />
 
     <!-- 停车位 -->
     <div class="card parking-card">
@@ -181,7 +203,7 @@ function actionLabel(a) {
             <div class="d-name">{{ focus.store.name }}</div>
             <div class="d-meta">
               <span class="d-badge">{{ focus.store.category || focus.store.cat }}</span>
-              <span class="d-loc">{{ focus.store.loc || focus.store.floor }}</span>
+              <span class="d-loc">{{ focus.store.loc || focus.store.floor }} · 编码 {{ focus.store.store_code || '待分配' }}</span>
             </div>
           </div>
           <div class="d-close" @click="focus.show = false">×</div>
@@ -214,6 +236,7 @@ function actionLabel(a) {
 .pp-nav { background:#fee2e2;color:#dc2626;font-size:11px;font-weight:700;padding:2px 10px;border-radius:14px; }
 .pp-wait { background: #fef3c7; color: #d97706; font-size: 11px; font-weight: 700; padding: 2px 10px; border-radius: 14px; }
 .pp-actions { display: flex; gap: 8px; }
+.transfer-selector{display:flex;align-items:center;gap:8px;margin:-2px 0 12px;color:#6b7280;font-size:12px}.transfer-selector button{border:1px solid #ddd6fe;background:#fff;color:#6d28d9;border-radius:16px;padding:5px 14px}.transfer-selector button.active{background:#7c3aed;color:#fff;border-color:#7c3aed}
 .pp-btn { border: none; border-radius: 18px; padding: 7px 14px; font-size: 12px; font-weight: 600; cursor: pointer; }
 .pp-btn.ghost { background: #fff; color: var(--primary); border: 1px solid var(--border); }
 .pp-btn.primary { background: linear-gradient(135deg, var(--primary), var(--cyan)); color: #fff; }

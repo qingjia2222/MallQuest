@@ -14,7 +14,13 @@ def _destination(mall_id:str,query:str):
     for alias,target in ALIASES.items():
         if alias in normalized: normalized+=f" {target}"
     with connection() as db:
-        stores=[dict(row) for row in db.execute("SELECT * FROM stores WHERE mall_id=?",(mall_id,)).fetchall()]
+        stores=[dict(row) for row in db.execute("""SELECT s.*,sp.store_code
+            FROM stores s LEFT JOIN store_profiles sp ON sp.store_id=s.id
+            WHERE s.mall_id=?""",(mall_id,)).fetchall()]
+    code_match=re.search(r"QD-[A-Z0-9]+(?:-[A-Z0-9]+)+",query.upper())
+    if code_match:
+        exact_code=[store for store in stores if str(store.get("store_code") or "").upper()==code_match.group(0)]
+        if exact_code: return exact_code[0]
     exact=[store for store in stores if store["name"] in query]
     if exact: return exact[0]
     scored=[]
@@ -28,10 +34,11 @@ def _destination(mall_id:str,query:str):
 def resolve_navigation(mall_id:str,query:str,current_node:str|None=None):
     if not is_navigation_intent(query): raise HTTPException(status_code=422,detail="message is not a navigation request")
     store=_destination(mall_id,query); start=current_node or "f1_c0"
-    route=route_between_nodes(mall_id,start,store["route_node"])
+    vertical_mode="escalator" if "扶梯" in query else "elevator"
+    route=route_between_nodes(mall_id,start,store["route_node"],vertical_mode)
     floors=list(dict.fromkeys(node["floor"] for node in route["nodes"]))
     transfers=[segment["transfer_instruction"] for segment in route["polyline_segments"] if segment["transfer_instruction"]]
     with connection() as db:
         status=db.execute("SELECT open_status,queue_minutes,seats_available,updated_at FROM store_status WHERE store_id=? AND mall_id=?",(store["id"],mall_id)).fetchone()
     destination={"id":store["id"],"name":store["name"],"category":store["category"],"floor":store["floor"],"open_status":status["open_status"] if status else store["open_status"],"queue_minutes":status["queue_minutes"] if status else store["queue_minutes"],"seats_available":status["seats_available"] if status else store["seats_available"]}
-    return {"type":"route_animation","mall_id":mall_id,"start_node":start,"start_label":"您当前所在位置","destination_store":destination,"floors":floors,"nodes":route["nodes"],"polyline_segments":route["polyline_segments"],"transfer_instructions":transfers,"estimated_distance":route["estimated_distance"],"map_mode":"demo_2_5d","replayable":True,"dismissible":True}
+    return {"type":"route_animation","mall_id":mall_id,"start_node":start,"start_label":"您当前所在位置","destination_store":destination,"floors":floors,"nodes":route["nodes"],"polyline_segments":route["polyline_segments"],"transfer_instructions":transfers,"estimated_distance":route["estimated_distance"],"vertical_mode":route["vertical_mode"],"path_policy":route["path_policy"],"map_mode":"demo_2_5d","replayable":True,"dismissible":True}

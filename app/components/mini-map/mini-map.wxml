@@ -1,26 +1,23 @@
 <view class="mm">
-  <!-- 楼层切换 -->
-  <view class="mm-floors">
-    <view wx:for="{{[1,2]}}" wx:key="*this"
-          class="mm-floor {{floor === item ? 'active' : ''}}"
-          data-f="{{item}}" bindtap="setFloor">{{item}}F</view>
-  </view>
+  <canvas id="mall3d" type="webgl" class="mm-webgl"
+          catchtouchstart="onTouchStart" catchtouchmove="onTouchMove" catchtouchend="onTouchEnd"></canvas>
 
-  <!-- 地图画布 -->
-  <view class="mm-canvas">
-    <!-- 网格 -->
+  <view class="mm-floors">
+    <view class="mm-floor {{floor === 0 ? 'active' : ''}}" data-f="0" bindtap="setFloor">全部</view>
+    <view class="mm-floor {{floor === 2 ? 'active' : ''}}" data-f="2" bindtap="setFloor">2F</view>
+    <view class="mm-floor {{floor === 1 ? 'active' : ''}}" data-f="1" bindtap="setFloor">1F</view>
+  </view>
+  <view class="mm-mode">{{webglReady ? '3D' : '2.5D'}}</view>
+  <view wx:if="{{route.length || routeNodes.length}}" class="mm-replay" bindtap="replayRoute">重播路线</view>
+
+  <view wx:if="{{webglFailed}}" class="mm-fallback">
     <view class="mm-grid"></view>
-    <!-- 路线连线（L 型段） -->
-    <view wx:for="{{segs}}" wx:key="index" class="mm-seg"
-          style="left:{{item.x}}%;top:{{item.y}}%;width:{{item.w}}%;height:{{item.h}}%"></view>
-    <!-- 店铺节点 -->
     <view wx:for="{{stores}}" wx:key="id"
-          class="mm-store {{item.id === activeId ? 'active' : ''}} {{item.floor !== floor ? 'dim' : ''}}"
+          class="mm-store {{item.id === activeId ? 'active' : ''}} {{floor && item.floor !== floor ? 'dim' : ''}}"
           style="left:{{item.pos_x}}%;top:{{item.pos_y}}%"
           data-store="{{item}}" bindtap="onStoreTap">
-      <text class="mm-emoji">{{item.category === '火锅' ? '🍲' : item.category === '饮品' ? '🧋' : item.category === '影院' ? '🎬' : item.category === '甜品' ? '🍰' : item.category === '咖啡' ? '☕' : '🏬'}}</text>
+      <text>{{item.category === '咖啡' ? '☕' : item.category === '影院' ? '🎬' : item.category === '甜品' ? '🍰' : '🏬'}}</text>
     </view>
   </view>
-
-  <view class="mm-legend">轻点节点可查看店铺 · 连线为规划路线</view>
+  <view class="mm-legend">{{webglReady ? '拖动旋转 · 点击店铺 · 红点为实时路线' : '当前设备使用平面兼容模式'}}</view>
 </view>

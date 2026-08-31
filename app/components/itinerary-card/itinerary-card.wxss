@@ -1,6 +1,7 @@
 .ic { background: #fff; border-radius: 28rpx; padding: 28rpx; box-shadow: 0 10rpx 30rpx rgba(124,58,237,0.08); }
 .ic-title { display: flex; align-items: center; justify-content: space-between; font-size: 32rpx; font-weight: 700; }
 .ic-tag { font-size: 22rpx; color: #7C3AED; background: #ede9fe; padding: 6rpx 18rpx; border-radius: 30rpx; font-weight: 500; }
+.ic-strategies{margin-top:20rpx;display:flex;flex-direction:column;gap:12rpx}.ic-strategy-title{font-size:24rpx;color:#6B7280}.ic-strategy{padding:18rpx;border:2rpx solid #E5E7EB;border-radius:18rpx}.ic-strategy.selected{border-color:#7C3AED;background:#F5F3FF}.ic-strategy>view:first-child{display:flex;justify-content:space-between}.ic-strategy strong{font-size:27rpx}.ic-strategy>view:first-child text{font-size:21rpx;color:#7C3AED}.ic-strategy-metrics{display:flex;gap:12rpx;flex-wrap:wrap;margin-top:8rpx;color:#6B7280;font-size:21rpx}
 
 .ic-timeline { margin-top: 24rpx; }
 .ic-stop { display: flex; }

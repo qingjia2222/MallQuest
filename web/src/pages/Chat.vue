@@ -123,7 +123,6 @@ function applyResponse(data) {
     currentPlan.value = data.plan;
     setCurrentPlan(data.plan);
     msg.plan = data.plan;
-    setTimeout(() => openExecuteConfirm(data.plan), 700);
   }
 }
 
@@ -220,6 +219,17 @@ async function send(txt) {
 function onChangePlan(planId) {
   send('请重新规划一版方案，换一些店铺');
 }
+async function chooseStrategy(planId, strategy) {
+  if (!planId || !strategy) return;
+  loading.value = true;
+  try {
+    const updated = await api.confirmPlan(planId, 'modify', { strategy });
+    currentPlan.value = updated; setCurrentPlan(updated);
+    const target = [...messages.value].reverse().find(m => m.plan && m.plan.plan_id === planId);
+    if (target) target.plan = updated;
+  } catch (e) { push('ai', '方案切换失败：' + (e.message || '')); }
+  finally { loading.value = false; }
+}
 // —— 执行确认弹窗：提问是否按照方案执行 ——
 const showConfirm = ref(false);
 const pendingPlan = ref(null);
@@ -257,6 +267,17 @@ async function onConfirmPlan(planId) {
 function toStops(it) {
   if (!Array.isArray(it)) return [];
   return it.map((s, i) => ({ time: s.time_label || `${i + 1}`, name: s.name || '', floor: s.floor ?? '', category: s.category || '', waiting: s.waiting_time ?? (s.queue_minutes ?? null), desc: s.desc || '' }));
+}
+function itineraryView(plan) {
+  const alternatives = ((plan && plan.route && plan.route.alternatives) || []).map(a => ({
+    strategy: a.strategy, label: a.label,
+    estimated_total_minutes: a.metrics.estimated_total_minutes,
+    estimated_distance: a.metrics.estimated_distance,
+    estimated_wait_minutes: a.metrics.estimated_wait_minutes
+  }));
+  return { tag: plan.state === 'DONE' ? '已执行' : '为你定制', stops: toStops(plan.itinerary),
+    actions: (plan.action_results || []).map(a => ({ label: actionLabel(a), ok: !['failed','unavailable'].includes(a.status) })),
+    selectedStrategy: plan.route && plan.route.selected_strategy, alternatives };
 }
 function actionLabel(a) {
   if (!a) return '';
@@ -297,11 +318,9 @@ function goMap() { router.push('/map'); }
             <div v-if="m.plan" class="plan-inline">
               <div class="pi-title">🎯 已生成方案<span v-if="m.plan.state === 'DONE'" class="pi-done">已确认</span></div>
               <PlanFlow :step="m.plan.state === 'DONE' ? 5 : 4" :step-names="['理解目标','采集偏好','生成方案','确认方案','执行']" />
-              <ItineraryCard v-if="m.plan.itinerary" :itinerary="{
-                  tag: '为你定制',
-                  stops: toStops(m.plan.itinerary),
-                  actions: (m.plan.action_results || []).map(a => ({ label: actionLabel(a), ok: a.status !== 'failed' }))
-                }" @confirm="openExecuteConfirm(m.plan)" @change="onChangePlan(m.plan.plan_id)" @stoptap="goMap" />
+              <ItineraryCard v-if="m.plan.itinerary" :itinerary="itineraryView(m.plan)"
+                @confirm="openExecuteConfirm(m.plan)" @change="onChangePlan(m.plan.plan_id)"
+                @strategy="chooseStrategy(m.plan.plan_id, $event)" @stoptap="goMap" />
               <div v-else class="pi-confirm">
                 <div class="pi-empty-t">🧠 大模型已生成这份智能方案，确认后即可为你预约 / 排号</div>
                 <div class="ic-btns">

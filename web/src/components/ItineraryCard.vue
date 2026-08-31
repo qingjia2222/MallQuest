@@ -1,6 +1,6 @@
 <script setup>
 const props = defineProps({ itinerary: Object });
-const emit = defineEmits(['stoptap', 'confirm', 'change']);
+const emit = defineEmits(['stoptap', 'confirm', 'change', 'strategy']);
 
 function stop(i) { emit('stoptap', i); }
 </script>
@@ -10,6 +10,14 @@ function stop(i) { emit('stoptap', i); }
     <div class="ic-title">
       <span>推荐方案</span>
       <span class="ic-tag">{{ itinerary.tag || '为你定制' }}</span>
+    </div>
+
+    <div v-if="itinerary.alternatives && itinerary.alternatives.length" class="ic-strategies">
+      <div class="ic-strategy-title">选择优化目标</div>
+      <button v-for="a in itinerary.alternatives" :key="a.strategy" class="ic-strategy" :class="{ selected: a.strategy === itinerary.selectedStrategy }" @click="emit('strategy', a.strategy)">
+        <span><b>{{ a.label }}</b><small>{{ a.strategy === itinerary.selectedStrategy ? '当前方案' : '点击切换' }}</small></span>
+        <span class="ic-metrics">生成时预计 {{ a.estimated_total_minutes }} 分钟 · 路程 {{ a.estimated_distance }} · 等候 {{ a.estimated_wait_minutes }} 分钟</span>
+      </button>
     </div>
 
     <div class="ic-timeline">
@@ -47,6 +55,7 @@ function stop(i) { emit('stoptap', i); }
 .ic { background: #fff; border-radius: 18px; padding: 18px; box-shadow: 0 8px 24px rgba(124,58,237,0.08); }
 .ic-title { display: flex; align-items: center; justify-content: space-between; font-weight: 700; font-size: 17px; }
 .ic-tag { font-size: 12px; color: var(--primary); background: #ede9fe; padding: 3px 12px; border-radius: 20px; font-weight: 500; }
+.ic-strategies{display:flex;flex-direction:column;gap:8px;margin-top:14px}.ic-strategy-title{font-size:12px;color:#6b7280}.ic-strategy{border:1px solid #e5e7eb;background:#fff;border-radius:12px;padding:10px 12px;text-align:left;color:#1f2937}.ic-strategy.selected{border-color:var(--primary);background:#f5f3ff}.ic-strategy span:first-child{display:flex;justify-content:space-between}.ic-strategy small{color:var(--primary)}.ic-metrics{display:block;margin-top:5px;font-size:11px;color:#6b7280}
 .ic-timeline { margin-top: 16px; }
 .ic-stop { display: flex; cursor: pointer; }
 .ic-rail { width: 22px; display: flex; flex-direction: column; align-items: center; }

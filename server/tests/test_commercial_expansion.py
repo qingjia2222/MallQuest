@@ -16,6 +16,10 @@ def test_navigation_only_for_destination_intent():
     assert data["intent"]=="navigation" and data["navigation"]["type"]=="route_animation"
     assert data["navigation"]["destination_store"]["id"]=="s09"
     assert data["navigation"]["nodes"] and data["navigation"]["replayable"] and data["navigation"]["dismissible"]
+    assert data["navigation"]["vertical_mode"]=="elevator"
+    escalator=client.post("/api/chat",headers=headers,json={"session_id":session,"message":"从当前位置怎么走扶梯去电影院？"}).json()["data"]
+    assert escalator["navigation"]["vertical_mode"]=="escalator"
+    assert "乘扶梯前往 2F" in escalator["navigation"]["transfer_instructions"]
     ordinary=client.post("/api/chat",headers=headers,json={"session_id":session,"message":"今天有什么优惠？"}).json()["data"]
     assert ordinary["intent"]!="navigation" and "navigation" not in ordinary
 
@@ -50,6 +54,18 @@ def test_party_a_map_geometry_is_merged_with_backend_store_data():
     target=next(s for s in stores if s["id"]=="s01")
     assert target["name"]=="蜀香小院" and target["map_slot"]=="shop102114"
     assert target["map_x"]==-12.6 and target["queue_minutes"]==12
+    assert target["store_code"]=="QD-S01-DEMO"
+
+def test_store_code_resolves_to_the_same_customer_store_and_llm_answer():
+    reset_and_seed(); client=TestClient(app); headers,session=login_scan(client)
+    stores=client.get("/api/stores",headers=headers,params={"session_id":session}).json()["data"]
+    assert next(s for s in stores if s["id"]=="s01")["store_code"]=="QD-S01-DEMO"
+    chat=client.post("/api/chat",headers=headers,json={"session_id":session,"message":"QD-S01-DEMO 是哪家店？"}).json()["data"]
+    assert chat["result"][0]["id"]=="s01" and chat["result"][0]["name"]=="蜀香小院"
+    assert "QD-S01-DEMO" in chat["reply"] and "蜀香小院" in chat["reply"]
+    nav=client.post("/api/chat",headers=headers,json={"session_id":session,"message":"怎么去 QD-S01-DEMO？"}).json()["data"]
+    assert nav["intent"]=="navigation" and nav["navigation"]["destination_store"]["id"]=="s01"
+    assert nav["navigation"]["path_policy"]=="corridor_only"
 
 def test_role_workspaces_do_not_leak_permissions():
     reset_and_seed(); client=TestClient(app); visitor,_=login_scan(client)

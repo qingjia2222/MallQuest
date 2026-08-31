@@ -4,6 +4,15 @@
     <text class="ic-tag">{{itinerary.tag || '为你定制'}}</text>
   </view>
 
+  <view wx:if="{{itinerary.alternatives && itinerary.alternatives.length}}" class="ic-strategies">
+    <view class="ic-strategy-title">选择优化目标</view>
+    <view wx:for="{{itinerary.alternatives}}" wx:key="strategy" data-strategy="{{item.strategy}}" bindtap="onStrategy"
+          class="ic-strategy {{item.strategy === itinerary.selectedStrategy ? 'selected' : ''}}">
+      <view><strong>{{item.label}}</strong><text>{{item.strategy === itinerary.selectedStrategy ? '当前方案' : '点击切换'}}</text></view>
+      <view class="ic-strategy-metrics"><text>生成时预计 {{item.estimated_total_minutes}} 分钟</text><text>路程 {{item.estimated_distance}}</text><text>等候 {{item.estimated_wait_minutes}} 分钟</text></view>
+    </view>
+  </view>
+
   <!-- 时间轴 -->
   <view class="ic-timeline">
     <view wx:for="{{itinerary.stops}}" wx:key="index" class="ic-stop"
@@ -16,7 +25,7 @@
         <view class="ic-stop-head">
           <text class="ic-time">{{item.time}}</text>
           <text class="ic-name">{{item.name}}</text>
-          <text wx:if="{{item.waiting}}" class="ic-wait {{item.waiting > 10 ? 'busy' : ''}}">{{item.waiting}} 桌</text>
+          <text wx:if="{{item.waiting}}" class="ic-wait {{item.waiting > 10 ? 'busy' : ''}}">{{item.waiting}} 分钟</text>
         </view>
         <text class="ic-meta">{{item.floor}} 层 · {{item.category}}</text>
       </view>

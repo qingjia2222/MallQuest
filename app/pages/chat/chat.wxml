@@ -16,8 +16,12 @@
             <view class="speak" bindtap="speak" data-text="{{item.text}}">🔊 播报</view>
             <!-- 富卡片 -->
             <rich-card wx:if="{{item.card}}" card="{{item.card}}" bind:cardtap="onCardTap" />
-            <!-- 方案提示 -->
-            <view wx:if="{{item.plan}}" class="plan-hint" bindtap="onPlanTap">📋 已生成方案，查看详情 →</view>
+            <!-- 与 Web 同构：方案直接在对话内展示并进入显式确认门 -->
+            <view wx:if="{{item.plan && item.plan.itineraryCard}}" class="plan-inline">
+              <view class="plan-inline-head"><text>已生成方案</text><text class="plan-state">{{item.plan.state === 'DONE' ? '已执行' : '待确认'}}</text></view>
+              <itinerary-card itinerary="{{item.plan.itineraryCard}}" bind:stoptap="onInlineStopTap" bind:confirm="openExecuteConfirm" bind:change="onChangePlan" bind:strategy="chooseStrategy" />
+              <view class="plan-detail-link" bindtap="goPlanDetail">详细调整方案 →</view>
+            </view>
             <!-- 规划入口 -->
             <view wx:if="{{item.quick && item.quick.length}}" class="quick-chips">
               <view wx:for="{{item.quick}}" wx:key="index" class="chip active" bindtap="send" data-text="{{item}}">{{item}}</view>
@@ -41,9 +45,28 @@
   <view wx:if="{{navVisible}}" class="nav-mask">
     <view class="nav-modal">
       <view class="nav-head"><view><view class="nav-kicker">3D ROUTE · 自动导览</view><view class="nav-title">前往 {{navigation.destination_store.name}}</view></view><view class="nav-close" bindtap="closeNavigation">×</view></view>
-      <view class="nav-stage"><image src="{{navMapUrl}}" mode="widthFix"/><canvas canvas-id="navCanvas" class="nav-canvas"/><view class="floor-badge">{{navFloor}}F</view><view class="you-badge">红点 = 您当前所在位置</view></view>
+      <view class="nav-stage"><mini-map id="chatRouteMap" stores="{{navStores}}" routeNodes="{{navigation.nodes}}" activeId="{{navigation.destination_store.id}}" floor="{{0}}"/><view class="you-badge">红点 = 您当前所在位置</view></view>
+      <view class="nav-transfer">🛗 {{navInstruction}}</view>
+      <view wx:if="{{navigation.floors && navigation.floors.length > 1}}" class="transfer-switch"><button data-mode="elevator" class="{{navigation.vertical_mode === 'elevator' ? 'active' : ''}}" bindtap="switchTransfer">直梯路线</button><button data-mode="escalator" class="{{navigation.vertical_mode === 'escalator' ? 'active' : ''}}" bindtap="switchTransfer">扶梯路线</button></view>
       <view class="nav-meta"><text>约 {{navigation.estimated_distance}}</text><text wx:if="{{navigation.transfer_instructions.length}}"> · 换乘 {{navigation.transfer_instructions.length}} 次</text></view>
       <view class="nav-actions"><button class="nav-replay" bindtap="replayNavigation">↻ 重播路线</button><button class="nav-done" bindtap="closeNavigation">关闭导览</button></view>
+    </view>
+  </view>
+
+  <!-- 与 Web 同构：第一步确认采用方案，第二步确认预约/购票等数据库写操作 -->
+  <view wx:if="{{showConfirm}}" class="confirm-mask" bindtap="cancelExecute">
+    <view class="confirm-sheet" catchtap="noop">
+      <block wx:if="{{confirmStep === 1}}">
+        <view class="cf-title">是否按照方案执行？</view>
+        <view class="cf-sub">可以继续沟通调整，也可以确认后查看同一界面的 3D 路线。</view>
+        <view class="cf-stops"><text wx:for="{{pendingPlan.itinerary}}" wx:key="id">{{item.name}}</text></view>
+        <view class="cf-actions"><button class="cf-ghost" bindtap="cancelExecute">继续沟通</button><button class="cf-primary" bindtap="nextConfirm">同意，继续</button></view>
+      </block>
+      <block wx:else>
+        <view class="cf-title">是否需要预约和订票？</view>
+        <view class="cf-sub">确认后才会写入预约、排号、领券或演示票务数据；先不用则只查看方案和路线。</view>
+        <view class="cf-actions"><button class="cf-ghost" data-booking="false" bindtap="runExecute">先不用，查看路线</button><button class="cf-primary" data-booking="true" bindtap="runExecute">需要，帮我执行</button></view>
+      </block>
     </view>
   </view>
 </view>

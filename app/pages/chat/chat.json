@@ -2,6 +2,8 @@
   "navigationStyle": "custom",
   "usingComponents": {
     "rich-card": "/components/rich-card/rich-card",
-    "voice-input": "/components/voice-input/voice-input"
+    "voice-input": "/components/voice-input/voice-input",
+    "itinerary-card": "/components/itinerary-card/itinerary-card",
+    "mini-map": "/components/mini-map/mini-map"
   }
 }

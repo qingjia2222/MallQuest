@@ -51,7 +51,8 @@ function statusText(s) { return s.open_status === 'open' ? '营业中' : '未营
 
     <!-- 页面中心：商场地图 -->
     <div class="home-map">
-      <Floors3D :route="null" @select="open" />
+      <Floors3D v-if="stores.length" :route="null" :stores="stores" @select="open" />
+      <div v-else class="hs-empty">地图店铺数据加载中…</div>
     </div>
 
     <!-- 下方：店铺详情列表 -->
@@ -87,7 +88,7 @@ function statusText(s) { return s.open_status === 'open' ? '营业中' : '未营
             <div class="d-name">{{ focus.name }}</div>
             <div class="d-meta">
               <span class="d-badge">{{ focus.category }}</span>
-              <span class="d-loc">{{ focus.floor }}F · {{ focus.avg_price ? '¥' + focus.avg_price + '/人' : '' }}</span>
+              <span class="d-loc">{{ focus.floor }}F · 编码 {{ focus.store_code || '待分配' }} · {{ focus.avg_price ? '¥' + focus.avg_price + '/人' : '' }}</span>
             </div>
           </div>
           <div class="d-close" @click="close">×</div>

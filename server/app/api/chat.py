@@ -1,4 +1,4 @@
-import logging
+import logging, re
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from app.core.auth import AuthContext, require_auth
@@ -39,6 +39,13 @@ def chat(body:ChatBody,auth:AuthContext=Depends(require_auth)):
             except Exception as exc:
                 log.exception("plan_from_agent_failed error_type=%s",type(exc).__name__)
         plan=create_plan(auth.user_id,session["mall_id"],body.session_id,text,scene); return envelope({"reply":"我已理解目标并生成方案，请确认后再执行预约、领券或购票。","intent":"plan","plan":plan,"cards":[plan["card"]],"degraded":True,"degraded_reason":"scripted fallback"})
+    # 店铺编码属于确定性私域主键，必须先查商场工具库，不能让在线模型自由猜测。
+    code_match=re.search(r"QD-[A-Z0-9]+(?:-[A-Z0-9]+)+",text.upper())
+    if code_match:
+        args={"keyword":code_match.group(0)}; result=run_tool("search_stores",context,args)
+        reply=(f"店铺编码 {code_match.group(0)} 对应 {result[0]['name']}，位于 {result[0]['floor']}F，当前状态为 {result[0]['open_status']}。" if result
+               else f"当前商场没有找到店铺编码 {code_match.group(0)}，请核对后再试。")
+        return envelope({"reply":reply,"intent":"search_stores","tool_calls":[{"name":"search_stores","arguments":args}],"result":result,"cards":[{"type":"stores","data":result}],"degraded":False,"source":"private_store_code_tool"})
     online=try_online(text,context)
     if online: return envelope({**online,"reply":plain_text(online.get("reply","")),"intent":"online_tool_loop","cards":[]})
     if "停车" in text: tool="query_parking_status"; args={}; reply="已查询星河里停车状态。"; card="parking"
@@ -47,5 +54,6 @@ def chat(body:ChatBody,auth:AuthContext=Depends(require_auth)):
     elif "排队" in text or "等位" in text: tool="query_queue_status"; args={}; reply="以下店铺当前需要排队，已按等候时间从长到短排列。"; card="queue"
     elif "优惠" in text or "特惠" in text: tool="get_today_deals"; args={}; reply="这是今天仍有库存的特惠。"; card="deals"
     else: tool="search_stores"; args={"keyword":text}; reply="已在当前商场私有店铺库中搜索。"; card="stores"
-    result=run_tool(tool,context,args); mode=LLMAdapter().chat([])
+    result=run_tool(tool,context,args)
+    mode=LLMAdapter().chat([])
     return envelope({"reply":reply,"intent":tool,"tool_calls":[{"name":tool,"arguments":args}],"result":result,"cards":[{"type":card,"data":result}],**mode})

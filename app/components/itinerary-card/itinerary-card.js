@@ -12,6 +12,7 @@ Component({
       this.triggerEvent('stoptap', { index: e.currentTarget.dataset.index, stop: e.currentTarget.dataset.stop });
     },
     onConfirm() { this.triggerEvent('confirm'); },
-    onChange() { this.triggerEvent('change'); }
+    onChange() { this.triggerEvent('change'); },
+    onStrategy(e) { this.triggerEvent('strategy', { strategy: e.currentTarget.dataset.strategy }); }
   }
 });

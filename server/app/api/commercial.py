@@ -41,7 +41,7 @@ def map_scene(mall_id:str,auth:AuthContext=Depends(require_auth)):
         if not mall: raise HTTPException(status_code=404,detail="mall not found")
         job=db.execute("SELECT * FROM map_jobs WHERE mall_id=? ORDER BY created_at DESC LIMIT 1",(mall_id,)).fetchone()
         stores=db.execute("""SELECT s.id,s.name,s.category,s.floor,s.pos_x,s.pos_y,
-            ss.open_status,ss.queue_minutes,ss.seats_available,sp.business_hours,sp.service_tags,
+            ss.open_status,ss.queue_minutes,ss.seats_available,sp.store_code,sp.business_hours,sp.service_tags,
             mb.source_key AS map_slot,mb.source_label AS map_label,mb.map_x,mb.map_z,
             mb.map_width,mb.map_depth,mb.source AS map_source
             FROM stores s
@@ -54,7 +54,7 @@ def map_scene(mall_id:str,auth:AuthContext=Depends(require_auth)):
 @router.get("/stores/{store_id}/public-status")
 def public_store(store_id:str,mall_id:str=Query(...),auth:AuthContext=Depends(require_auth)):
     with connection() as db:
-        row=db.execute("SELECT s.id,s.name,s.category,s.floor,s.avg_price,ss.open_status,ss.queue_minutes,ss.seats_available,sp.business_hours,sp.service_tags,d.title AS deal_title,d.price AS deal_price FROM stores s LEFT JOIN store_status ss ON ss.store_id=s.id LEFT JOIN store_profiles sp ON sp.store_id=s.id LEFT JOIN deals d ON d.store_id=s.id AND d.mall_id=s.mall_id AND d.stock>0 WHERE s.id=? AND s.mall_id=? ORDER BY d.price LIMIT 1",(store_id,mall_id)).fetchone()
+        row=db.execute("SELECT s.id,s.name,s.category,s.floor,s.avg_price,ss.open_status,ss.queue_minutes,ss.seats_available,sp.store_code,sp.business_hours,sp.service_tags,d.title AS deal_title,d.price AS deal_price FROM stores s LEFT JOIN store_status ss ON ss.store_id=s.id LEFT JOIN store_profiles sp ON sp.store_id=s.id LEFT JOIN deals d ON d.store_id=s.id AND d.mall_id=s.mall_id AND d.stock>0 WHERE s.id=? AND s.mall_id=? ORDER BY d.price LIMIT 1",(store_id,mall_id)).fetchone()
     if not row: raise HTTPException(status_code=404,detail="store not found")
     return envelope(dict(row))
 

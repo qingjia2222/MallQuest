@@ -11,5 +11,5 @@
       <view class="store-main"><text class="store-name">{{item.name}}</text><text class="store-meta">{{item.category}} · {{item.floor}}F</text><view class="store-tags"><text class="wait">排 {{item.waiting}} 分钟</text><text>余 {{item.seats_available}}</text><text class="open">营业中</text></view></view>
     </view>
   </view>
-  <view wx:if="{{showDetail && focusStore}}" class="detail-mask" bindtap="closeDetail"><view class="detail" catchtap="noop"><view class="detail-title">{{focusStore.name}}</view><view>{{focusStore.category}} · {{focusStore.floor}}F</view><view class="detail-live">排队 {{focusStore.waiting}} 分钟 · 余位 {{focusStore.seats_available}}</view><button class="button" bindtap="goChat">去对话规划</button></view></view>
+  <view wx:if="{{showDetail && focusStore}}" class="detail-mask" bindtap="closeDetail"><view class="detail" catchtap="noop"><view class="detail-title">{{focusStore.name}}</view><view>{{focusStore.category}} · {{focusStore.floor}}F · 编码 {{focusStore.store_code || '待分配'}}</view><view class="detail-live">排队 {{focusStore.waiting}} 分钟 · 余位 {{focusStore.seats_available}}</view><button class="button" bindtap="goChat">去对话规划</button></view></view>
 </view>

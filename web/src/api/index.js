@@ -41,6 +41,7 @@ export default {
     return scan;
   },
   chat: (message) => req('POST', '/api/chat', { session_id: getSession(), message }),
+  navigationResolve: (query, current_node = null) => req('POST', '/api/navigation/resolve', { session_id: getSession(), query, current_node }),
   createPlan: (scene, slots = {}) => req('POST', '/api/plan/goal', { session_id: getSession(), scene, slots }),
   getPlan: (plan_id) => req('GET', `/api/plan/${plan_id}`),
   getRoute: (plan_id) => req('GET', '/api/plan/route', { plan_id }),
