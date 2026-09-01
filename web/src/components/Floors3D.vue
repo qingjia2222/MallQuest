@@ -2,6 +2,7 @@
 import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
 import ringPlan from '../store/mall_ring.json';
 import storeInfo from '../store/store_info.json';
+import api from '../api';
 
 // 取店铺详情(分类/简介/标签)，找不到给默认
 function infoOf(name) {
@@ -13,8 +14,9 @@ const props = defineProps({ route: { type: Object, default: null }, navigate: { 
 const emit = defineEmits(['select', 'floorschanged']);
 
 const el = ref(null);
-const floors = ['F1', 'F2'];
-const curFloor = ref('all');       // 'all' | 'F1' | 'F2'
+const floors = ['B1', 'F1', 'F2'];
+const curFloor = ref('all');       // 'all' | 'B1' | 'F1' | 'F2'
+const parkingAreas = ref([]);      // 停车场分区 {area,total,free}
 
 let scene, camera, renderer, controls;
 let raf;
@@ -27,14 +29,15 @@ let animationStartedAt = 0;
 let animationDuration = 6500;
 let storePositions = {};
 let mainEntrance = null;
-let floorGroups = { F1: null, F2: null };
+let floorGroups = { B1: null, F1: null, F2: null };
+let parkingMeshes = [];
 
 // 平台常量：正方形回字形
 const W = 58;
 const EDGE = 8;
 const INNER = W/2 - EDGE;            // 店内边缘(朝中庭)
 const DARK = 0xF7F3FA;               // 参考图风：近白淡紫背景
-const FLOOR_Y = { F1: 0, F2: 12 };   // 两层楼高差拉大，区分更明显
+const FLOOR_Y = { B1: -12, F1: 0, F2: 12 };   // B1 地下停车场 + 两层楼高差拉大，区分更明显
 // 参考图配色：淡粉/淡紫/淡蓝/淡灰的低饱和浅色块，柔和淡雅
 const CAT = { 餐饮: 0xF2A9C0, 饮品甜品: 0xB89BE0, 零售: 0x9BB4E8, 服务设施: 0xC7CFDA,
   food: 0xF2A9C0, lift: 0x9BB4E8, esc: 0xF2A9C0, bridge: 0xB89BE0, entrance: 0x6FBF8F };
@@ -56,7 +59,8 @@ function init() {
     const dir = new THREE.DirectionalLight(0xffffff, 0.5); dir.position.set(20, 40, 20); scene.add(dir);
     const p = new THREE.PointLight(0xFFFFFF, 0.35, 90); p.position.set(-20, 20, -20); scene.add(p);
 
-    buildFloor('F1'); buildFloor('F2'); buildElevator();
+    buildFloor('F1'); buildFloor('F2'); buildParkingFloor(); buildParkingZones(); buildElevator();
+    loadParking();
     renderer.domElement.addEventListener('click', onCanvasClick);
     resize(); window.addEventListener('resize', resize); animate(); focusFloor('all');
     drawRoute(props.route);   // 场景就绪后再画初次路线
@@ -78,6 +82,18 @@ function makeLabel(text) {
   ctx.fillStyle = '#5A4B3C'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, 128, 42);
   return new THREE.CanvasTexture(c);
 }
+const numTexCache = {};
+function numberTexture(n) {
+  if (numTexCache[n]) return numTexCache[n];
+  const c = document.createElement('canvas'); c.width = 64; c.height = 64;
+  const ctx = c.getContext('2d');
+  ctx.font = 'bold 30px "PingFang SC","Microsoft YaHei",sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(90,75,60,0.85)';
+  ctx.fillText(String(n), 32, 34);
+  numTexCache[n] = new THREE.CanvasTexture(c);
+  return numTexCache[n];
+}
 function catColor(cat) { return CAT[cat] || 0x9CA3AF; }
 // 悬浮文字标签
 function addLabel(group, text, x, y, z, scale) {
@@ -85,6 +101,7 @@ function addLabel(group, text, x, y, z, scale) {
   spr.scale.set((scale || 6.4), 1.6, 1);
   spr.position.set(x, y, z);
   group.add(spr);
+  return spr;
 }
 
 function buildFloor(fl) {
@@ -273,6 +290,116 @@ function buildElevator() {
   addLabel(scene, '↑上', xSpan/2, FLOOR_Y.F2 + 0.8, zA, 3);
   addLabel(scene, '↓下', -xSpan/2, FLOOR_Y.F1 + 0.8, zB, 3);
   addLabel(scene, '↓下', xSpan/2, FLOOR_Y.F2 + 0.8, zB, 3);
+  // 直梯井：从 B1 贯穿到 2F，让地下停车场与地上楼层连通
+  const shaft = new THREE.Mesh(new THREE.BoxGeometry(6, FLOOR_Y.F2 - FLOOR_Y.B1, 6), new THREE.MeshStandardMaterial({ color: 0x9BB4E8, transparent: true, opacity: 0.3 }));
+  shaft.position.set(0, (FLOOR_Y.B1 + FLOOR_Y.F2) / 2, 0);
+  scene.add(shaft);
+}
+
+// 地下 B1 层：停车场（目字形车道：外围环形车道 + 两条横向内车道，中央电梯四周留车道）
+function buildParkingFloor() {
+  const floorY = FLOOR_Y.B1;
+  const group = new THREE.Group(); group.position.y = floorY;
+  // 平台底
+  const base = new THREE.Mesh(new THREE.BoxGeometry(W, 1.0, W), new THREE.MeshStandardMaterial({ color: 0xE9E5F4, transparent: true, opacity: 0.9 }));
+  group.add(base);
+  // 目字形车道：外框（上/下横向 + 左/右竖向）+ 两条横向内车道
+  const laneMat = new THREE.MeshBasicMaterial({ color: 0xCFC8E2 });
+  const R = 20, LW = 5, LEN = 42;
+  [[0, -R, LEN, LW], [0, R, LEN, LW], [-R, 0, LW, LEN], [R, 0, LW, LEN]]
+    .forEach(([x, z, sx, sz]) => {
+      const lane = new THREE.Mesh(new THREE.BoxGeometry(sx, 0.14, sz), laneMat);
+      lane.position.set(x, 0.57, z);
+      group.add(lane);
+    });
+  // 两条横向内车道（目字中间的“横”）
+  [-7, 7].forEach(z => {
+    const lane = new THREE.Mesh(new THREE.BoxGeometry(LEN, 0.14, 3), laneMat);
+    lane.position.set(0, 0.57, z);
+    group.add(lane);
+  });
+  // 中央直梯（四周留车道）
+  const lift = new THREE.Mesh(new THREE.BoxGeometry(6, 0.3, 6), new THREE.MeshStandardMaterial({ color: 0x9BB4E8, emissive: 0x9BB4E8, emissiveIntensity: 0.25 }));
+  lift.position.set(0, 0.7, 0); group.add(lift);
+  addLabel(group, '直梯', 0, 1.6, 0, 4);
+  // 入口坡道（下边中央缺口）
+  const ramp = new THREE.Mesh(new THREE.BoxGeometry(6, 0.2, 3), new THREE.MeshStandardMaterial({ color: 0x6FBF8F, emissive: 0x6FBF8F, emissiveIntensity: 0.2 }));
+  ramp.position.set(0, 0.6, 27.5); group.add(ramp);
+  addLabel(group, '入口坡道', 0, 1.5, 27.5, 4.5);
+  // 车道方向箭头（外环顺时针 + 内车道横向）
+  addLabel(group, '→', 0, 0.9, -R, 3);
+  addLabel(group, '↓', R, 0.9, 0, 3);
+  addLabel(group, '←', 0, 0.9, R, 3);
+  addLabel(group, '↑', -R, 0.9, 0, 3);
+  addLabel(group, '→', 0, 0.9, -7, 2.4);
+  addLabel(group, '←', 0, 0.9, 7, 2.4);
+  // 标题（左上空角）
+  addLabel(group, 'B1 停车场', -22, 4.5, -22, 8);
+  floorGroups.B1 = group;
+  scene.add(group);
+}
+
+// 按分区名称筛选 B1 停车区（B1 前缀优先；无则回退为全部）
+function b1Areas() {
+  const list = parkingAreas.value.filter(a => /B1/i.test(a.area));
+  return list.length ? list : parkingAreas.value;
+}
+
+// 在 B1 平台绘制车位：外围回字形（上16/下16/左16/右16）+ 电梯前后各两排背靠背岛式车位（10×4），带编号，绿=空位/红=占用
+function buildParkingZones() {
+  const group = floorGroups.B1; if (!group) return;
+  parkingMeshes.forEach(m => group.remove(m)); parkingMeshes = [];
+  const zones = b1Areas();
+  const total = zones.reduce((s, z) => s + (Number(z.total) || 0), 0);
+  const free = zones.reduce((s, z) => s + (Number(z.free) || 0), 0);
+  const SW = 2.3, SD = 4.5;            // 车位宽 / 深（90° 垂直）
+  const stalls = [];
+  // 上排 16（朝下）
+  for (let i = 0; i < 16; i++) stalls.push({ x: -18.75 + 2.5*i, z: -26.75, horiz: true });
+  // 右排 16（朝左）
+  for (let i = 0; i < 16; i++) stalls.push({ x: 26.75, z: -18.75 + 2.5*i, horiz: false });
+  // 下排 16（朝上，中央留坡道缺口）
+  [-25, -22.5, -20, -17.5, -15, -12.5, -10, -7.5, 7.5, 10, 12.5, 15, 17.5, 20, 22.5, 25].forEach(x => stalls.push({ x, z: 26.75, horiz: true }));
+  // 左排 16（朝右）
+  for (let i = 0; i < 16; i++) stalls.push({ x: -26.75, z: -18.75 + 2.5*i, horiz: false });
+  // 电梯后（北）两排背靠背（往外靠，让电梯四周留出车道）
+  for (let i = 0; i < 10; i++) stalls.push({ x: -11.25 + 2.5*i, z: -15, horiz: true });
+  for (let i = 0; i < 10; i++) stalls.push({ x: -11.25 + 2.5*i, z: -11, horiz: true });
+  // 电梯前（南）两排背靠背
+  for (let i = 0; i < 10; i++) stalls.push({ x: -11.25 + 2.5*i, z: 11, horiz: true });
+  for (let i = 0; i < 10; i++) stalls.push({ x: -11.25 + 2.5*i, z: 15, horiz: true });
+
+  const SPACES = stalls.length;        // 80
+  const freeCount = total ? Math.round(SPACES * free / total) : 20;
+  const freeSet = new Set();
+  for (let i = 0; i < freeCount; i++) freeSet.add(Math.floor(i * SPACES / Math.max(1, freeCount)));
+
+  const freeMat = new THREE.MeshLambertMaterial({ color: 0x9BE8B0 });
+  const occupiedMat = new THREE.MeshLambertMaterial({ color: 0xE8999B });
+
+  stalls.forEach((s, i) => {
+    const num = i + 1;
+    const geo = s.horiz ? new THREE.BoxGeometry(SW, 0.35, SD) : new THREE.BoxGeometry(SD, 0.35, SW);
+    const tile = new THREE.Mesh(geo, freeSet.has(i) ? freeMat : occupiedMat);
+    tile.position.set(s.x, 1.0, s.z);
+    group.add(tile); parkingMeshes.push(tile);
+    const ns = new THREE.Sprite(new THREE.SpriteMaterial({ map: numberTexture(num), depthTest: false, transparent: true }));
+    ns.scale.set(1.7, 1.7, 1); ns.position.set(s.x, 1.5, s.z);
+    group.add(ns); parkingMeshes.push(ns);
+  });
+  const lbl = addLabel(group, `空位 ${freeCount}/${SPACES}`, -22, 3, -22, 6);
+  if (lbl) parkingMeshes.push(lbl);
+}
+
+// 拉取实时停车余位并绘制分区（会话刚建立时可能还没拿到分区，稍后重试）
+function loadParking(attempt = 0) {
+  api.parking().then((p) => {
+    parkingAreas.value = (p && p.areas) || [];
+    buildParkingZones();
+    if (!parkingAreas.value.length && attempt < 4) setTimeout(() => loadParking(attempt + 1), 900);
+  }).catch(() => {
+    if (attempt < 4) setTimeout(() => loadParking(attempt + 1), 900);
+  });
 }
 
 function onCanvasClick(e) {
@@ -286,12 +413,13 @@ function onCanvasClick(e) {
 function focusFloor(fl) {
   curFloor.value = fl;
   // 按模式显示/隐藏楼层
+  if (floorGroups.B1) floorGroups.B1.visible = (fl === 'all' || fl === 'B1');
   if (floorGroups.F1) floorGroups.F1.visible = (fl === 'all' || fl === 'F1');
   if (floorGroups.F2) floorGroups.F2.visible = (fl === 'all' || fl === 'F2');
   [...routeLines, ...navLines].forEach((m) => { const f = m.userData && m.userData.floor; m.visible = !f || f === 'all' || fl === 'all' || ('F' + f) === fl; });
   // 相机聚焦
   if (fl === 'all') {
-    controls.target.set(0, (FLOOR_Y.F1 + FLOOR_Y.F2) / 2, 0);
+    controls.target.set(0, (FLOOR_Y.B1 + FLOOR_Y.F2) / 2, 0);
     camera.position.set(44, 30, 60);
   } else {
     controls.target.set(0, FLOOR_Y[fl], 0);
@@ -609,6 +737,7 @@ defineExpose({ focusFloor, drawRoute, replayRoute });
       <span class="f3d-floor" :class="{ active: curFloor === 'all' }" @click="focusFloor('all')">全部</span>
       <span class="f3d-floor" :class="{ active: curFloor === 'F2' }" @click="focusFloor('F2')">2F</span>
       <span class="f3d-floor" :class="{ active: curFloor === 'F1' }" @click="focusFloor('F1')">1F</span>
+      <span class="f3d-floor" :class="{ active: curFloor === 'B1' }" @click="focusFloor('B1')">B1</span>
     </div>
     <div class="f3d-hint">🖱️ 拖拽旋转 · 滚轮缩放 · 点击店铺查询</div>
   </div>

@@ -48,11 +48,12 @@ def map_scene(mall_id:str,auth:AuthContext=Depends(require_auth)):
         mall=db.execute("SELECT * FROM malls WHERE id=?",(mall_id,)).fetchone()
         if not mall: raise HTTPException(status_code=404,detail="mall not found")
         job=db.execute("SELECT * FROM map_jobs WHERE mall_id=? ORDER BY created_at DESC LIMIT 1",(mall_id,)).fetchone()
+        parking=db.execute("SELECT area,total,free,updated_at FROM parking WHERE mall_id=? ORDER BY area",(mall_id,)).fetchall()
     catalog=list_stores(mall_id)
     for item in catalog:
         item["shape"]={"x":item["pos_x"]-55,"y":item["pos_y"]-30,"width":110,"height":60}
     facilities=map_catalog()["facilities"] if mall_id=="mall_demo" else []
-    return envelope({"mall_id":mall_id,"mall_name":mall["name"],"map_mode":job["map_mode"] if job else "demo_2_5d","status":job["status"] if job else "published","stores":catalog,"facilities":facilities})
+    return envelope({"mall_id":mall_id,"mall_name":mall["name"],"map_mode":job["map_mode"] if job else "demo_2_5d","status":job["status"] if job else "published","stores":catalog,"facilities":facilities,"parking":rows_to_dicts(parking)})
 
 @router.get("/stores/{store_id}/public-status")
 def public_store(store_id:str,mall_id:str=Query(...),auth:AuthContext=Depends(require_auth)):

@@ -61,14 +61,15 @@ Component({
   properties:{
     stores:{type:Array,value:[]},
     facilities:{type:Array,value:[]},
+    parking:{type:Array,value:[]},
     route:{type:Array,value:[]},
     routeNodes:{type:Array,value:[]},
     activeId:{type:String,value:''},
     floor:{type:Number,value:0}
   },
-  data:{webglReady:false,webglFailed:false,floorCount:2,segs:[],labels:[],facilityMarkers:[]},
+  data:{webglReady:false,webglFailed:false,floorCount:3,segs:[],labels:[],facilityMarkers:[]},
   observers:{
-    'stores,facilities,route,routeNodes,activeId,floor'(){ this.syncFacilityMarkers();if(this._gl){this._routeStarted=Date.now();this.render();this.scheduleLabels();} }
+    'stores,facilities,parking,route,routeNodes,activeId,floor'(){ this.syncFacilityMarkers();if(this._gl){this._routeStarted=Date.now();this.render();this.scheduleLabels();} }
   },
   lifetimes:{
     ready(){this.initWebGL();},
@@ -123,7 +124,8 @@ Component({
     visibleStores(){
       const floor=Number(this.data.floor||0);return (this.data.stores||[]).filter(s=>!floor||Number(s.floor)===floor);
     },
-    floorY(floor){return Number(floor)===2?8.5:1.25;},
+    floorY(floor){const n=Number(floor);return n===2?8.5:n===-1?-6.0:1.25;},
+    baseY(floor){const n=Number(floor);return n===2?7.55:n===-1?-6.95:0.3;},
     storePoint(s){
       const x=Number(s.map_x),z=Number(s.map_z);
       if(Number.isFinite(x)&&Number.isFinite(z))return[x,this.floorY(s.floor),z];
@@ -159,18 +161,65 @@ Component({
       const items=synced.length?synced:fallback;
       const colors={服务台:[0.34,0.72,0.92],瀑布厅:[0.30,0.80,0.72],儿童乐园:[0.55,0.72,0.96],美食广场:[0.96,0.67,0.35]};
       items.filter(item=>floors.includes(item.floor)).forEach(item=>{const height=item.height||.48,y=this.floorY(item.floor)+height,rgb=colors[item.name]||[0.67,0.72,0.79],color=item.color||[...rgb,all ? .68 : 1];this.drawBox(item.x,y,item.z,item.w/2,height,item.d/2,color);this.projectLabel(item.key,item.name,[item.x,y+height+.25,item.z],item.labelFacility!==false);});
-      floors.forEach(floor=>{const y=this.floorY(floor)+.7;this.drawBox(0,y,0,2.6,.7,2.6,[0.18,0.75,0.82,all ? .72 : 1]);this.projectLabel(`elevator_${floor}`,'直梯',[0,y+1.1,0],true);const ex=floor===1?-8:8;this.drawBox(ex,y,-9.5,2.4,.38,1.4,[0.96,0.43,0.34,all ? .74 : 1]);this.projectLabel(`escalator_${floor}`,'扶梯',[ex,y+1,-9.5],true);});
+      floors.forEach(floor=>{const y=this.floorY(floor)+.7;this.drawBox(0,y,0,2.6,.7,2.6,[0.18,0.75,0.82,all ? .72 : 1]);this.projectLabel(`elevator_${floor}`,'直梯',[0,y+1.1,0],true);if(floor!==-1){const ex=floor===1?-8:8;this.drawBox(ex,y,-9.5,2.4,.38,1.4,[0.96,0.43,0.34,all ? .74 : 1]);this.projectLabel(`escalator_${floor}`,'扶梯',[ex,y+1,-9.5],true);}});
+    },
+    b1Zones(){
+      const list=(this.data.parking||[]).filter(a=>/B1/i.test(a.area));
+      return list.length?list:(this.data.parking||[]);
+    },
+    drawParking(floors,all){
+      if(!floors.includes(-1))return;
+      const zones=this.b1Zones();
+      const total=zones.reduce((s,z)=>s+(Number(z.total)||0),0);
+      const free=zones.reduce((s,z)=>s+(Number(z.free)||0),0);
+      const y=this.floorY(-1)+0.5;
+      const lane=[0.79,0.77,0.88,all?0.9:1];
+      // 目字形车道：外围环形（四段）+ 两条横向内车道
+      this.drawBox(0,y-0.15,-15,21,0.1,2.5,lane);
+      this.drawBox(0,y-0.15,15,21,0.1,2.5,lane);
+      this.drawBox(-15,y-0.15,0,2.5,0.1,21,lane);
+      this.drawBox(15,y-0.15,0,2.5,0.1,21,lane);
+      this.drawBox(0,y-0.15,-5.5,21,0.1,1.5,lane);
+      this.drawBox(0,y-0.15,5.5,21,0.1,1.5,lane);
+      // 中央直梯（四周留车道）+ 入口坡道（下边中央）
+      this.drawBox(0,y-0.1,0,3,0.3,3,[0.34,0.72,0.92,all?0.8:1]);
+      this.drawBox(0,y-0.1,21.5,3,0.2,1.5,[0.42,0.72,0.55,all?0.85:1]);
+      // 外围回字形 + 电梯前后各两排岛式车位（带编号顺序）
+      const SW=1.15,SD=2.25;
+      const stalls=[];
+      for(let i=0;i<16;i++)stalls.push([-18.75+2.5*i,-20.75,1]);
+      for(let i=0;i<16;i++)stalls.push([26.75,-18.75+2.5*i,0]);
+      [-25,-22.5,-20,-17.5,-15,-12.5,-10,-7.5,7.5,10,12.5,15,17.5,20,22.5,25].forEach(x=>stalls.push([x,20.75,1]));
+      for(let i=0;i<16;i++)stalls.push([-26.75,-18.75+2.5*i,0]);
+      for(let i=0;i<10;i++)stalls.push([-11.25+2.5*i,-13,1]);
+      for(let i=0;i<10;i++)stalls.push([-11.25+2.5*i,-9,1]);
+      for(let i=0;i<10;i++)stalls.push([-11.25+2.5*i,9,1]);
+      for(let i=0;i<10;i++)stalls.push([-11.25+2.5*i,13,1]);
+      const SPACES=stalls.length;
+      const freeCount=total?Math.round(SPACES*free/total):20;
+      const freeSet=new Set();
+      for(let i=0;i<freeCount;i++)freeSet.add(Math.floor(i*SPACES/Math.max(1,freeCount)));
+      stalls.forEach((s,i)=>{
+        const rgb=freeSet.has(i)?[0.61,0.91,0.69]:[0.91,0.60,0.61];
+        const col=[...rgb,all?0.82:1];
+        if(s[2])this.drawBox(s[0],y,s[1],SW,0.3,SD,col);
+        else this.drawBox(s[0],y,s[1],SD,0.3,SW,col);
+      });
+      this.projectLabel('b1_parking',`B1 停车场 · 空位 ${freeCount}/${SPACES}`,[0,y+2.4,-17],true);
+      this.projectLabel('b1_ramp','入口坡道',[0,y+1.4,21.5],true);
+      this.projectLabel('b1_arrow','↻ 单向循环',[15,y+1.2,15],true);
     },
     render(){
       const gl=this._gl;if(!gl)return;
       gl.viewport(0,0,this._canvas.width,this._canvas.height);gl.clearColor(0.969,0.953,0.980,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
       const all=!Number(this.data.floor),radius=all?61:52,eye=[Math.sin(this._yaw)*radius,10+this._pitch*32,Math.cos(this._yaw)*radius];
-      const targetY=Number(this.data.floor)===2?7:Number(this.data.floor)===1?1:4;
+      const targetY=Number(this.data.floor)===2?7:Number(this.data.floor)===-1?-5:Number(this.data.floor)===1?1:4;
       const view=lookAt(eye,[0,targetY,0],[0,1,0]),proj=perspective(Math.PI/4,this._canvas.width/this._canvas.height,0.1,160);
       this._vp=multiply(proj,view);this._projected=[];this._projectedLabels=[];
-      const floors=Number(this.data.floor)?[Number(this.data.floor)]:[1,2];
-      gl.depthMask(false);floors.forEach(f=>this.drawBox(0,f===2?7.55:.3,0,29,.42,23,[0.98,0.97,0.94,all ? (f===2 ? .22 : .34) : .96]));gl.depthMask(true);
+      const floors=Number(this.data.floor)?[Number(this.data.floor)]:[-1,1,2];
+      gl.depthMask(false);floors.forEach(f=>this.drawBox(0,this.baseY(f),0,29,.42,23,[0.98,0.97,0.94,all ? (f===2 ? .22 : .34) : .96]));gl.depthMask(true);
       this.drawFacilities(floors,all);
+      this.drawParking(floors,all);
       this.visibleStores().forEach(s=>{
         const p=this.storePoint(s),active=s.id===this.data.activeId;
         const width=Math.max(2,Number(s.map_width)||4.5),depth=Math.max(2,Number(s.map_depth)||3.8),color=active?[0.94,0.27,0.31,1]:colorOf(s.category);if(all)color[3]=.76;
