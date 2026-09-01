@@ -5,7 +5,7 @@
 ## 快速演示
 
 ```powershell
-.\run_demo.ps1
+powershell -ExecutionPolicy Bypass -File .\run_demo.ps1
 ```
 
 随后打开 Web `http://127.0.0.1:5173`，或在微信开发者工具导入 `app/`。游客/会员手机号联调用 `11111111111 / 123456`，Web 也保留 `demo / demo123`；商户演示编码 `QD-S01-DEMO`；管理者演示账号 `manager / manager123`。真实凭证只放未提交的 `server/.env`，自动测试会强制使用 scripted，不消耗线上额度。
