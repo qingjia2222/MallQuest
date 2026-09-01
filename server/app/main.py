@@ -41,5 +41,5 @@ def health():
     if not database["ok"]: raise HTTPException(status_code=503,detail={"reason":"database_not_ready","database":database})
     return envelope(data)
 
-from app.api import auth, business, chat, commercial, debug, plan, scan, tts
-for router in (auth.router,scan.router,chat.router,plan.router,business.router,commercial.router,tts.router,debug.router): app.include_router(router,prefix="/api")
+from app.api import auth, business, chat, commercial, debug, plan, prompt_admin, scan, tts
+for router in (auth.router,scan.router,chat.router,plan.router,business.router,commercial.router,prompt_admin.router,tts.router,debug.router): app.include_router(router,prefix="/api")

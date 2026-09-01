@@ -1,5 +1,12 @@
 # 星河里积分规则
 mall_id: mall_demo
+doc_id: points_rules
+topic: points
+version: 2.0
+updated_at: 2026-09-01
+authority: 星河里会员服务演示规则
+maintainer: 商场运营管理员
+tags: 积分 有效期 生日月 兑换 过期
 
 ## 积分有效期
 积分按自然年滚动管理：每笔积分自获得之日起至次年 12 月 31 日有效。到期前 30 天会在会员中心提示，过期积分不可恢复。

@@ -34,14 +34,20 @@ async function req(method, path, data) {
   });
   const body = await resp.json().catch(() => ({}));
   if (body && body.code === 0) return body.data;
-  throw new Error((body && (body.message || body.detail)) || `HTTP ${resp.status}`);
+  const detail = body && body.detail;
+  const detailMessage = Array.isArray(detail) && detail[0]
+    ? `${(detail[0].loc || []).slice(-1)[0] || '参数'}：${detail[0].msg || '格式不正确'}`
+    : (typeof detail === 'string' ? detail : '');
+  throw new Error((body && body.message) || detailMessage || `HTTP ${resp.status}`);
 }
 
 export default {
   webLogin: (username, password) => req('POST', '/api/auth/web-login', { username, password }),
   phoneLogin: (phone, password) => req('POST', '/api/auth/phone-login', { phone, password }),
+  phoneRegister: (phone, password) => req('POST', '/api/auth/phone-register', { phone, password }),
   wxLogin: (code) => req('POST', '/api/auth/wx-login', { code }),
-  merchantLogin: (store_code) => req('POST', '/api/merchant/auth/store-code', { store_code }),
+  merchantLogin: (store_code, password) => req('POST', '/api/merchant/auth/store-code', { store_code, password }),
+  merchantRegister: (store_code, password) => req('POST', '/api/merchant/auth/register', { store_code, password }),
   scan: (mall_id = 'mall_demo') => req('POST', '/api/scan', { mall_id }),
   freshScan: (mall_id = 'mall_demo') => req('POST', '/api/scan', { mall_id }),
   chat: (message) => req('POST', '/api/chat', { session_id: getSession(), message }),
@@ -58,9 +64,13 @@ export default {
   liveStatus: (plan_id) => req('GET', '/api/plan/live-status', { plan_id }),
   parking: () => req('GET', '/api/parking', { session_id: getSession() }),
   stores: () => req('GET', '/api/stores', { session_id: getSession() }),
+  reservableStores: () => req('GET', '/api/stores', { session_id: getSession(), reservable_only: true }),
   location: () => req('GET', '/api/location'),
   navigationResolve: (query, current_node = 'f1_entrance') => req('POST', '/api/navigation/resolve', {
     session_id: getSession(), query, current_node
+  }),
+  navigationRecalculate: (destination_store_id, vertical_mode, current_node = 'f1_entrance') => req('POST', '/api/navigation/resolve', {
+    session_id: getSession(), destination_store_id, vertical_mode, current_node
   }),
   memberPoints: () => req('GET', '/api/member/points', { session_id: getSession() }),
   deals: () => req('GET', '/api/deals', { session_id: getSession() }),
@@ -71,13 +81,19 @@ export default {
   ticketsProducts: () => req('GET', '/api/tickets/products', { session_id: getSession() }),
   reservations: () => req('GET', '/api/reservations'),
   cancelReservation: (id) => req('DELETE', `/api/reservations/${id}`),
+  updateReservation: (id, payload) => req('PATCH', `/api/reservations/${id}`, { confirmed: true, ...payload }),
   claimCoupon: (coupon_id, confirmed = true) => req('POST', '/api/coupons/claim', { session_id: getSession(), coupon_id, confirmed }),
   reserve: (payload) => req('POST', '/api/reservations', { session_id: getSession(), confirmed: true, ...payload }),
   merchantStore: () => req('GET', '/api/merchant/store'),
   merchantStatus: (payload) => req('PATCH', '/api/merchant/store/status', payload),
   merchantDeal: (payload) => req('PUT', '/api/merchant/store/deals', payload),
+  merchantCoupon: (payload) => req('PUT', '/api/merchant/store/coupons', payload),
   managerAnalytics: (granularity = 'month', mall_id = 'mall_demo') => req('GET', '/api/manager/analytics', { mall_id, granularity }),
   managerStore: (payload) => req('POST', '/api/manager/stores', { mall_id: 'mall_demo', ...payload }),
+  managerPrompts: () => req('GET', '/api/manager/prompts'),
+  managerPrompt: (name) => req('GET', `/api/manager/prompts/${name}`),
+  updateManagerPrompt: (name, content, expected_revision) => req('PUT', `/api/manager/prompts/${name}`, { content, expected_revision }),
+  restoreManagerPrompt: (name, expected_revision) => req('POST', `/api/manager/prompts/${name}/restore-latest`, { expected_revision }),
   mapScene: (mall_id = 'mall_demo') => req('GET', `/api/maps/${mall_id}/scene`),
   mapFloorUrl: (floor) => `${BASE}/api/maps/mall_demo/floor_${floor}.svg`,
   // 确保存在有效会话：缺 session 就重新扫码建一个（登录后调用）

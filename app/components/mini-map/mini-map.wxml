@@ -15,6 +15,9 @@
 
   <view wx:if="{{webglFailed}}" class="mm-fallback">
     <view class="mm-grid"></view>
+    <view wx:for="{{facilityMarkers}}" wx:key="key"
+          class="mm-facility-marker {{floor && item.floor !== floor ? 'dim' : ''}}"
+          style="left:{{item.left}}%;top:{{item.top}}%">{{item.name}}</view>
     <view wx:for="{{stores}}" wx:key="id"
           class="mm-store {{item.id === activeId ? 'active' : ''}} {{floor && item.floor !== floor ? 'dim' : ''}}"
           style="left:{{item.pos_x}}%;top:{{item.pos_y}}%"

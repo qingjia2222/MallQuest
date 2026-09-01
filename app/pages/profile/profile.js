@@ -18,7 +18,5 @@ Page({
   logout() { wx.removeStorageSync('mallAuth'); Object.assign(getApp().globalData, { token: '', userId: '', sessionId: '', currentPlan: null, planState: null }); wx.reLaunch({ url: '/pages/portal/portal' }); },
   goCoupon() { wx.navigateTo({ url: '/pages/coupon/coupon' }); },
   goReserve() { wx.navigateTo({ url: '/pages/reserve/reserve' }); },
-  goPlan() { wx.navigateTo({ url: '/pages/plan/plan' }); },
-  goChat() { wx.switchTab({ url: '/pages/chat/chat' }); },
-  goChatWith(e) { getApp().globalData.chatPrefill = e.currentTarget.dataset.text; wx.switchTab({ url: '/pages/chat/chat' }); }
+  goPlan() { wx.navigateTo({ url: '/pages/plan/plan' }); }
 });

@@ -42,6 +42,12 @@ function setFilter(k) { filterBy.value = k; activeCat.value = ''; }
 
 function open(store) { const live=stores.value.find((item) => item.id === store.id || item.name === store.name) || {}; focus.value = { ...store, ...live }; aiReply.value = ''; }
 function close() { focus.value = null; aiReply.value = ''; }
+function goReserve() {
+  const s = focus.value;
+  if (!s || Number(s.reservable) !== 1) return;
+  close();
+  router.push({ path: '/reserve', query: { store: s.id } });
+}
 function getGeoloc() {
   return new Promise((resolve) => {
     if (!navigator.geolocation) { resolve(false); return; }
@@ -62,7 +68,7 @@ async function goNavigate() {
 async function switchVertical(mode) {
   if (!planStore.navigateTarget) return;
   const target = planStore.navigateTarget;
-  const route = await api.navigationResolve(`请走${mode === 'escalator' ? '扶梯' : '直梯'}去${target.name}`, 'f1_entrance');
+  const route = await api.navigationRecalculate(target.id || (target.route && target.route.destination_store && target.route.destination_store.id), mode, 'f1_entrance');
   setNavigateTarget({ ...target, vertical_mode: mode, route });
 }
 async function askAI() {
@@ -195,6 +201,7 @@ function statusText(s) { return s.open_status === 'open' ? '营业中' : '未营
         <div v-if="aiReply" class="d-reply" v-html="renderMd(aiReply)"></div>
         <div class="d-actions">
           <button class="ic-btn ghost" @click="close">关闭</button>
+          <button class="ic-btn reserve" :disabled="Number(focus.reservable) !== 1" @click="goReserve">{{ Number(focus.reservable) === 1 ? '📅 预约' : '暂不可预约' }}</button>
           <button class="ic-btn primary" @click="goNavigate">🧭 导航到此店铺</button>
         </div>
       </div>
@@ -268,5 +275,7 @@ function statusText(s) { return s.open_status === 'open' ? '营业中' : '未营
 .d-actions { display: flex; gap: 12px; margin-top: 14px; }
 .ic-btn { flex: 1; border: none; border-radius: 20px; padding: 11px 0; font-size: 14px; font-weight: 600; cursor: pointer; }
 .ic-btn.ghost { background: #fff; color: var(--primary); border: 1px solid var(--border); }
+.ic-btn.reserve { background: #f5f3ff; color: var(--primary); border: 1px solid #ddd6fe; }
+.ic-btn:disabled { cursor: not-allowed; opacity: .55; }
 .ic-btn.primary { background: linear-gradient(135deg, var(--primary), var(--cyan)); color: #fff; }
 </style>

@@ -26,13 +26,5 @@
     <view class="pa" bindtap="goCoupon"><text class="pa-num">{{myOrders}}</text><text class="pa-label">订单 / 票券</text></view>
   </view>
 
-  <view class="section-title">💡 试试对我说</view>
-  <view class="chip-wrap">
-    <view class="chip active" bindtap="goChatWith" data-text="帮我规划约会">帮我规划约会</view>
-    <view class="chip" bindtap="goChatWith" data-text="停车还有空位吗">停车还有空位吗</view>
-    <view class="chip" bindtap="goChatWith" data-text="积分多久过期">积分多久过期</view>
-    <view class="chip" bindtap="goChatWith" data-text="今日特惠">今日特惠</view>
-  </view>
-
   <button class="pf-exit" bindtap="logout">退出游客 / 会员端</button>
 </view>

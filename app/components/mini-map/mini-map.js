@@ -60,14 +60,15 @@ function colorOf(category){
 Component({
   properties:{
     stores:{type:Array,value:[]},
+    facilities:{type:Array,value:[]},
     route:{type:Array,value:[]},
     routeNodes:{type:Array,value:[]},
     activeId:{type:String,value:''},
     floor:{type:Number,value:0}
   },
-  data:{webglReady:false,webglFailed:false,floorCount:2,segs:[],labels:[]},
+  data:{webglReady:false,webglFailed:false,floorCount:2,segs:[],labels:[],facilityMarkers:[]},
   observers:{
-    'stores,route,routeNodes,activeId,floor'(){ if(this._gl){this._routeStarted=Date.now();this.render();this.scheduleLabels();} }
+    'stores,facilities,route,routeNodes,activeId,floor'(){ this.syncFacilityMarkers();if(this._gl){this._routeStarted=Date.now();this.render();this.scheduleLabels();} }
   },
   lifetimes:{
     ready(){this.initWebGL();},
@@ -132,14 +133,32 @@ Component({
       const clip=transform(this._vp,point);
       this._projectedLabels.push({key,name,x:(clip[0]+1)*this._width/2,y:(1-clip[1])*this._height/2,z:clip[2],facility:Boolean(facility)});
     },
+    syncFacilityMarkers(){
+      const markers=(this.data.facilities||[]).filter(item=>item.kind!=='vertical').map(item=>({
+        key:item.source_key,name:item.name,floor:Number(item.floor),left:Math.max(3,Math.min(97,Math.round((Number(item.x)+32)/64*100))),top:Math.max(8,Math.min(92,Math.round((Number(item.z)+32)/64*100)))
+      }));
+      this.setData({facilityMarkers:markers});
+    },
     drawFacilities(floors,all){
-      const items=[
+      const fallback=[
+        {key:'restroom_f1',name:'卫生间',floor:1,x:0,z:-25,w:6.06,d:7.6,height:1.05},
+        {key:'restroom_f2',name:'卫生间',floor:2,x:0,z:-25,w:6.06,d:7.6,height:1.05},
         {key:'service_desk_f1',name:'服务台',floor:1,x:-9,z:-1,w:11,d:8,color:[0.34,0.72,0.92,all ? .68 : 1]},
         {key:'waterfall_hall_f1',name:'瀑布厅',floor:1,x:9,z:-1,w:11,d:8,color:[0.30,0.80,0.72,all ? .68 : 1]},
         {key:'children_area_f2',name:'儿童乐园',floor:2,x:-9,z:-1,w:11,d:8,color:[0.55,0.72,0.96,all ? .68 : 1]},
         {key:'food_court_f2',name:'美食广场',floor:2,x:9,z:-1,w:11,d:8,color:[0.96,0.67,0.35,all ? .68 : 1]},
+        // 地图原图中的实体占用区：只显示、参与空间表达，不加入可点击商户集合。
+        {key:'fire_security_f2',name:'消防兼安保',floor:2,x:25,z:-6.7,w:7.6,d:6.1,height:1.05,color:[0.67,0.72,0.79,all ? .68 : 1]},
+        {key:'cable_tv_f2',name:'有线电视',floor:2,x:-25,z:25,w:12,d:12,height:1.05,color:[0.62,0.72,0.91,all ? .68 : 1]},
       ];
-      items.filter(item=>floors.includes(item.floor)).forEach(item=>{const y=this.floorY(item.floor)+.48;this.drawBox(item.x,y,item.z,item.w/2,.48,item.d/2,item.color);this.projectLabel(item.key,item.name,[item.x,y+1,item.z],true);});
+      const synced=(this.data.facilities||[]).filter(item=>item.kind!=='vertical').map(item=>({
+        key:item.source_key,name:item.name,floor:Number(item.floor),x:Number(item.x),z:Number(item.z),w:Number(item.width),d:Number(item.depth),
+        height:/^(ring_|corner_)/.test(String(item.source_key||''))?1.05:.48,
+        labelFacility:true
+      }));
+      const items=synced.length?synced:fallback;
+      const colors={服务台:[0.34,0.72,0.92],瀑布厅:[0.30,0.80,0.72],儿童乐园:[0.55,0.72,0.96],美食广场:[0.96,0.67,0.35]};
+      items.filter(item=>floors.includes(item.floor)).forEach(item=>{const height=item.height||.48,y=this.floorY(item.floor)+height,rgb=colors[item.name]||[0.67,0.72,0.79],color=item.color||[...rgb,all ? .68 : 1];this.drawBox(item.x,y,item.z,item.w/2,height,item.d/2,color);this.projectLabel(item.key,item.name,[item.x,y+height+.25,item.z],item.labelFacility!==false);});
       floors.forEach(floor=>{const y=this.floorY(floor)+.7;this.drawBox(0,y,0,2.6,.7,2.6,[0.18,0.75,0.82,all ? .72 : 1]);this.projectLabel(`elevator_${floor}`,'直梯',[0,y+1.1,0],true);const ex=floor===1?-8:8;this.drawBox(ex,y,-9.5,2.4,.38,1.4,[0.96,0.43,0.34,all ? .74 : 1]);this.projectLabel(`escalator_${floor}`,'扶梯',[ex,y+1,-9.5],true);});
     },
     render(){

@@ -36,12 +36,13 @@ CREATE TABLE IF NOT EXISTS malls(id TEXT PRIMARY KEY, name TEXT NOT NULL, is_dem
 CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY, display_name TEXT NOT NULL, created_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS wx_identities(openid TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id));
 CREATE TABLE IF NOT EXISTS web_credentials(username TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), salt TEXT NOT NULL, password_hash TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS merchant_credentials(store_id TEXT PRIMARY KEY REFERENCES stores(id), user_id TEXT NOT NULL UNIQUE REFERENCES users(id), mall_id TEXT NOT NULL REFERENCES malls(id), salt TEXT NOT NULL, password_hash TEXT NOT NULL, registered_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS stores(id TEXT PRIMARY KEY, mall_id TEXT NOT NULL REFERENCES malls(id), name TEXT NOT NULL, category TEXT NOT NULL, floor INTEGER NOT NULL, pos_x REAL NOT NULL, pos_y REAL NOT NULL, route_node TEXT NOT NULL, avg_price REAL NOT NULL, open_status TEXT NOT NULL, queue_minutes INTEGER NOT NULL, reservable INTEGER NOT NULL, seats_available INTEGER NOT NULL, tags TEXT NOT NULL DEFAULT '');
 CREATE TABLE IF NOT EXISTS parking(id TEXT PRIMARY KEY, mall_id TEXT NOT NULL, area TEXT NOT NULL, total INTEGER NOT NULL, free INTEGER NOT NULL, updated_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS members(user_id TEXT NOT NULL, mall_id TEXT NOT NULL, points INTEGER NOT NULL, level TEXT NOT NULL, expires_on TEXT NOT NULL, PRIMARY KEY(user_id,mall_id));
 CREATE TABLE IF NOT EXISTS deals(id TEXT PRIMARY KEY, mall_id TEXT NOT NULL, store_id TEXT, title TEXT NOT NULL, price REAL NOT NULL, stock INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS deal_purchases(id TEXT PRIMARY KEY, deal_id TEXT NOT NULL, user_id TEXT NOT NULL, mall_id TEXT NOT NULL, quantity INTEGER NOT NULL, unit_price REAL NOT NULL, status TEXT NOT NULL, purchased_at TEXT NOT NULL);
-CREATE TABLE IF NOT EXISTS coupons(id TEXT PRIMARY KEY, mall_id TEXT NOT NULL, store_id TEXT, title TEXT NOT NULL, stock INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS coupons(id TEXT PRIMARY KEY, mall_id TEXT NOT NULL, store_id TEXT, title TEXT NOT NULL, stock INTEGER NOT NULL, face_value REAL, min_spend REAL NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS user_coupons(id TEXT PRIMARY KEY, coupon_id TEXT NOT NULL, user_id TEXT NOT NULL, mall_id TEXT NOT NULL, claimed_at TEXT NOT NULL, UNIQUE(coupon_id,user_id,mall_id));
 CREATE TABLE IF NOT EXISTS reservations(id TEXT PRIMARY KEY, user_id TEXT NOT NULL, mall_id TEXT NOT NULL, store_id TEXT NOT NULL, kind TEXT NOT NULL, reserved_for TEXT NOT NULL, people INTEGER NOT NULL, notes TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS ticket_products(id TEXT PRIMARY KEY, mall_id TEXT NOT NULL, store_id TEXT NOT NULL, title TEXT NOT NULL, price REAL NOT NULL, stock INTEGER NOT NULL);
@@ -84,8 +85,13 @@ def _ensure_columns(db) -> None:
     plan_columns={row["name"] for row in db.execute("PRAGMA table_info(plans)").fetchall()}
     if "revision" not in plan_columns:
         db.execute("ALTER TABLE plans ADD COLUMN revision INTEGER NOT NULL DEFAULT 1")
+    coupon_columns={row["name"] for row in db.execute("PRAGMA table_info(coupons)").fetchall()}
+    if "face_value" not in coupon_columns:
+        db.execute("ALTER TABLE coupons ADD COLUMN face_value REAL")
+    if "min_spend" not in coupon_columns:
+        db.execute("ALTER TABLE coupons ADD COLUMN min_spend REAL NOT NULL DEFAULT 0")
     db.execute("INSERT OR IGNORE INTO app_meta VALUES('database_instance_id',?)",("db_"+uuid.uuid4().hex,))
-    db.execute("INSERT OR REPLACE INTO app_meta VALUES('schema_version','2')")
+    db.execute("INSERT OR REPLACE INTO app_meta VALUES('schema_version','3')")
 
 def _party_a_assets():
     root=Path(__file__).resolve().parents[2]/"web"/"src"/"store"
@@ -168,6 +174,8 @@ def seed_commercial(db) -> None:
         code="QD-S01-DEMO" if store["id"]==demo_merchant_store else f"QD-{store['id'].upper()}-DEMO"
         manager="陈店长" if store["id"]==demo_merchant_store else f"{store['name'][:1]}店长"
         db.execute("INSERT OR IGNORE INTO store_profiles VALUES(?,?,?,?,?,?,?,?)",(store["id"],code,manager,json.dumps(["值班员工A","值班员工B"],ensure_ascii=False),"10:00-22:00",store["tags"] or "到店服务","400-800-%04d"%index,now))
+    merchant_salt="mall-merchant-demo-salt"
+    db.execute("INSERT OR IGNORE INTO merchant_credentials VALUES(?,?,?,?,?,?)",(demo_merchant_store,"merchant_s01","mall_demo",merchant_salt,hash_password("123456",merchant_salt),now))
     metrics=[
         ("a_day_1","day","08-25",18620,1286000,0.184),("a_day_2","day","08-26",19480,1362000,0.191),("a_day_3","day","08-27",20310,1428000,0.196),("a_day_4","day","08-28",21890,1586000,0.204),("a_day_5","day","08-29",24760,1812000,0.218),("a_day_6","day","08-30",28640,2159000,0.231),("a_day_7","day","08-31",26380,1984000,0.226),
         ("a_month_6","month","3月",488000,35600000,0.186),("a_month_5","month","4月",512000,37100000,0.192),("a_month_4","month","5月",536000,38900000,0.198),("a_month_3","month","6月",561000,40800000,0.205),("a_month_2","month","7月",594000,43900000,0.214),("a_month_1","month","8月",628000,47200000,0.223),
@@ -179,8 +187,10 @@ def seed_marketplace(db) -> None:
     ids={name:stable_store_id(name) for name in ("蜀签成都串串香","格瑞特运动馆","金伯利","星巴克","川食公馆","世界茶饮","拼桌茶餐厅")}
     deals=[("d1",ids["蜀签成都串串香"],"川味双人餐",238,30),("d2",ids["格瑞特运动馆"],"双人运动体验",108,50),("d3",ids["格瑞特运动馆"],"亲子运动体验票",88,40),("d4",ids["金伯利"],"礼赠满减",399,12),("d5",ids["星巴克"],"商务咖啡套餐",68,30),("d6",ids["川食公馆"],"商务晚宴套餐",688,10),("d7",ids["世界茶饮"],"第二杯半价",18,80),("d8",ids["拼桌茶餐厅"],"家庭套餐",198,25)]
     db.executemany("INSERT OR REPLACE INTO deals VALUES(?,?,?,?,?,?)",[(i,"mall_demo",s,t,p,stock) for i,s,t,p,stock in deals])
-    coupons=[("c1",ids["蜀签成都串串香"],"蜀签成都串串香满200减30",50),("c2",ids["金伯利"],"礼赠满300减50",30),("c3",ids["格瑞特运动馆"],"运动体验减20",40),("c4",ids["星巴克"],"商务咖啡减10",30),("c5",ids["川食公馆"],"川食公馆满500减60",20),("c6",ids["世界茶饮"],"茶饮第二杯半价券",60)]
-    db.executemany("INSERT OR REPLACE INTO coupons VALUES(?,?,?,?,?)",[(i,"mall_demo",s,t,stock) for i,s,t,stock in coupons])
+    coupons=[("c1",ids["蜀签成都串串香"],"蜀签成都串串香满200减30",50,30,200),("c2",ids["金伯利"],"礼赠满300减50",30,50,300),("c3",ids["格瑞特运动馆"],"运动体验减20",40,20,0),("c4",ids["星巴克"],"商务咖啡减10",30,10,0),("c5",ids["川食公馆"],"川食公馆满500减60",20,60,500),("c6",ids["世界茶饮"],"茶饮第二杯半价券",60,None,0)]
+    db.executemany("""INSERT INTO coupons(id,mall_id,store_id,title,stock,face_value,min_spend) VALUES(?,?,?,?,?,?,?)
+      ON CONFLICT(id) DO UPDATE SET mall_id=excluded.mall_id,store_id=excluded.store_id,title=excluded.title,
+      face_value=excluded.face_value,min_spend=excluded.min_spend""",[(i,"mall_demo",s,t,stock,value,minimum) for i,s,t,stock,value,minimum in coupons])
     db.execute("DELETE FROM ticket_products WHERE mall_id='mall_demo' AND id!='t_sport'")
     db.execute("INSERT OR REPLACE INTO ticket_products VALUES(?,?,?,?,?,?)",("t_sport","mall_demo",ids["格瑞特运动馆"],"格瑞特运动馆单次体验票",88,120))
 
@@ -226,6 +236,7 @@ def reconcile_demo_catalog() -> dict:
         if extras:
             marks=",".join("?" for _ in extras)
             db.execute(f"DELETE FROM reservations WHERE mall_id='mall_demo' AND store_id IN ({marks})",extras)
+            db.execute(f"DELETE FROM merchant_credentials WHERE mall_id='mall_demo' AND store_id IN ({marks})",extras)
             db.execute(f"DELETE FROM merchant_store_access WHERE mall_id='mall_demo' AND store_id IN ({marks})",extras)
             db.execute(f"DELETE FROM store_profiles WHERE store_id IN ({marks})",extras)
             db.execute(f"DELETE FROM store_details WHERE store_id IN ({marks})",extras)
@@ -238,6 +249,7 @@ def reconcile_demo_catalog() -> dict:
             db.execute(f"DELETE FROM plans WHERE id IN ({marks})",plan_ids)
         db.execute("UPDATE sessions SET plan_id=NULL,plan_state='IDLE',updated_at=? WHERE mall_id='mall_demo'",(now_iso(),))
         # Rebuild all map-derived rows so names, codes, positions and live status share one source.
+        db.execute("DELETE FROM merchant_credentials WHERE mall_id='mall_demo'")
         db.execute("DELETE FROM merchant_store_access WHERE mall_id='mall_demo'")
         db.execute("DELETE FROM store_profiles WHERE store_id IN (SELECT id FROM stores WHERE mall_id='mall_demo')")
         db.execute("DELETE FROM store_map_bindings WHERE mall_id='mall_demo'")

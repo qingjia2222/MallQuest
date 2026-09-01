@@ -6,6 +6,7 @@ import Floors3D from '../components/Floors3D.vue';
 import ItineraryCard from '../components/ItineraryCard.vue';
 import { planStore, setCurrentPlan, setNavigateTarget } from '../store/plan';
 import { renderMd } from '../utils/md';
+import { actionResultLabel, actionResultOk } from '../utils/actionResult';
 
 const router = useRouter();
 const floorsRef = ref(null);
@@ -223,7 +224,7 @@ async function switchNavVertical(mode) {
   if (!planStore.navigateTarget) return;
   try {
     const target = planStore.navigateTarget;
-    const route = await api.navigationResolve(`请走${mode === 'escalator' ? '扶梯' : '直梯'}去${target.name}`, 'f1_entrance');
+    const route = await api.navigationRecalculate(target.id || (target.route && target.route.destination_store && target.route.destination_store.id), mode, 'f1_entrance');
     setNavigateTarget({ ...target, vertical_mode: mode, route });
   } catch (e) { editError.value = '导航路线切换失败：' + (e.message || ''); }
 }
@@ -236,14 +237,6 @@ function toStops(it) {
   });
 }
 function storeReco(name) { const info = availableStores.value.find((item) => item.name === name) || {}; return (info.recommend || []).join('、'); }
-function actionLabel(a) {
-  if (!a) return '';
-  if (a.label) return a.label;
-  const t = a.tool || a.action || '';
-  if (t === 'queue') return `${a.store_id ? '已排号' : '已排队'}${a.queue_minutes ? '（约' + a.queue_minutes + '分钟）' : ''}`;
-  const map = { claim_coupon: '领取优惠券', buy_ticket: '购买门票', reserve_restaurant: '预约餐厅', reserve_business_space: '预约商务空间' };
-  return map[t] || t;
-}
 </script>
 
 <template>
@@ -274,7 +267,7 @@ function actionLabel(a) {
       <ItineraryCard v-if="!editMode" :itinerary="{
           tag: planStore.current.source === 'online_agent' ? '大模型规划' : '为你定制',
           stops: toStops(planStore.current.itinerary),
-          actions: (planStore.current.action_results || []).map(a => ({ label: actionLabel(a), ok: a.status !== 'failed' }))
+          actions: (planStore.current.action_results || []).map(a => ({ label: actionResultLabel(a), ok: actionResultOk(a) }))
         }" hide-confirm @change="goRevise" @stoptap="goChat" />
 
       <!-- 手动编辑推荐方案（规划页内直接调整顺序/删除/添加店铺） -->

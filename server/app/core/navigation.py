@@ -31,10 +31,22 @@ def _destination(mall_id:str,query:str):
     if not scored: raise HTTPException(status_code=404,detail="没有在当前商场找到你要去的店铺，请说出更完整的店名")
     return max(scored,key=lambda item:item[0])[1]
 
-def resolve_navigation(mall_id:str,query:str,current_node:str|None=None):
-    if not is_navigation_intent(query): raise HTTPException(status_code=422,detail="message is not a navigation request")
-    store=_destination(mall_id,query); start=current_node or "f1_entrance"
-    vertical_mode="escalator" if "扶梯" in query else "elevator"
+def resolve_navigation(mall_id:str,query:str="",current_node:str|None=None,destination_store_id:str|None=None,vertical_mode:str|None=None):
+    """Resolve free-text navigation or deterministically recalculate a UI route.
+
+    A transfer-mode button is structured UI state, not a user utterance.  When
+    destination_store_id is supplied it deliberately bypasses intent parsing.
+    """
+    if destination_store_id:
+        with connection() as db: row=db.execute("SELECT * FROM stores WHERE mall_id=? AND id=?",(mall_id,destination_store_id)).fetchone()
+        if not row: raise HTTPException(status_code=404,detail="destination store not found")
+        store=dict(row)
+    else:
+        if not is_navigation_intent(query): raise HTTPException(status_code=422,detail="message is not a navigation request")
+        store=_destination(mall_id,query)
+    start=current_node or "f1_entrance"
+    vertical_mode=vertical_mode or ("escalator" if "扶梯" in query else "elevator")
+    if vertical_mode not in {"elevator","escalator","auto"}: raise HTTPException(status_code=422,detail="invalid vertical mode")
     route=route_between_nodes(mall_id,start,store["route_node"],vertical_mode)
     floors=list(dict.fromkeys(node["floor"] for node in route["nodes"]))
     transfers=[segment["transfer_instruction"] for segment in route["polyline_segments"] if segment["transfer_instruction"]]

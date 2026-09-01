@@ -1,5 +1,6 @@
 import uuid
 import re
+import secrets
 import httpx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -12,7 +13,14 @@ router=APIRouter(prefix="/auth",tags=["auth"])
 class WebLogin(BaseModel):
     username:str|None=None; password:str|None=None; phone:str|None=None; pwd:str|None=None
 class PhoneLogin(BaseModel): phone:str; password:str
+class PhoneRegister(BaseModel): phone:str; password:str
 class WxLogin(BaseModel): code:str
+
+def validate_phone_password(phone:str,password:str):
+    phone=phone.strip()
+    if not re.fullmatch(r"1\d{10}",phone): raise HTTPException(status_code=422,detail="请输入11位手机号")
+    if len(password)<6 or len(password)>64: raise HTTPException(status_code=422,detail="密码长度需为6至64位")
+    return phone
 
 def authenticate(username:str,password:str):
     with connection() as db: row=db.execute("SELECT * FROM web_credentials WHERE username=?",(username,)).fetchone()
@@ -28,10 +36,21 @@ def web_login(body:WebLogin):
 
 @router.post("/phone-login")
 def phone_login(body:PhoneLogin):
-    phone=body.phone.strip()
-    if not re.fullmatch(r"1\d{10}",phone): raise HTTPException(status_code=422,detail="请输入11位手机号")
+    phone=validate_phone_password(body.phone,body.password)
     row=authenticate(phone,body.password)
     return envelope({"token":issue_token(row["user_id"],"phone"),"user_id":row["user_id"],"login_channel":"phone","phone_masked":phone[:3]+"****"+phone[-4:]})
+
+@router.post("/phone-register")
+def phone_register(body:PhoneRegister):
+    phone=validate_phone_password(body.phone,body.password)
+    with connection(immediate=True) as db:
+        if db.execute("SELECT 1 FROM web_credentials WHERE username=?",(phone,)).fetchone():
+            raise HTTPException(status_code=409,detail="该手机号已注册，请直接登录")
+        user_id="user_phone_"+uuid.uuid4().hex[:12]; salt=secrets.token_hex(16)
+        db.execute("INSERT INTO users VALUES(?,?,?)",(user_id,"手机会员",now_iso()))
+        db.execute("INSERT INTO web_credentials VALUES(?,?,?,?)",(phone,user_id,salt,hash_password(body.password,salt)))
+        db.execute("INSERT INTO members VALUES(?,?,?,?,?)",(user_id,"mall_demo",0,"普通会员","2027-12-31"))
+    return envelope({"token":issue_token(user_id,"phone"),"user_id":user_id,"login_channel":"phone","role":"visitor","phone_masked":phone[:3]+"****"+phone[-4:]})
 
 @router.post("/wx-login")
 async def wx_login(body:WxLogin):

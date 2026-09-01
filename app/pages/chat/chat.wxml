@@ -13,7 +13,7 @@
           <view class="ai-avatar">AI</view>
           <view class="ai-body">
             <view class="bubble ai-bubble">{{item.text}}<text wx:if="{{!item.done && !item.card}}" class="caret"></text></view>
-            <view class="speak" bindtap="speak" data-text="{{item.text}}">🔊 播报</view>
+            <view class="speak" bindtap="speak" data-index="{{index}}" data-text="{{item.text}}">{{speakingIndex === index ? '⏹ 停止' : '🔊 播报'}}</view>
             <!-- 富卡片 -->
             <rich-card wx:if="{{item.card}}" card="{{item.card}}" bind:cardtap="onCardTap" />
             <!-- 与 Web 同构：方案直接在对话内展示并进入显式确认门 -->
@@ -32,6 +32,7 @@
     </view>
   </scroll-view>
 
+  <view class="composer-quick"><text class="composer-quick-title">💡 试试对我说</text><scroll-view scroll-x class="quick-scroll" show-scrollbar="{{false}}"><view class="quick-inner"><view wx:for="{{quickActions}}" wx:key="*this" class="chip {{index === 0 ? 'active' : ''}}" data-text="{{item}}" bindtap="onQuick">{{item}}</view></view></scroll-view></view>
   <!-- 输入栏 -->
   <view class="composer">
     <view class="composer-input">
@@ -45,7 +46,7 @@
   <view wx:if="{{navVisible}}" class="nav-mask">
     <view class="nav-modal">
       <view class="nav-head"><view><view class="nav-kicker">3D ROUTE · 自动导览</view><view class="nav-title">前往 {{navigation.destination_store.name}}</view></view><view class="nav-close" bindtap="closeNavigation">×</view></view>
-      <view class="nav-stage"><mini-map id="chatRouteMap" stores="{{navStores}}" routeNodes="{{navigation.nodes}}" activeId="{{navigation.destination_store.id}}" floor="{{0}}"/><view class="you-badge">红点 = 您当前所在位置</view></view>
+      <view class="nav-stage"><mini-map id="chatRouteMap" stores="{{navStores}}" facilities="{{navFacilities}}" routeNodes="{{navigation.nodes}}" activeId="{{navigation.destination_store.id}}" floor="{{0}}"/><view class="you-badge">红点 = 您当前所在位置</view></view>
       <view class="nav-transfer">🛗 {{navInstruction}}</view>
       <view wx:if="{{navigation.floors && navigation.floors.length > 1}}" class="transfer-switch"><button data-mode="elevator" class="{{navigation.vertical_mode === 'elevator' ? 'active' : ''}}" bindtap="switchTransfer">直梯路线</button><button data-mode="escalator" class="{{navigation.vertical_mode === 'escalator' ? 'active' : ''}}" bindtap="switchTransfer">扶梯路线</button></view>
       <view class="nav-meta"><text>约 {{navigation.estimated_distance}}</text><text wx:if="{{navigation.transfer_instructions.length}}"> · 换乘 {{navigation.transfer_instructions.length}} 次</text></view>
@@ -57,16 +58,16 @@
   <view wx:if="{{showConfirm}}" class="confirm-mask" bindtap="cancelExecute">
     <view class="confirm-sheet" catchtap="noop">
       <block wx:if="{{confirmStep === 1}}">
-        <view class="cf-title">是否按照方案执行？</view>
-        <view class="cf-sub">可以继续沟通调整，也可以确认后查看同一界面的 3D 路线。</view>
+        <view class="cf-title">{{pendingManagement ? '是否确认这次预约变更？' : '是否按照方案执行？'}}</view>
+        <view class="cf-sub">{{pendingManagement ? '下一步确认后才会取消预约或修改预约时间、人数。' : '可以继续沟通调整，也可以确认后查看同一界面的 3D 路线。'}}</view>
         <view class="cf-stops"><text wx:for="{{pendingPlan.itinerary}}" wx:key="id">{{item.name}}</text></view>
         <view wx:if="{{movieOptions.length}}" class="cf-stops"><text>选择影院场次：</text><text wx:for="{{movieOptions}}" wx:key="*this" data-movie="{{item}}" bindtap="chooseMovie">{{chosenMovie === item ? '✓ ' : ''}}{{item}}</text></view>
         <view class="cf-actions"><button class="cf-ghost" bindtap="cancelExecute">继续沟通</button><button class="cf-primary" bindtap="nextConfirm">同意，继续</button></view>
       </block>
       <block wx:else>
-        <view class="cf-title">是否需要预约和订票？</view>
-        <view class="cf-sub">确认后才会写入预约、排号、领券或演示票务数据；先不用则只查看方案和路线。</view>
-        <view class="cf-actions"><button class="cf-ghost" data-booking="false" bindtap="runExecute">先不用，查看路线</button><button class="cf-primary" data-booking="true" bindtap="runExecute">需要，帮我执行</button></view>
+        <view class="cf-title">{{pendingManagement ? '是否正式提交预约变更？' : '是否需要预约和订票？'}}</view>
+        <view class="cf-sub">{{pendingManagement ? '确认后将立即写入你的预约记录。' : '确认后才会写入预约、排号、领券或演示票务数据；先不用则只查看方案和路线。'}}</view>
+        <view class="cf-actions"><button class="cf-ghost" data-booking="false" bindtap="runExecute">{{pendingManagement ? '暂不变更' : '先不用，查看路线'}}</button><button class="cf-primary" data-booking="true" bindtap="runExecute">{{pendingManagement ? '确认提交' : '需要，帮我执行'}}</button></view>
       </block>
     </view>
   </view>

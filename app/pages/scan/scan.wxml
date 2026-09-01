@@ -9,15 +9,16 @@
   </block>
   <view wx:else class="login-shell">
     <view class="login-brand">星河里 · PRIVATE AI</view>
-    <view class="login-title">游客 / 会员登录</view>
-    <view class="login-copy">登录后连接当前商场的实时排队、停车、积分规则与今日特惠。</view>
+    <view class="login-title">游客 / 会员{{authMode==='register'?'注册':'登录'}}</view>
+    <view class="login-copy">{{authMode==='register'?'注册后自动登录并连接当前商场，会员等级为“普通会员”。':'登录后连接当前商场的实时排队、停车、积分规则与今日特惠。'}}</view>
+    <view class="auth-switch"><view class="auth-option {{authMode==='login'?'active':''}}" data-mode="login" bindtap="switchAuth">登录</view><view class="auth-option {{authMode==='register'?'active':''}}" data-mode="register" bindtap="switchAuth">注册</view></view>
     <view wx:if="{{qrDetected}}" class="qr-state">已识别 AI 服务二维码 · {{serviceCode}}</view>
     <view wx:else class="qr-state manual">普通入口 · 将连接星河里 Demo</view>
     <view class="field-label">手机号</view>
     <input class="field" type="number" maxlength="11" value="{{phone}}" data-key="phone" bindinput="field" placeholder="请输入手机号" />
     <view class="field-label">密码</view>
     <input class="field" password value="{{password}}" data-key="password" bindinput="field" placeholder="请输入密码" />
-    <button class="login-button" bindtap="submitLogin">登录并连接商场</button>
-    <view class="mock-tip">演示账号：11111111111　密码：123456</view>
+    <button class="login-button" bindtap="submitLogin">{{authMode==='register'?'注册并连接商场':'登录并连接商场'}}</button>
+    <view class="mock-tip" wx:if="{{authMode==='login'}}">演示账号：11111111111　密码：123456</view>
   </view>
 </view>

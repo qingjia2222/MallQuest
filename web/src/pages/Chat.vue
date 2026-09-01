@@ -10,21 +10,22 @@ import ItineraryCard from '../components/ItineraryCard.vue';
 import { setCurrentPlan } from '../store/plan';
 import { setSession } from '../api';
 import { renderMd } from '../utils/md';
+import { actionResultLabel, actionResultOk } from '../utils/actionResult';
 
 const router = useRouter();
 const messages = ref([]);
-const input = ref('发个「停车场还有空位吗？」试试智能对话');
+const input = ref('');
 const loading = ref(false);
 const listening = ref(false);
 const currentPlan = ref(null);
 const showPlan = ref(false);        // 规划悬浮窗开关
 const planInOverlay = ref(null);    // 传给悬浮窗的方案
 const collector = ref(null);        // 偏好采集器
-const quickActions = ['停车场还有空位吗？', '积分多久过期？', '今天有什么特惠？', '帮我规划约会'];
+const quickActions = ['帮我规划约会', '帮我预约沃德面包，2个人，19点', '停车还有空位吗', '积分多久过期', '今日特惠'];
 
 // 场景默认槽位（兜底）与偏好问题集
 const DEFAULT_SLOTS = {
-  date: { time: '今晚7点', people: 2, budget_per_person: 200, cuisine: '川菜', want_movie: true },
+  date: { time: '今晚7点', people: 2, budget_per_person: 200, cuisine: '川菜', want_movie: false },
   banquet: { time: '周末6点', people: 6, total_budget: 1000, cuisine: '川菜', private_room: true },
   gift: { recipient: '朋友', budget: 300, preferences: '设计感小物', occasion: '礼物' },
   family_day: { child_age: 6, duration: 4, budget: 500, interests: '游乐', meal_preference: '亲子餐' },
@@ -222,6 +223,7 @@ const showConfirm = ref(false);
 const pendingPlan = ref(null);
 const confirmStep = ref(1);          // 1=是否按方案执行  2=是否帮忙预约订票
 const chosenMovie = ref('');          // 方案含影院时，确认弹窗里选择的影片
+function reservationManagement(plan) { const actions=plan?.slots?.requested_actions || []; return actions.some(a => a === 'cancel_reservation' || a === 'update_reservation'); }
 function openExecuteConfirm(plan) {
   pendingPlan.value = plan || null;
   confirmStep.value = 1;
@@ -232,13 +234,14 @@ function openExecuteConfirm(plan) {
 function cancelExecute() { showConfirm.value = false; pendingPlan.value = null; confirmStep.value = 1; }
 async function runExecute(doBooking) {
   const plan = pendingPlan.value;
+  const managing = reservationManagement(plan);
   showConfirm.value = false; pendingPlan.value = null; confirmStep.value = 1;
   if (!plan) return;
-  if (doBooking && plan.plan_id) { await onConfirmPlan(plan.plan_id, chosenMovie.value ? { selected_movie: chosenMovie.value } : {}, plan.revision); }
-  else { currentPlan.value = plan; setCurrentPlan(plan); router.push('/map'); }
+  if (doBooking && plan.plan_id) { await onConfirmPlan(plan.plan_id, chosenMovie.value ? { selected_movie: chosenMovie.value } : {}, plan.revision, managing); }
+  else if (!managing) { currentPlan.value = plan; setCurrentPlan(plan); router.push('/map'); }
 }
 // 确认方案并执行
-async function onConfirmPlan(planId, modifications = {}, expectedRevision = null) {
+async function onConfirmPlan(planId, modifications = {}, expectedRevision = null, managing = false) {
   if (!planId) return;
   loading.value = true;
   try {
@@ -247,9 +250,8 @@ async function onConfirmPlan(planId, modifications = {}, expectedRevision = null
     const last = [...messages.value].reverse().find(m => m.plan);
     if (last) last.plan = { ...last.plan, ...data, state: 'DONE' };
     if (navigator.vibrate) navigator.vibrate(30);
-    push('ai', '✅ 方案已确认并执行，已为你预约可排队的店铺，到号时会实时提醒。');
-    startQueueWatch(data.plan_id, data.itinerary);
-    setTimeout(() => router.push('/map'), 1100);
+    if (managing) push('ai', '✅ 预约变更已确认并完成，可在“我的预约”中查看最新状态。');
+    else { push('ai', '✅ 方案已确认并执行，已为你预约可排队的店铺，到号时会实时提醒。'); startQueueWatch(data.plan_id, data.itinerary); setTimeout(() => router.push('/map'), 1100); }
   } catch (e) { push('ai', '确认失败：' + (e.message || '')); }
   finally { loading.value = false; }
 }
@@ -257,14 +259,6 @@ async function onConfirmPlan(planId, modifications = {}, expectedRevision = null
 function toStops(it) {
   if (!Array.isArray(it)) return [];
   return it.map((s, i) => ({ time: s.time_label || `${i + 1}`, name: s.name || '', floor: s.floor ?? '', category: s.category || '', waiting: s.waiting_time ?? (s.queue_minutes ?? null), desc: s.desc || '' }));
-}
-function actionLabel(a) {
-  if (!a) return '';
-  if (a.label) return a.label;
-  const t = a.tool || a.action || '';
-  if (t === 'queue') return `${a.store_id ? '已排号：' + a.store_id : '已排队'}${a.queue_minutes ? '（约' + a.queue_minutes + '分钟）' : ''}`;
-  const map = { claim_coupon: '领取优惠券', buy_ticket: '购买门票', purchase_deal: '购买限时特惠', reserve_restaurant: '预约餐厅', reserve_business_space: '预约商务空间' };
-  return map[t] || t;
 }
 function onCardTap(card) {
   if (card.type === 'parking') router.push('/map');
@@ -306,7 +300,7 @@ function goMap() { router.push('/map'); }
               <ItineraryCard v-if="m.plan.itinerary" :itinerary="{
                   tag: '为你定制',
                   stops: toStops(m.plan.itinerary),
-                  actions: (m.plan.action_results || []).map(a => ({ label: actionLabel(a), ok: a.status !== 'failed' }))
+                  actions: (m.plan.action_results || []).map(a => ({ label: actionResultLabel(a), ok: actionResultOk(a) }))
                 }" @confirm="openExecuteConfirm(m.plan)" @change="onChangePlan(m.plan.plan_id)" @stoptap="goMap" />
               <div v-else class="pi-confirm">
                 <div class="pi-empty-t">🧠 大模型已生成这份智能方案，确认后即可为你预约 / 排号</div>
@@ -321,6 +315,7 @@ function goMap() { router.push('/map'); }
       </div>
     </div>
 
+    <div class="composer-quick"><div class="composer-quick-title">💡 试试对我说</div><div class="composer-quick-list"><button v-for="q in quickActions" :key="q" :class="['composer-chip',{active:q==='帮我规划约会'}]" @click="send(q)">{{ q }}</button></div></div>
     <div class="composer">
       <input class="ci" v-model="input" @keyup.enter="send()" placeholder="问我任何商场问题…" />
       <div class="mic" :class="{ on: listening }" @click="toggleVoice">{{ listening ? '🔴' : '🎤' }}</div>
@@ -334,8 +329,8 @@ function goMap() { router.push('/map'); }
     <div v-if="showConfirm" class="confirm-mask" @click.self="cancelExecute">
       <div class="confirm-sheet">
         <template v-if="confirmStep === 1">
-          <div class="cf-title">是否按照方案执行？</div>
-          <div class="cf-sub">确认后为你预约 / 排号，并跳转「规划」页查看路线；选择「继续沟通」可留在对话里调整方案。</div>
+          <div class="cf-title">{{ reservationManagement(pendingPlan) ? '是否确认这次预约变更？' : '是否按照方案执行？' }}</div>
+          <div class="cf-sub">{{ reservationManagement(pendingPlan) ? '下一步确认后才会取消预约或修改预约时间、人数。' : '确认后为你预约 / 排号，并跳转「规划」页查看路线；选择「继续沟通」可留在对话里调整方案。' }}</div>
           <div v-if="pendingPlan && pendingPlan.itinerary && pendingPlan.itinerary.length" class="cf-stops">
             <span v-for="(s, i) in pendingPlan.itinerary" :key="i" class="cf-stop">{{ s.name || s.title }}</span>
           </div>
@@ -351,11 +346,11 @@ function goMap() { router.push('/map'); }
           </div>
         </template>
         <template v-else>
-          <div class="cf-title">是否需要我帮你预约和订票？</div>
-          <div class="cf-sub">将为你预约可预约店铺、购买演示票券，并进入排队（到号会实时提醒）；选择「先不用」可直接看方案。</div>
+          <div class="cf-title">{{ reservationManagement(pendingPlan) ? '是否正式提交预约变更？' : '是否需要我帮你预约和订票？' }}</div>
+          <div class="cf-sub">{{ reservationManagement(pendingPlan) ? '确认后将立即写入你的预约记录。' : '将为你预约可预约店铺、购买演示票券，并进入排队（到号会实时提醒）；选择「先不用」可直接看方案。' }}</div>
           <div class="cf-actions">
-            <button class="cf-btn ghost" @click="runExecute(false)">先不用，直接看方案</button>
-            <button class="cf-btn primary" @click="runExecute(true)">要，帮我预约和订票</button>
+            <button class="cf-btn ghost" @click="runExecute(false)">{{ reservationManagement(pendingPlan) ? '暂不变更' : '先不用，直接看方案' }}</button>
+            <button class="cf-btn primary" @click="runExecute(true)">{{ reservationManagement(pendingPlan) ? '确认提交' : '要，帮我预约和订票' }}</button>
           </div>
         </template>
       </div>
@@ -412,6 +407,7 @@ function goMap() { router.push('/map'); }
 .cf-btn.primary { background: linear-gradient(135deg, var(--primary), var(--cyan)); color: #fff; }
 
 .composer { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: #fff; border-top: 1px solid var(--border); }
+.composer-quick{flex-shrink:0;background:#fff;padding:8px 14px 6px;border-top:1px solid var(--border)}.composer-quick-title{font-size:12px;color:#6b7280;font-weight:700;margin-bottom:7px}.composer-quick-list{display:flex;gap:7px;overflow-x:auto;padding-bottom:2px}.composer-chip{flex-shrink:0;border:1px solid var(--border);background:#fff;color:#4b5563;border-radius:18px;padding:6px 12px;font-size:12px;cursor:pointer}.composer-chip.active{border-color:transparent;background:linear-gradient(135deg,var(--primary),var(--cyan));color:#fff}
 .ci { flex: 1; background: var(--bg); border: none; border-radius: 24px; padding: 11px 16px; font-size: 15px; }
 .ci:focus { outline: none; }
 .mic { font-size: 22px; cursor: pointer; }

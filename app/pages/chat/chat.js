@@ -1,12 +1,8 @@
 // Mobile chat mirrors the Web flow: answer -> inline plan -> explicit execution gate -> 3D route.
 const { request, BASE_URL } = require('../../utils/request');
 const { formatTime } = require('../../utils/format');
+const { actionResultLabel, actionResultOk } = require('../../utils/action-result');
 const cleanReply = text => String(text || '').replace(/\*/g, '');
-
-function actionLabel(action) {
-  const labels = { reserve_restaurant: '餐厅预约', reserve_business_space: '商务空间预约', claim_coupon: '优惠券领取', buy_ticket: '电影票购买', purchase_deal: '限时特惠购买', queue: '店铺排号' };
-  return `${labels[action.tool] || action.label || action.tool || '服务操作'}：${action.status || '完成'}`;
-}
 function decoratePlan(plan) {
   if (!plan) return null;
   return {
@@ -14,7 +10,7 @@ function decoratePlan(plan) {
     itineraryCard: {
       tag: plan.state === 'DONE' ? '已执行' : '等待确认',
       stops: (plan.itinerary || []).map((s, i) => ({ ...s, time: s.time_label || `第 ${i + 1} 站`, waiting: s.queue_minutes || 0 })),
-      actions: (plan.action_results || []).map(a => ({ label: actionLabel(a), ok: !['failed','unavailable'].includes(a.status) })),
+      actions: (plan.action_results || []).map(a => ({ label: actionResultLabel(a), ok: actionResultOk(a) })),
       selectedStrategy: plan.route && plan.route.selected_strategy,
       alternatives: ((plan.route && plan.route.alternatives) || []).map(a => ({ strategy: a.strategy, label: a.label,
         estimated_total_minutes: a.metrics.estimated_total_minutes, estimated_distance: a.metrics.estimated_distance,
@@ -25,9 +21,10 @@ function decoratePlan(plan) {
 
 Page({
   data: {
-    messages: [], input: '', loading: false, scrollTop: 0,
-    navigation: null, navVisible: false, navStores: [], navInstruction: '',
-    showConfirm: false, confirmStep: 1, pendingPlan: null, movieOptions: [], chosenMovie: '', executing: false
+    messages: [], input: '', loading: false, scrollTop: 0, speakingIndex: -1,
+    quickActions: ['帮我规划约会','帮我预约沃德面包，2个人，19点','停车还有空位吗','积分多久过期','今日特惠'],
+    navigation: null, navVisible: false, navStores: [], navFacilities: [], navInstruction: '',
+    showConfirm: false, confirmStep: 1, pendingPlan: null, pendingManagement:false, movieOptions: [], chosenMovie: '', executing: false
   },
 
   onLoad() {
@@ -39,6 +36,7 @@ Page({
     const app = getApp();
     if (app.globalData.chatPrefill) { this.setData({ input: app.globalData.chatPrefill }); app.globalData.chatPrefill = ''; }
   },
+  onUnload() { this.stopTtsPlayback(false); },
   onInput(e) { this.setData({ input: e.detail.value }); },
   onQuick(e) { this.send(e.currentTarget.dataset.text); },
 
@@ -69,7 +67,7 @@ Page({
     if (this.data.navStores.length) return this.data.navStores;
     const scene = await request('/api/maps/mall_demo/scene');
     const stores = (scene.stores || []).map(s => ({ ...s, pos_x: s.pos_x / 10, pos_y: s.pos_y / 7.6 }));
-    this.setData({ navStores: stores }); return stores;
+    this.setData({ navStores: stores, navFacilities:scene.facilities||[] }); return stores;
   },
   async openNavigation(navigation) {
     await this.loadMapStores();
@@ -99,8 +97,8 @@ Page({
         const app=getApp();app.globalData.currentPlan=updated;app.setPlanState({current:updated});
         const messages=this.data.messages.map(m=>m.plan&&m.plan.plan_id===updated.plan_id?{...m,plan:updated}:m);this.setData({messages});await this.openPlanRoute();
       }else{
-        const app=getApp(),name=nav.destination_store.name;
-        const updated=await request('/api/navigation/resolve',{method:'POST',data:{session_id:app.globalData.sessionId,query:`怎么走${mode==='escalator'?'扶梯':'直梯'}去${name}？`,current_node:nav.start_node}});
+        const app=getApp(),destinationId=nav.destination_store.id;
+        const updated=await request('/api/navigation/resolve',{method:'POST',data:{session_id:app.globalData.sessionId,destination_store_id:destinationId,vertical_mode:mode,current_node:nav.start_node}});
         await this.openNavigation(updated);
       }
     }catch(err){wx.showToast({title:err.message||'切换失败',icon:'none'});}
@@ -110,24 +108,27 @@ Page({
     const plan = getApp().globalData.currentPlan;
     if (!plan || plan.state === 'DONE') { this.openPlanRoute(); return; }
     const cinema=(plan.itinerary||[]).find(s=>s.now_showing&&s.now_showing.length), movies=cinema?cinema.now_showing:[];
-    this.setData({ showConfirm: true, confirmStep: 1, pendingPlan: plan, movieOptions:movies, chosenMovie:movies[0]||'' });
+    const actions=plan.slots&&plan.slots.requested_actions||[],pendingManagement=actions.some(action=>action==='cancel_reservation'||action==='update_reservation');
+    this.setData({ showConfirm: true, confirmStep: 1, pendingPlan: plan, pendingManagement, movieOptions:movies, chosenMovie:movies[0]||'' });
   },
   chooseMovie(e){this.setData({chosenMovie:e.currentTarget.dataset.movie})},
-  cancelExecute() { this.setData({ showConfirm: false, confirmStep: 1, pendingPlan: null }); },
+  cancelExecute() { this.setData({ showConfirm: false, confirmStep: 1, pendingPlan: null, pendingManagement:false }); },
   nextConfirm() { this.setData({ confirmStep: 2 }); },
   async runExecute(e) {
-    const booking = String(e.currentTarget.dataset.booking) === 'true', plan = this.data.pendingPlan;
-    this.setData({ showConfirm: false, confirmStep: 1, pendingPlan: null });
+    const booking = String(e.currentTarget.dataset.booking) === 'true', plan = this.data.pendingPlan, managing=this.data.pendingManagement;
+    this.setData({ showConfirm: false, confirmStep: 1, pendingPlan: null, pendingManagement:false });
     if (!plan) return;
-    if (!booking) { await this.openPlanRoute(); return; }
+    if (!booking) { if(!managing)await this.openPlanRoute(); return; }
     this.setData({ executing: true, loading: true });
     try {
       const modifications=this.data.chosenMovie?{selected_movie:this.data.chosenMovie}:{};
       const done = decoratePlan(await request('/api/plan/confirm', { method: 'POST', data: { plan_id: plan.plan_id, decision: 'confirm', modifications, expected_revision: plan.revision } }));
       const app = getApp(); app.globalData.currentPlan = done; app.setPlanState({ current: done });
       const messages = this.data.messages.map(m => m.plan && m.plan.plan_id === done.plan_id ? { ...m, plan: done } : m);
-      this.setData({ messages }); this.push('ai', '方案已确认并执行，预约、排号、领券或演示票务结果已更新。现在为你展示路线。');
-      wx.vibrateShort && wx.vibrateShort({ type: 'light' }); await this.openPlanRoute();
+      this.setData({ messages });
+      if(managing)this.push('ai','预约变更已确认并完成，可在“我的预约”中查看最新状态。');
+      else this.push('ai', '方案已确认并执行，预约、排号、领券或演示票务结果已更新。现在为你展示路线。');
+      wx.vibrateShort && wx.vibrateShort({ type: 'light' }); if(!managing)await this.openPlanRoute();
     } catch (err) { this.push('ai', '确认失败：' + (err.message || '')); }
     finally { this.setData({ executing: false, loading: false }); }
   },
@@ -153,9 +154,46 @@ Page({
     else if (card.type === 'coupon' || card.type === 'deals') wx.navigateTo({ url: '/pages/coupon/coupon' });
     else if (['store', 'list', 'stores', 'queue'].includes(card.type)) wx.switchTab({ url: '/pages/map/map' });
   },
+  stopTtsPlayback(updateView = true) {
+    this._ttsRequestToken = (this._ttsRequestToken || 0) + 1;
+    const audio = this._ttsAudio;
+    this._ttsAudio = null;
+    this._ttsMessageIndex = -1;
+    if (audio) {
+      try { audio.stop(); } finally { audio.destroy(); }
+    }
+    if (updateView && this.data.speakingIndex !== -1) this.setData({ speakingIndex: -1 });
+  },
   async speak(e) {
-    try { const data = await request('/api/tts', { method: 'POST', data: { text: e.currentTarget.dataset.text || '欢迎来到星河里' } }); const audio = wx.createInnerAudioContext(); audio.src = BASE_URL + data.audio_url; audio.play(); }
-    catch (err) { wx.showToast({ title: err.message || '播报失败', icon: 'none' }); }
+    const index = Number(e.currentTarget.dataset.index);
+    if (this._ttsMessageIndex === index) { this.stopTtsPlayback(); return; }
+
+    this.stopTtsPlayback();
+    this._ttsMessageIndex = index;
+    const token = (this._ttsRequestToken || 0) + 1;
+    this._ttsRequestToken = token;
+    this.setData({ speakingIndex: index });
+    try {
+      const data = await request('/api/tts', { method: 'POST', data: { text: e.currentTarget.dataset.text || '欢迎来到星河里' } });
+      if (this._ttsRequestToken !== token || this._ttsMessageIndex !== index) return;
+      const audio = wx.createInnerAudioContext();
+      this._ttsAudio = audio;
+      const finish = () => {
+        if (this._ttsAudio !== audio) return;
+        this._ttsAudio = null;
+        this._ttsMessageIndex = -1;
+        audio.destroy();
+        this.setData({ speakingIndex: -1 });
+      };
+      audio.onEnded(finish);
+      audio.onError(finish);
+      audio.src = BASE_URL + data.audio_url;
+      audio.play();
+    } catch (err) {
+      if (this._ttsRequestToken !== token) return;
+      this.stopTtsPlayback();
+      wx.showToast({ title: err.message || '播报失败', icon: 'none' });
+    }
   },
   goPlan() { wx.navigateTo({ url: '/pages/plan/plan' }); },
   onVoice(e) { const text = e.detail.text; this.setData({ input: text }); this.send(text); },

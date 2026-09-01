@@ -78,7 +78,7 @@ def run_planning_tool_loop(user_message,context,scene,existing=None):
         if idx>=0: result["reply"]=raw[:idx].rstrip()
         result["plan_json"]=_extract_plan_json(raw); result["scene"]=scene
         return result
-    return _run_tool_loop(system,user_message,context,("read",),max_iter=10,collect=collect)
+    return _run_tool_loop(system,user_message,context,("read",),max_iter=5,collect=collect)
 
 def try_online_planning(user_message,context,scene,existing=None):
     if not _online_enabled(): return None

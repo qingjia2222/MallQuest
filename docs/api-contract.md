@@ -14,11 +14,14 @@ Base URL：`http://127.0.0.1:8000`。除音频/地图文件外，响应统一为
 | POST | `/api/scan` | service_code? 或 mall_id,session_id? | session_id,mall,entry_node,datasource_connection,map_manifest |
 | POST | `/api/chat` | session_id,message | reply,intent,tool_calls,result,cards,plan?,navigation? |
 | POST | `/api/navigation/resolve` | session_id,query,current_node? | route_animation |
-| GET | `/api/maps/{mall_id}/scene` | Bearer | 2.5D scene + store hotspots/status |
+| GET | `/api/maps/{mall_id}/scene` | Bearer | 2.5D scene + store hotspots/status + 完整非商户实体设施（含卫生间、服务台、瀑布厅、电梯等） |
 | GET | `/api/stores/{store_id}/public-status` | mall_id | 游客可见营业/排队/优惠 |
 | GET/PATCH | `/api/merchant/store[/status]` | merchant token | 本店资料与实时状态 |
 | PUT | `/api/merchant/store/deals` | merchant token,title,price,stock | 发布优惠 |
 | GET | `/api/manager/analytics` | manager token,granularity | 日/月/年经营分析（Mock 标识） |
+| GET | `/api/manager/prompts`、`/api/manager/prompts/{name}` | manager token | 可维护系统提示词目录/正文及 revision |
+| PUT | `/api/manager/prompts/{name}` | manager token,content,expected_revision | 保存提示词并自动备份；并发旧版本返回 409 |
+| POST | `/api/manager/prompts/{name}/restore-latest` | manager token,expected_revision | 恢复上一版提示词 |
 | POST | `/api/manager/stores` | manager token,店铺资料 | 店铺与商户编码 |
 | POST | `/api/manager/maps` | manager token,source_name | 2.5D 初稿任务、人工校准标识 |
 | GET | `/api/tools/schema` | Bearer | 工具 JSON Schema |
@@ -33,6 +36,7 @@ Base URL：`http://127.0.0.1:8000`。除音频/地图文件外，响应统一为
 | GET | `/api/deals?session_id=` | session_id | deal[] |
 | POST | `/api/coupons/claim` | session_id,coupon_id,confirmed | 领取结果 |
 | POST/GET | `/api/reservations` | 写入需 confirmed | 预约结果/本人预约 |
+| PATCH | `/api/reservations/{id}` | 本人预约 ID，reserved_for 和/或 people，confirmed | 修改预约时间和/或人数 |
 | DELETE | `/api/reservations/{id}` | 本人预约 ID | cancelled |
 | GET | `/api/tickets/products`、`/api/tickets/my` | session_id/本人 | 产品/本人票 |
 | POST | `/api/tts` | text | audio_id,audio_url,mime_type,tts_mode |
@@ -43,3 +47,7 @@ Base URL：`http://127.0.0.1:8000`。除音频/地图文件外，响应统一为
 卡片 `type` 冻结为：`parking`、`member`、`rag`、`deals`、`stores`、`plan`、`itinerary`、`route_animation`。路线节点固定字段：`sequence,node_id,floor,x,y,type,label`；线段固定字段：`floor,from,to,transfer_instruction`。只有目的地导航意图返回 `navigation.type=route_animation`，攻略、优惠、会员等普通问答不得携带该字段。
 
 AI 服务二维码使用微信小程序码的 `scene` 传递服务码，例如 `QD-AI-DEMO`。后端表 `mall_service_codes` 将服务码解析为 `mall_id + entry_node`；若同时传入其他 `mall_id`，服务码映射优先。所有 AI 回复均为纯文本，服务端和双端显示层都会移除星号，避免未渲染的 Markdown 粗体符号出现在界面。
+
+地图 `facilities` 与 `stores` 来自同一地图目录：前者只参与双端展示与占用区/路网约束，不作为商户热点，不允许点击、预约或穿越。Web 首页、小程序首页、小程序规划地图和对话路线弹层必须消费同一份 `facilities`，不得在单端另建不完整清单。
+
+Web 与小程序预约页长期从共享场景接口读取 `reservable=1` 的餐厅，不依赖当前是否存在 Plan；两端均支持自定义时间/人数、查看本人预约、取消及修改时间/人数。对话支持“帮我预约店名，N个人，X点”“帮我取消店名的预约”“帮我更改店名预约为N个人，X点”，所有写入仍须经过确认门。

@@ -8,29 +8,21 @@
     <view class="mt-btn" bindtap="goPlan">帮我规划</view>
   </view>
 
-  <mini-map stores="{{stores}}" route="{{route}}" routeNodes="{{routeNodes}}" activeId="{{activeId}}"
+  <mini-map stores="{{stores}}" facilities="{{facilities}}" route="{{route}}" routeNodes="{{routeNodes}}" activeId="{{activeId}}"
             bind:storetap="onStoreTap" />
   <view wx:if="{{waypoints.length}}" class="route-waypoints"><view wx:for="{{waypoints}}" wx:key="store_id" class="route-waypoint"><text>{{index + 1}}</text>{{item.name}} · {{item.floor}}F</view></view>
 
   <!-- 店铺详情弹层 -->
   <view wx:if="{{showDetail && focusStore}}" class="detail-mask" bindtap="closeDetail">
     <view class="detail" catchtap="noop">
-      <view class="d-head">
-        <view class="d-emoji">🏬</view>
-        <view class="d-main">
-          <text class="d-name">{{focusStore.name}}</text>
-          <text class="d-meta">{{focusStore.category}} · {{focusStore.floor}}F · 编码 {{focusStore.store_code || '待分配'}}</text>
-          <text class="d-meta">{{focusStore.business_hours}}</text>
-        </view>
-        <view class="d-close" bindtap="closeDetail">×</view>
-      </view>
-      <text class="d-desc">{{focusStore.desc}}</text>
-      <view class="d-live"><text>营业：{{focusStore.open_status}}</text><text>预计排队：{{focusStore.waiting}} 分钟</text><text>可用座位：{{focusStore.seats_available}}</text></view>
-      <view wx:if="{{focusStore.deal_title}}" class="d-deal">当前优惠：{{focusStore.deal_title}} · ¥{{focusStore.deal_price}}</view>
-      <view class="d-actions">
-        <view class="ic-btn ghost" bindtap="closeDetail">再看看</view>
-        <view class="ic-btn primary" bindtap="reserve">去预约</view>
-      </view>
+      <view class="d-hero {{focusStore.heroClass}}"><text class="dh-emoji">{{focusStore.hero || focusStore.emoji}}</text><text class="dh-name">{{focusStore.name}}</text></view>
+      <view class="d-head"><view class="d-emoji">{{focusStore.emoji}}</view><view class="d-main"><text class="d-name">{{focusStore.name}}</text><view class="d-meta"><text class="d-badge">{{focusStore.category}}</text><text>{{focusStore.floor}}F · 编码 {{focusStore.store_code || '待分配'}}{{focusStore.avg_price ? ' · ¥' + focusStore.avg_price + '/人' : ''}}</text></view></view><view class="d-close" bindtap="closeDetail">×</view></view>
+      <view class="d-states"><view><text>{{focusStore.queueText}}</text><text>排队</text></view><view><text>{{focusStore.seats_available}}</text><text>余位</text></view><view><text>{{focusStore.statusText}}</text><text>营业</text></view></view>
+      <text wx:if="{{focusStore.desc}}" class="d-desc">{{focusStore.desc}}</text>
+      <view wx:if="{{focusStore.recommend && focusStore.recommend.length}}" class="d-reco"><text class="d-reco-title">🍽️ 推荐</text><view><text wx:for="{{focusStore.recommend}}" wx:key="*this">{{item}}</text></view></view>
+      <button class="detail-ai" loading="{{asking}}" disabled="{{asking}}" bindtap="askAI">{{asking ? '查询中…' : '🤖 问问 AI 这家店'}}</button>
+      <view wx:if="{{aiReply}}" class="d-reply">{{aiReply}}</view>
+      <view class="d-actions"><button class="ghost" bindtap="closeDetail">关闭</button><button class="primary" bindtap="goNavigate">🧭 导航到此店铺</button></view>
     </view>
   </view>
 </view>

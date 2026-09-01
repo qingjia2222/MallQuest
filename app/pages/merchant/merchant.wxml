@@ -1,15 +1,26 @@
 <view class="page">
   <view wx:if="{{!token}}" class="card login-card">
     <view class="role-tag">商户独立入口</view>
-    <view class="title">店铺运营登录</view>
-    <view class="muted">输入商场管理者为你创建的店铺编码</view>
+    <view class="title">店铺运营{{authMode==='register'?'注册':'登录'}}</view>
+    <view class="muted">使用商场管理者为你创建的店铺编码和密码</view>
+    <view class="auth-switch"><view class="auth-option {{authMode==='login'?'active':''}}" data-mode="login" bindtap="switchAuth">登录</view><view class="auth-option {{authMode==='register'?'active':''}}" data-mode="register" bindtap="switchAuth">注册</view></view>
     <input class="login-input" value="{{storeCode}}" bindinput="code" placeholder="例如 QD-S01-DEMO" placeholder-class="input-placeholder" confirm-type="done" bindconfirm="login" />
-    <view class="demo-hint">演示编码：QD-S01-DEMO</view>
-    <button class="button" loading="{{loggingIn}}" disabled="{{loggingIn}}" bindtap="login">进入我的店铺</button>
+    <input class="login-input" password value="{{password}}" data-key="password" bindinput="field" placeholder="请输入密码（至少6位）" placeholder-class="input-placeholder" confirm-type="done" bindconfirm="login" />
+    <view class="demo-hint" wx:if="{{authMode==='login'}}">演示编码：QD-S01-DEMO　密码：123456</view>
+    <view class="demo-hint" wx:else>仅可使用尚未注册的有效店铺编码</view>
+    <button class="button" loading="{{loggingIn}}" disabled="{{loggingIn}}" bindtap="login">{{authMode==='register'?'注册并进入':'进入我的店铺'}}</button>
   </view>
   <block wx:else>
     <view class="store-hero"><view class="hero-line"><view class="role-tag light">商户工作区</view><view bindtap="logout">退出</view></view><view class="store-name">{{store.name}}</view><view>{{store.floor}}F · {{store.category}} · {{store.business_hours}}</view><view class="manager">负责人：{{store.manager_name}}</view></view>
     <view class="card"><view class="section-title">实时营业状态</view><picker range="{{statusLabels}}" value="{{statusIndex}}" bindchange="pickStatus"><view class="picker">营业状态：{{statusLabels[statusIndex]}} ›</view></picker><view class="form-row"><view><text>排队分钟</text><input type="number" data-key="queueMinutes" value="{{queueMinutes}}" bindinput="field"/></view><view><text>可用座位</text><input type="number" data-key="seatsAvailable" value="{{seatsAvailable}}" bindinput="field"/></view></view><button class="button" bindtap="updateStatus">同步给游客端</button></view>
-    <view class="card"><view class="section-title">发布优惠</view><input data-key="dealTitle" value="{{dealTitle}}" bindinput="field" placeholder="优惠标题"/><view class="form-row"><input type="digit" data-key="dealPrice" value="{{dealPrice}}" bindinput="field" placeholder="价格"/><input type="number" data-key="dealStock" value="{{dealStock}}" bindinput="field" placeholder="库存"/></view><button class="button" bindtap="publishDeal">发布优惠</button><view wx:for="{{store.deals}}" wx:key="id" class="deal"><text>{{item.title}}</text><text>¥{{item.price}} · {{item.stock}}份</text></view></view>
+    <view class="card">
+      <view class="section-title">发布优惠</view>
+      <view class="offer-tabs"><view class="offer-tab {{offerType==='deal'?'active':''}}" data-type="deal" bindtap="chooseOfferType">优惠套餐</view><view class="offer-tab {{offerType==='coupon'?'active':''}}" data-type="coupon" bindtap="chooseOfferType">代金券活动</view></view>
+      <block wx:if="{{offerType==='deal'}}"><input data-key="dealTitle" value="{{dealTitle}}" bindinput="field" placeholder="套餐标题"/><view class="form-row"><input type="digit" data-key="dealPrice" value="{{dealPrice}}" bindinput="field" placeholder="优惠价（大于0）"/><input type="number" data-key="dealStock" value="{{dealStock}}" bindinput="field" placeholder="库存"/></view></block>
+      <block wx:else><input data-key="couponTitle" value="{{couponTitle}}" bindinput="field" placeholder="代金券标题，如满30减5"/><view class="form-row"><input type="digit" data-key="couponValue" value="{{couponValue}}" bindinput="field" placeholder="抵扣金额"/><input type="digit" data-key="couponMinimum" value="{{couponMinimum}}" bindinput="field" placeholder="使用门槛（无门槛填0）"/></view><input type="number" data-key="couponStock" value="{{couponStock}}" bindinput="field" placeholder="发放数量"/></block>
+      <button class="button" bindtap="publishOffer">发布{{offerType==='deal'?'优惠套餐':'代金券'}}</button>
+      <view wx:if="{{offerType==='deal'}}"><view wx:for="{{store.deals}}" wx:key="id" class="deal"><text>{{item.title}}</text><text>¥{{item.price}} · {{item.stock}}份</text></view></view>
+      <view wx:else><view wx:for="{{store.coupons}}" wx:key="id" class="deal"><text>{{item.title}}</text><text>减¥{{item.face_value}} · {{item.stock}}张</text></view></view>
+    </view>
   </block>
 </view>

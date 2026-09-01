@@ -12,6 +12,12 @@ async function phoneLogin(phone, password) {
   return auth;
 }
 
+async function phoneRegister(phone, password) {
+  const auth = await request('/api/auth/phone-register', { method: 'POST', token: '', data: { phone, password } });
+  saveAuth(auth);
+  return auth;
+}
+
 async function wxLogin() {
   const app = getApp();
   let code = 'mock-demo';
@@ -38,4 +44,4 @@ async function scan(serviceCode) {
   return data;
 }
 
-module.exports = { phoneLogin, wxLogin, scan };
+module.exports = { phoneLogin, phoneRegister, wxLogin, scan };

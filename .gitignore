@@ -39,3 +39,7 @@ Thumbs.db
 .upstream/
 .skill-staging/
 .docx-qa/
+.codex-doc-build/
+_rollback/
+MallQuest_原版备份*.pptx
+微信图片_*.png

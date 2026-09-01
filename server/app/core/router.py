@@ -3,6 +3,7 @@ from pathlib import Path
 from fastapi import HTTPException
 from app.config import settings
 from app.core.map_catalog import CORRIDOR_BOTTOM, CORRIDOR_TOP, CORRIDOR_X, map_catalog, stable_store_id
+from app.core.activity_semantics import planning_pois
 from app.db import connection
 
 # Derive writable map artifacts from the configured database directory. This is
@@ -127,8 +128,11 @@ def build_route(mall_id,store_ids,vertical_mode="elevator"):
     if not store_ids: return {"nodes":[],"polyline_segments":[],"estimated_distance":0,"is_demo_map":True}
     marks=','.join('?' for _ in store_ids)
     with connection() as db: rows=db.execute(f"SELECT id,name,floor,route_node FROM stores WHERE mall_id=? AND id IN ({marks})",(mall_id,*store_ids)).fetchall()
-    mapping={r["id"]:r["route_node"] for r in rows}; details={r["id"]:dict(r) for r in rows}
-    if len(mapping)!=len(store_ids): raise HTTPException(status_code=400,detail="plan contains store outside current mall")
+    mapping={r["id"]:r["route_node"] for r in rows}; details={r["id"]:{**dict(r),"location_kind":"store"} for r in rows}
+    for poi in planning_pois(mall_id):
+        if poi["id"] in store_ids:
+            mapping[poi["id"]]=poi["route_node"];details[poi["id"]]=poi
+    if len(mapping)!=len(set(store_ids)): raise HTTPException(status_code=400,detail="plan contains location outside current mall")
     graph_nodes,_=_graph(mall_id)
     if mall_id=="mall_demo" and ("f1_entrance" not in graph_nodes or any(node not in graph_nodes for node in mapping.values())):
         write_demo_maps()
@@ -141,5 +145,5 @@ def build_route(mall_id,store_ids,vertical_mode="elevator"):
     collisions=route_obstacle_collisions(mall_id,points)
     if collisions: raise HTTPException(status_code=500,detail={"reason":"route_intersects_map_obstacle","collisions":collisions})
     segments=[{"floor":a["floor"],"from":[a["x"],a["y"]],"to":[b["x"],b["y"]],"transfer_instruction":_transfer_instruction(a,b)} for a,b in zip(points,points[1:])]
-    waypoints=[{"sequence":index+1,"store_id":store_id,"name":details[store_id]["name"],"floor":details[store_id]["floor"],"node_id":mapping[store_id]} for index,store_id in enumerate(store_ids)]
+    waypoints=[{"sequence":index+1,"store_id":store_id,"location_id":store_id,"location_kind":details[store_id].get("location_kind","store"),"name":details[store_id]["name"],"floor":details[store_id]["floor"],"node_id":mapping[store_id]} for index,store_id in enumerate(store_ids)]
     return {"strategy":"shortest","vertical_mode":vertical_mode,"path_policy":"corridor_only","coordinate_system":"three_world_xz","obstacle_clearance_verified":True,"start_node":"f1_entrance" if mall_id=="mall_demo" else route_targets[0],"waypoints":waypoints,"nodes":points,"polyline_segments":segments,"estimated_distance":round(total,1),"is_demo_map":True}

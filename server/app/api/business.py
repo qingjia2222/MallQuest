@@ -1,8 +1,9 @@
 import json, re, uuid
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, model_validator
 from app.core.auth import AuthContext, require_auth
+from app.core.business_data import list_coupons, list_deals, list_reservations, list_stores
 from app.core.envelope import envelope
 from app.core.planner import _claim
 from app.core.tools import get_today_deals, query_member_points, query_parking_status, schemas
@@ -20,11 +21,7 @@ def points(session_id:str,auth:AuthContext=Depends(require_auth)): return envelo
 @router.get("/deals")
 def deals(session_id:str,auth:AuthContext=Depends(require_auth)):
     mall=mall_for(auth,session_id)
-    with connection() as db:
-        rows=db.execute("""SELECT d.*,s.name AS store_name,
-          COALESCE((SELECT SUM(p.quantity) FROM deal_purchases p WHERE p.deal_id=d.id AND p.user_id=? AND p.status='paid'),0) AS purchased_quantity
-          FROM deals d LEFT JOIN stores s ON s.id=d.store_id WHERE d.mall_id=? ORDER BY d.id""",(auth.user_id,mall)).fetchall()
-    return envelope(rows_to_dicts(rows))
+    return envelope(list_deals(mall,auth.user_id))
 @router.get("/tools/schema")
 def tools(auth:AuthContext=Depends(require_auth)): return envelope(schemas())
 class ClaimBody(BaseModel): session_id:str; coupon_id:str; confirmed:bool=False
@@ -37,12 +34,7 @@ def claim(body:ClaimBody,auth:AuthContext=Depends(require_auth)):
 @router.get("/coupons")
 def coupons(session_id:str,auth:AuthContext=Depends(require_auth)):
     mall=mall_for(auth,session_id)
-    with connection() as db:
-        rows=db.execute("""SELECT c.*,s.name AS store_name,CASE WHEN uc.id IS NULL THEN 0 ELSE 1 END AS claimed,
-          uc.claimed_at FROM coupons c LEFT JOIN stores s ON s.id=c.store_id
-          LEFT JOIN user_coupons uc ON uc.coupon_id=c.id AND uc.user_id=? AND uc.mall_id=c.mall_id
-          WHERE c.mall_id=? ORDER BY c.id""",(auth.user_id,mall)).fetchall()
-    return envelope(rows_to_dicts(rows))
+    return envelope(list_coupons(mall,auth.user_id))
 
 class PurchaseBody(BaseModel): session_id:str; deal_id:str; quantity:int=1; confirmed:bool=False
 @router.post("/deals/purchase")
@@ -77,7 +69,15 @@ def _scheduled_at(value: str):
     try: return datetime.combine(day,datetime.min.time(),tzinfo=now.tzinfo).replace(hour=hour,minute=minute).astimezone(timezone.utc).isoformat()
     except ValueError: return None
 
-class ReservationBody(BaseModel): session_id:str; store_id:str; reserved_for:str; people:int; confirmed:bool=False; notes:str=""; scheduled_at:str|None=None; duration_minutes:int=60
+class ReservationBody(BaseModel):
+    session_id:str
+    store_id:str
+    reserved_for:str=Field(min_length=2,max_length=60)
+    people:int=Field(ge=1,le=50)
+    confirmed:bool=False
+    notes:str=""
+    scheduled_at:str|None=None
+    duration_minutes:int=Field(default=60,ge=15,le=480)
 @router.post("/reservations")
 def reserve(body:ReservationBody,auth:AuthContext=Depends(require_auth)):
     if not body.confirmed: raise HTTPException(status_code=409,detail="explicit confirmation required")
@@ -90,12 +90,34 @@ def reserve(body:ReservationBody,auth:AuthContext=Depends(require_auth)):
         db.execute("""INSERT INTO reservations(id,user_id,mall_id,store_id,kind,reserved_for,people,notes,status,created_at,scheduled_at,duration_minutes)
           VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""",(rid,auth.user_id,mall,body.store_id,"restaurant",body.reserved_for,body.people,body.notes,"confirmed",now_iso(),scheduled,body.duration_minutes))
     return envelope({"reservation_id":rid,"status":"confirmed","scheduled_at":scheduled,"duration_minutes":body.duration_minutes})
+
+class ReservationUpdateBody(BaseModel):
+    reserved_for:str|None=Field(default=None,min_length=2,max_length=60)
+    people:int|None=Field(default=None,ge=1,le=50)
+    confirmed:bool=False
+
+    @model_validator(mode="after")
+    def require_change(self):
+        if self.reserved_for is None and self.people is None:
+            raise ValueError("reserved_for or people is required")
+        return self
+
+@router.patch("/reservations/{reservation_id}")
+def update_reservation(reservation_id:str,body:ReservationUpdateBody,auth:AuthContext=Depends(require_auth)):
+    if not body.confirmed: raise HTTPException(status_code=409,detail="explicit confirmation required")
+    with connection() as db:
+        current=db.execute("SELECT * FROM reservations WHERE id=? AND user_id=?",(reservation_id,auth.user_id)).fetchone()
+        if not current: raise HTTPException(status_code=404,detail="reservation not found")
+        if current["status"]=="cancelled": raise HTTPException(status_code=409,detail="cancelled reservation cannot be changed")
+        reserved_for=(body.reserved_for or current["reserved_for"]).strip(); people=body.people or current["people"]
+        scheduled=_scheduled_at(reserved_for) if body.reserved_for is not None else current["scheduled_at"]
+        db.execute("UPDATE reservations SET reserved_for=?,people=?,scheduled_at=? WHERE id=? AND user_id=?",(reserved_for,people,scheduled,reservation_id,auth.user_id))
+        updated=db.execute("""SELECT r.*,s.name AS store_name FROM reservations r LEFT JOIN stores s ON s.id=r.store_id
+          WHERE r.id=? AND r.user_id=?""",(reservation_id,auth.user_id)).fetchone()
+    return envelope(dict(updated))
 @router.get("/reservations")
 def reservations(auth:AuthContext=Depends(require_auth)):
-    with connection() as db: rows=db.execute("""SELECT r.*,s.name AS store_name FROM reservations r LEFT JOIN stores s ON s.id=r.store_id
-      WHERE r.user_id=? ORDER BY CASE WHEN r.status='cancelled' THEN 1 ELSE 0 END,
-      CASE WHEN r.scheduled_at IS NULL THEN 1 ELSE 0 END,r.scheduled_at,r.created_at DESC""",(auth.user_id,)).fetchall()
-    return envelope(rows_to_dicts(rows))
+    return envelope(list_reservations(auth.user_id))
 
 @router.get("/member/assets")
 def assets(auth:AuthContext=Depends(require_auth)):
@@ -121,23 +143,9 @@ def my_tickets(auth:AuthContext=Depends(require_auth)):
     with connection() as db: rows=db.execute("SELECT * FROM user_tickets WHERE user_id=?",(auth.user_id,)).fetchall()
     return envelope(rows_to_dicts(rows))
 @router.get("/stores")
-def stores(session_id:str,auth:AuthContext=Depends(require_auth)):
+def stores(session_id:str,reservable_only:bool=False,keyword:str="",auth:AuthContext=Depends(require_auth)):
     mall=mall_for(auth,session_id)
-    with connection() as db:
-        rows=db.execute("""SELECT s.*,COALESCE(ss.open_status,s.open_status) AS live_open_status,
-          COALESCE(ss.queue_minutes,s.queue_minutes) AS live_queue_minutes,COALESCE(ss.seats_available,s.seats_available) AS live_seats_available,
-          sp.store_code,sp.business_hours,b.source_key AS map_slot,b.map_x,b.map_z,b.source AS map_source,sd.details_json
-          FROM stores s LEFT JOIN store_status ss ON ss.store_id=s.id LEFT JOIN store_profiles sp ON sp.store_id=s.id
-          LEFT JOIN store_map_bindings b ON b.store_id=s.id LEFT JOIN store_details sd ON sd.store_id=s.id
-          WHERE s.mall_id=? ORDER BY s.floor,s.name""",(mall,)).fetchall()
-    data=[]
-    for row in rows:
-        item=dict(row); details=json.loads(item.pop("details_json") or "{}")
-        item.update({key:value for key,value in details.items() if key not in item or item[key] in (None,"")})
-        item["tags"]=details.get("tags") or [tag for tag in str(item.get("tags") or "").split(",") if tag]
-        item["open_status"]=item.pop("live_open_status"); item["queue_minutes"]=item.pop("live_queue_minutes"); item["seats_available"]=item.pop("live_seats_available")
-        data.append(item)
-    return envelope(data)
+    return envelope(list_stores(mall,keyword,reservable_only))
 @router.get("/location")
 def location(auth:AuthContext=Depends(require_auth)):
     # DEMO：用户当前位置默认为主入口（商场入口），供导航起点使用

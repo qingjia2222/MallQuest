@@ -2,6 +2,7 @@
   <view class="ct-main">
     <text class="ct-title">{{coupon.title}}</text>
     <text class="ct-scope">{{coupon.scope}}</text>
+    <text wx:if="{{coupon.face_value}}" class="ct-value">抵扣 ¥{{coupon.face_value}}{{coupon.min_spend ? ' · 满 ¥' + coupon.min_spend + ' 可用' : ' · 无门槛'}}</text>
     <view class="ct-notch top"></view>
     <view class="ct-notch bottom"></view>
   </view>

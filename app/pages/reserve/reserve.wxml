@@ -18,30 +18,51 @@
   <view wx:else>
     <view class="rs-hero">
       <text class="rs-title">🍽️ 预约餐厅</text>
-      <text class="rs-sub">选择时间与人数，我帮你把关</text>
+      <text class="rs-sub">开放预约服务 · 可自由选择餐厅、时间与人数</text>
     </view>
 
-    <view class="section-title">选餐厅</view>
-    <view class="rs-stores">
-      <view wx:for="{{stores}}" wx:key="id" class="rs-store {{form.store === item.id ? 'active' : ''}}"
+    <view class="section-title">选餐厅（{{filteredStores.length}}/{{stores.length}} 家）</view>
+    <view class="store-tools">
+      <view class="filter-row"><text>楼层</text><picker range="{{floorOptions}}" value="{{floorIndex}}" bindchange="onFloorFilter"><view class="filter-picker">{{floorOptions[floorIndex]}}⌄</view></picker></view>
+      <view class="search-row"><text>🔎</text><input value="{{searchKeyword}}" placeholder="输入餐厅名称手动搜索" bindinput="onSearch"/><text wx:if="{{searchKeyword}}" class="search-clear" bindtap="clearSearch">清除</text></view>
+    </view>
+    <view wx:if="{{storeLoading}}" class="rs-empty">正在加载可预约店铺…</view>
+    <view wx:elif="{{!stores.length}}" class="rs-empty">当前没有开放预约的店铺</view>
+    <view wx:elif="{{!filteredStores.length}}" class="rs-empty">没有符合筛选或搜索条件的餐厅</view>
+    <scroll-view wx:else scroll-y class="rs-stores">
+      <view wx:for="{{filteredStores}}" wx:key="id" class="rs-store {{form.store === item.id ? 'active' : ''}}"
             bindtap="onStore" data-id="{{item.id}}">
         <text class="rs-store-n">{{item.name}}</text>
         <text class="rs-store-m">{{item.floor}}F · 评分{{item.rating}} · 前方{{item.waiting}}桌</text>
       </view>
-    </view>
+    </scroll-view>
 
     <view class="section-title">选时间</view>
     <view class="rs-chips">
       <view wx:for="{{['18:00','19:00','19:30','20:00']}}" wx:key="*this"
             class="chip {{form.time === item ? 'active' : ''}}" data-t="{{item}}" bindtap="onTime">{{item}}</view>
     </view>
+    <picker mode="time" value="{{form.time}}" bindchange="onCustomTime"><view class="rs-custom"><text>自定义时间</text><text>{{form.time}} ›</text></view></picker>
 
     <view class="section-title">几人</view>
     <view class="rs-chips">
       <view wx:for="{{[1,2,4,6]}}" wx:key="*this"
             class="chip {{form.people === item ? 'active' : ''}}" data-n="{{item}}" bindtap="onPeople">{{item}}人</view>
     </view>
+    <view class="rs-custom"><text>自定义人数</text><input type="number" min="1" max="50" value="{{form.people}}" bindinput="onPeopleInput"/></view>
 
     <view class="rs-submit btn" bindtap="submit">确认预约</view>
+
   </view>
+
+  <view class="section-title">📋 我的预约（{{reservationList.length}}）</view>
+  <view class="rs-list card">
+    <view wx:if="{{!reservationList.length}}" class="rs-empty">暂无预约记录</view>
+    <view wx:for="{{reservationList}}" wx:key="id" class="rs-history-item">
+      <view class="rs-history-main"><text class="rs-history-name">{{item.store_name || item.store_id}}</text><text>{{item.reserved_for}} · {{item.people}} 人 · {{item.statusText}}</text></view>
+      <view wx:if="{{item.status !== 'cancelled'}}" class="rs-history-actions"><button data-id="{{item.id}}" bindtap="editExisting">改时间/人数</button><button class="danger" data-id="{{item.id}}" bindtap="cancelExisting">取消</button></view>
+    </view>
+  </view>
+
+  <view wx:if="{{editVisible}}" class="edit-mask" bindtap="closeEdit"><view class="edit-dialog" catchtap="noop"><view class="edit-title">修改 {{editReservation.store_name || editReservation.store_id}} 的预约</view><picker mode="time" value="{{editTime}}" bindchange="onEditTime"><view class="rs-custom"><text>预约时间</text><text>{{editTime}} ›</text></view></picker><view class="rs-custom"><text>预约人数</text><input type="number" min="1" max="50" value="{{editPeople}}" bindinput="onEditPeople"/></view><view class="edit-actions"><button bindtap="closeEdit">暂不修改</button><button class="save" bindtap="saveEdit">确认修改</button></view></view></view>
 </view>

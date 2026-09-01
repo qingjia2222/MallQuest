@@ -19,11 +19,12 @@
 .small-action.primary { color:#fff;border:0;background:linear-gradient(135deg,#7C3AED,#06B6D4); }
 .plan-editor { background:#fff;border-radius:28rpx;padding:26rpx 22rpx;box-shadow:0 10rpx 30rpx rgba(124,58,237,.08); }
 .editor-title { font-size:27rpx;font-weight:700;margin-bottom:18rpx; }
-.time-row { display:grid;grid-template-columns:44rpx minmax(0,1fr) 170rpx 58rpx 58rpx;align-items:center;gap:8rpx;padding:14rpx 8rpx;border-radius:16rpx;background:#F9FAFB;margin-top:10rpx; }
+.time-row { display:grid;grid-template-columns:44rpx minmax(0,1fr) 142rpx 54rpx 54rpx 54rpx;align-items:center;gap:6rpx;padding:14rpx 8rpx;border-radius:16rpx;background:#F9FAFB;margin-top:10rpx; }
 .stop-index { width:38rpx;height:38rpx;line-height:38rpx;text-align:center;border-radius:50%;background:#EDE9FE;color:#7C3AED;font-weight:700;font-size:22rpx; }
 .stop-name { overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:25rpx;font-weight:600; }
 .time-input { height:64rpx;line-height:64rpx;padding:0 12rpx;border:1rpx solid #E5E7EB;border-radius:14rpx;background:#fff;font-size:24rpx; }
 .move-btn { width:56rpx!important;min-width:56rpx!important;height:56rpx;line-height:52rpx;padding:0!important;margin:0!important;border:0;background:#fff;color:#7C3AED;font-size:27rpx; }
+.move-btn.del{color:#EF4444}.add-stop-row{display:flex;align-items:center;gap:12rpx;margin-top:18rpx}.add-picker{flex:1;min-width:0}.add-picker-value{height:72rpx;line-height:72rpx;padding:0 18rpx;border:2rpx solid #E5E7EB;border-radius:18rpx;background:#fff;color:#374151;font-size:24rpx;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.add-stop-btn{flex-shrink:0;height:72rpx;line-height:72rpx;margin:0;padding:0 20rpx;border:0;border-radius:36rpx;background:#EDE9FE;color:#7C3AED;font-size:24rpx;font-weight:650}.add-stop-btn::after{border:0}
 .move-btn::after,.editor-save::after { border:0; }
 .editor-buttons { display:flex;gap:14rpx;margin-top:22rpx;align-items:center; }
 .editor-cancel,.editor-save { flex:1;height:76rpx;line-height:76rpx;text-align:center;border-radius:38rpx;font-size:26rpx;font-weight:650;margin:0;padding:0; }
@@ -56,6 +57,7 @@
 .done-tip {
   text-align: center; font-size: 28rpx; color: #10B981; font-weight: 600; margin: 20rpx 0 10rpx;
 }
+.calendar-reminder{margin:18rpx 0;border:0;border-radius:42rpx;background:linear-gradient(135deg,#7C3AED,#06B6D4);color:#fff;font-size:27rpx;font-weight:650}.calendar-reminder::after{border:0}
 .plan-nav { display: flex; gap: 18rpx; margin-top: 26rpx; }
 .ic-btn { flex: 1; text-align: center; border-radius: 40rpx; padding: 20rpx 0; font-size: 28rpx; font-weight: 600; }
 .ic-btn.ghost { background: #fff; color: #7C3AED; border: 2rpx solid var(--border); }

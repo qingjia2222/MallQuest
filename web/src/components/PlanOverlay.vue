@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router';
 import api from '../api';
 import PlanFlow from '../components/PlanFlow.vue';
 import ItineraryCard from '../components/ItineraryCard.vue';
+import { actionResultLabel, actionResultOk } from '../utils/actionResult';
 
 // 规划浮层：悬浮在对话页上方，不跳转独立页
 // props.initialPlan：若对话已带方案则直接进入确认；否则从选场景开始
@@ -153,7 +154,7 @@ async function generateCurrent() {
           <ItineraryCard v-if="plan && plan.itinerary" :itinerary="{
               tag: selected.name + ' 方案',
               stops: toStops(plan.itinerary),
-              actions: (plan.action_results || []).map(a => ({ label: a.label || (a.tool || a.action || '') , ok: a.status !== 'failed' }))
+              actions: (plan.action_results || []).map(a => ({ label: actionResultLabel(a), ok: actionResultOk(a) }))
             }" @confirm="onConfirm" @change="onChange" @stoptap="stopPlan" />
           <div v-else class="card hint">暂无行程，请重试。</div>
           <div v-if="step === 5" class="done-tip">✅ 方案已执行，去地图查看路线</div>

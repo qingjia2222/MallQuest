@@ -5,6 +5,7 @@ import api from '../api';
 import PlanFlow from '../components/PlanFlow.vue';
 import ItineraryCard from '../components/ItineraryCard.vue';
 import { setCurrentPlan } from '../store/plan';
+import { actionResultLabel, actionResultOk } from '../utils/actionResult';
 
 const router = useRouter();
 
@@ -108,7 +109,7 @@ function toStops(it) {
         <ItineraryCard v-if="plan && plan.itinerary" :itinerary="{
             tag: selected.name + ' 方案',
             stops: toStops(plan.itinerary),
-            actions: (plan.action_results || []).map(a => ({ label: a.label || (a.tool || a.action || '') , ok: a.status !== 'failed' }))
+            actions: (plan.action_results || []).map(a => ({ label: actionResultLabel(a), ok: actionResultOk(a) }))
           }" @confirm="onConfirm" @change="onChange" @stoptap="onStop" />
         <div v-else class="card hint">暂无行程，请重试。</div>
         <div v-if="step === 5" class="done-tip">✅ 方案已执行，去地图查看路线</div>
